@@ -16,7 +16,7 @@ In order to build BetaPilot 4.0 (BetaCopter/BetaPlane), do this:
 
 - Follow the instructions in the ArduPilot wiki for installing the build environment.
 - Clone this fork and checkout the desired BetaPilot (BetaCopter/BetaPlane) branch.
-- Ensure that all git submodules are there. Run git submodule update --init -- recursive.
+- Ensure that all git submodules are there. Run git submodule update --init --recursive.
 - Copy the three files ardupilotmega.xml, common.xml, and storm32_4ap.xml from the \mavlink_withmostbasicadditions folder to the ardupilot\modules\mavlink\message_definitions\v1.0 folder. This will overwrite files existing there. (This step is crucuial since ArduPilot does not support the latest MAVLink standard, which STorM32 needs).
 - Compile for your board follow the instructions in the ArduPilot wiki for compiling.
 
