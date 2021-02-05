@@ -1,12 +1,17 @@
 #pragma once
 
-#define BETAPILOTVERSION " v049rc04 "
+#define BETAPILOTVERSION " v049 "
 
 #define ISV41 0
 
 
 /*
 search for //OW to find all changes
+
+2021.02.05:
+ upgraded to Copter4.0.6
+ upgraded to storm32.xml v 4. Feb. 2021, 600xx ranges
+ dual mount support if enabled
 
 2020.11.25:
  upgraded to Copter4.0.5
@@ -26,7 +31,7 @@ Libraries:
 - AP_Mount_Backend.h:   1x  (+1 comment, no change)
 - AP_Mount.cpp:         7x  (+1 comment, no change)
 - AP_Mount.h:           5x
-- GCS_Common.cpp:       9x
+- GCS_Common.cpp:       11x
 - GCS.h:                1x
 - MAVLink_routing.cpp:  1x
 - MAVLink_routing.h:    1x
@@ -63,6 +68,7 @@ ACCEL_Z CAPACITY TYPE
 
 RC_CHANNELS_OVERRIDE
 RC_CHANNELS
+RC_CHANNELS_RAW
 
 SYSTEM_TIME
 
