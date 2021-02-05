@@ -1518,6 +1518,9 @@ void GCS_MAVLINK::send_rc_channels() const
     if (rssi != nullptr) {
         receiver_rssi = rssi->read_receiver_rssi_uint8();
     }
+//OW THIS IS A DAMMED BUG
+    if (rssi == nullptr) { receiver_rssi = UINT8_MAX; } else { if (receiver_rssi == UINT8_MAX) receiver_rssi = UINT8_MAX-1; }
+//OWEND
 
     uint16_t values[18] = {};
     rc().get_radio_in(values, ARRAY_SIZE(values));
@@ -1569,6 +1572,9 @@ void GCS_MAVLINK::send_rc_channels_raw() const
     if (rssi != nullptr) {
         receiver_rssi = rssi->read_receiver_rssi_uint8();
     }
+//OW THIS IS A DAMMED BUG
+    if (rssi == nullptr) { receiver_rssi = UINT8_MAX; } else { if (receiver_rssi == UINT8_MAX) receiver_rssi = UINT8_MAX-1; }
+//OWEND
     uint16_t values[8] = {};
     rc().get_radio_in(values, ARRAY_SIZE(values));
 
@@ -1603,7 +1609,7 @@ void GCS_MAVLINK::send_raw_imu()
 
     mavlink_msg_raw_imu_send(
         chan,
-        AP_HAL::micros(),
+        AP_HAL::micros64(),
         accel.x * 1000.0f / GRAVITY_MSS,
         accel.y * 1000.0f / GRAVITY_MSS,
         accel.z * 1000.0f / GRAVITY_MSS,
