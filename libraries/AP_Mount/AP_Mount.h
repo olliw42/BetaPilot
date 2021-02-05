@@ -37,7 +37,7 @@ class AP_Mount_SToRM32_serial;
 //OW
 class BP_Mount_STorM32_MAVLink;
 #undef AP_MOUNT_MAX_INSTANCES
-#define AP_MOUNT_MAX_INSTANCES 2
+#define AP_MOUNT_MAX_INSTANCES 1
 //OWEND
 
 /*
