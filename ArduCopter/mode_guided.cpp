@@ -455,6 +455,13 @@ void ModeGuided::pos_control_run()
         // roll, pitch from waypoint controller, yaw heading from GCS or auto_heading()
         attitude_control->input_euler_angle_roll_pitch_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), auto_yaw.yaw(), true);
     }
+//OW //XX
+/*
+    AP::logger().Write("ZZZZ", "TimeUS,YawMode,YawYaw", "Qff",
+                                           AP_HAL::micros64(),
+                                           (double)auto_yaw.mode(),
+                                           (double)auto_yaw.yaw());
+*/
 }
 
 // guided_vel_control_run - runs the guided velocity controller

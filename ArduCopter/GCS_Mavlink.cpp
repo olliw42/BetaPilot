@@ -603,7 +603,11 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_mount(const mavlink_command_long_t
     case MAV_CMD_DO_MOUNT_CONTROL:
         if(!copter.camera_mount.has_pan_control()) {
             copter.flightmode->auto_yaw.set_fixed_yaw(
-                (float)packet.param3 * 0.01f,
+//OW this is a serious bug!
+// however, a proper solution needs quite some changes, someone really screwed this up heavily
+//we don't correct it however since we use CMD_DO_MOUNT_CONTROL
+//                (float)packet.param3 * 0.01f,
+                (float)packet.param3,
                 0.0f,
                 0,0);
         }
@@ -873,6 +877,9 @@ void GCS_MAVLINK_Copter::handle_mount_message(const mavlink_message_t &msg)
         if(!copter.camera_mount.has_pan_control()) {
             // if the mount doesn't do pan control then yaw the entire vehicle instead:
             copter.flightmode->auto_yaw.set_fixed_yaw(
+//OW this is a serious bug!
+// however, a proper solution needs quite some changes, someone really screwed this up heavily
+//we don't correct it however since we useCMD_DO_MOUNT_CONTROL
                 mavlink_msg_mount_control_get_input_c(&msg) * 0.01f,
                 0.0f,
                 0,

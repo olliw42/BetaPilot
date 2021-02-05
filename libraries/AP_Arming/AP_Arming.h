@@ -124,6 +124,9 @@ protected:
 
     bool fence_checks(bool report);
 
+//OW
+    bool mount_checks(bool report);
+//OWEND
     virtual bool system_checks(bool report);
 
     bool can_checks(bool report);

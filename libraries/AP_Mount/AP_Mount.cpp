@@ -7,6 +7,9 @@
 #include "AP_Mount_Alexmos.h"
 #include "AP_Mount_SToRM32.h"
 #include "AP_Mount_SToRM32_serial.h"
+//OW
+#include "BP_Mount_STorM32_MAVLink.h"
+//OWEND
 
 const AP_Param::GroupInfo AP_Mount::var_info[] = {
     // @Param: _DEFLT_MODE
@@ -208,6 +211,10 @@ const AP_Param::GroupInfo AP_Mount::var_info[] = {
 
     // 24 is AVAILABLE
 
+//OW
+    AP_GROUPINFO("_ZFLAGS", 20, AP_Mount, state[0]._zflags, 0),
+//OWEND
+
 #if AP_MOUNT_MAX_INSTANCES > 1
     // @Param: 2_DEFLT_MODE
     // @DisplayName: Mount default operating mode
@@ -388,6 +395,10 @@ const AP_Param::GroupInfo AP_Mount::var_info[] = {
     // @Values: 0:None, 1:Servo, 2:3DR Solo, 3:Alexmos Serial, 4:SToRM32 MAVLink, 5:SToRM32 Serial
     // @User: Standard
     AP_GROUPINFO("2_TYPE",           42, AP_Mount, state[1]._type, 0),
+
+//OW
+    AP_GROUPINFO("2_ZFLAGS", 43, AP_Mount, state[1]._zflags, 0),
+//OWEND
 #endif // AP_MOUNT_MAX_INSTANCES > 1
 
     AP_GROUPEND
@@ -462,17 +473,31 @@ void AP_Mount::init()
         } else if (mount_type == Mount_Type_SToRM32_serial) {
             _backends[instance] = new AP_Mount_SToRM32_serial(*this, state[instance], instance);
             _num_instances++;
-        }
 
+//OW
+        // check for STorM32_MAVLink mounts using MAVLink protocol
+        } else if (mount_type == Mount_Type_STorM32_MAVLink) {
+            _backends[instance] = new BP_Mount_STorM32_MAVLink(*this, state[instance], instance);
+            _num_instances++;
+//OWEND
+        }
         // init new instance
         if (_backends[instance] != nullptr) {
-            _backends[instance]->init();
+//OW // don't yet init
+//            _backends[instance]->init();
+//OWEND
             if (!primary_set) {
                 _primary = instance;
                 primary_set = true;
             }
         }
     }
+//OW
+    // init each instance, do it after all instances were created, so that all know frontend things like num_instances and primary
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) _backends[instance]->init();
+    }
+//OWEND
 }
 
 // update - give mount opportunity to update servos.  should be called at 10hz or higher
@@ -580,7 +605,11 @@ MAV_RESULT AP_Mount::handle_command_do_mount_control(const mavlink_command_long_
     }
 
     // send message to backend
-    _backends[_primary]->control(packet.param1, packet.param2, packet.param3, (MAV_MOUNT_MODE) packet.param7);
+//OW this is a serious bug!
+// however, a proper solution needs quite some changes, someone really screwed this up heavily
+// so we just fake it here, this "works" since param1-param3 are always angles
+//    _backends[_primary]->control(packet.param1, packet.param2, packet.param3, (MAV_MOUNT_MODE) packet.param7);
+    _backends[_primary]->control(100.0f*packet.param1, 100.0f*packet.param2, 100.0f*packet.param3, (MAV_MOUNT_MODE) packet.param7);
 
     return MAV_RESULT_ACCEPTED;
 }
@@ -695,6 +724,36 @@ void AP_Mount::send_gimbal_report(mavlink_channel_t chan)
     }    
 }
 
+//OW
+void AP_Mount::handle_msg(const mavlink_message_t &msg)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            _backends[instance]->handle_msg(msg);
+        }
+    }
+}
+
+bool AP_Mount::pre_arm_checks(void)
+{
+    bool res = true;
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            res &= _backends[instance]->pre_arm_checks();
+        }
+    }
+    return res;
+}
+
+void AP_Mount::send_banner(void)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            _backends[instance]->send_banner();
+        }
+    }
+}
+//OWEND
 
 // singleton instance
 AP_Mount *AP_Mount::_singleton;
