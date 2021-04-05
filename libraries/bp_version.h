@@ -84,4 +84,10 @@ BUTTON_CHANGE MANUAL_CONTROL
 
 MAV_CMD_DO_SEND_BANNER
 
+
+FOLLOW
+copter.g2.follow.handle_msg(msg);
+GCS_MAVLINK_Copter::handle_command_int_packet() -> MAV_CMD_DO_FOLLOW -> copter.g2.follow.set_target_sysid((uint8_t)packet.param1);
+GCS_MAVLINK_Copter::handle_command_long_packet()-> MAV_CMD_DO_FOLLOW -> copter.g2.follow.set_target_sysid((uint8_t)packet.param1);
+
 */
