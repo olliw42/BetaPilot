@@ -58,6 +58,7 @@ public:
     virtual void set_roi_target(const struct Location &target_loc);
 
     // control - control the mount
+//OW this is a serious bug!
     virtual void control(int32_t pitch_or_lat, int32_t roll_or_lon, int32_t yaw_or_alt, MAV_MOUNT_MODE mount_mode);
     
     // process MOUNT_CONFIGURE messages received from GCS:
@@ -77,6 +78,21 @@ public:
 
     // send a GIMBAL_REPORT message to the GCS
     virtual void send_gimbal_report(const mavlink_channel_t chan) {}
+
+//OW
+    // handle msg - allows to process a msg from a gimbal
+    virtual void handle_msg(const mavlink_message_t &msg) {}
+
+    // pre arm checks
+    virtual bool pre_arm_checks(void) { return true; }
+
+    // send banner
+    virtual void send_banner(void) {}
+
+    // frontend access
+    uint8_t num_instances(void) { return _frontend._num_instances; }
+    bool is_primary(void) { return (_instance == _frontend._primary); }
+//OWEND
 
 protected:
 
