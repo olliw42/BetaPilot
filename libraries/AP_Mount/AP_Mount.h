@@ -47,6 +47,11 @@ class AP_Mount_SoloGimbal;
 class AP_Mount_Alexmos;
 class AP_Mount_SToRM32;
 class AP_Mount_SToRM32_serial;
+//OW
+class BP_Mount_STorM32_MAVLink;
+#undef AP_MOUNT_MAX_INSTANCES
+#define AP_MOUNT_MAX_INSTANCES 1
+//OWEND
 
 /*
   This is a workaround to allow the MAVLink backend access to the
@@ -62,6 +67,9 @@ class AP_Mount
     friend class AP_Mount_Alexmos;
     friend class AP_Mount_SToRM32;
     friend class AP_Mount_SToRM32_serial;
+//OW
+    friend class BP_Mount_STorM32_MAVLink;
+//OWEND
 
 public:
     AP_Mount();

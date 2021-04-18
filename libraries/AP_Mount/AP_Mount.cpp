@@ -11,6 +11,9 @@
 #include "AP_Mount_SToRM32.h"
 #include "AP_Mount_SToRM32_serial.h"
 #include <AP_Math/location.h>
+//OW
+#include "BP_Mount_STorM32_MAVLink.h"
+//OWEND
 
 const AP_Param::GroupInfo AP_Mount::var_info[] = {
 
@@ -474,11 +477,18 @@ void AP_Mount::init()
         } else if (mount_type == Mount_Type_SToRM32_serial) {
             _backends[instance] = new AP_Mount_SToRM32_serial(*this, state[instance], instance);
             _num_instances++;
+
+//OW
+        // check for STorM32_MAVLink mounts using MAVLink protocol
+        } else if (mount_type == Mount_Type_STorM32_MAVLink) {
+            _backends[instance] = new BP_Mount_STorM32_MAVLink(*this, state[instance], instance);
+            _num_instances++;
+//OWEND
         }
 
         // init new instance
         if (_backends[instance] != nullptr) {
-//OW // don't yet init
+//OW        // don't yet init
 //            _backends[instance]->init();
 //OWEND
             if (!primary_set) {

@@ -1,14 +1,13 @@
 #pragma once
 
-#define BETAPILOTVERSION " v049 rc05"
-
-#define ISV41 1
+#define BETAPILOTVERSION " v049 rc06"
 
 
 /*
 search for //OW to find all changes
 2021.04.18:
  upgraded to Copter4.1.0-beta1
+ need to shorten some names for avoiding cygwin limits
 
 2021.04.05:
  upgraded to Copter4.0.7
@@ -27,17 +26,16 @@ _PARAMS
 ArduCopter specific
 - compassmot.cpp:       1x
 - GCS_Mavlink.cpp:      (+ 2 comments, no change)
-- mode_guided.cpp:      1x  (just a debug log, commented out, not relevant)
 - version.h:            1x
 
 Libraries:
 - AP_Arming.cpp:        3x
 - AP_Arming.h:          1x
-- AP_Mount_Backend.cpp: (+ 3 comments, no change)
+- AP_Mount_Backend.cpp: (+ 3 comments, no changes)
 - AP_Mount_Backend.h:   1x  (+1 comment, no change)
 - AP_Mount.cpp:         7x  (+1 comment, no change)
 - AP_Mount.h:           5x
-- GCS_Common.cpp:       11x
+- GCS_Common.cpp:       9x (11x ????)
 - GCS.h:                1x
 - MAVLink_routing.cpp:  1x
 - MAVLink_routing.h:    1x
