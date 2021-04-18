@@ -49,7 +49,7 @@ GCS_MAVLINK::queued_param_send()
     if (bytes_allowed < size_for_one_param_value_msg) {
         bytes_allowed = size_for_one_param_value_msg;
     }
-    if (bytes_allowed > comm_get_txspace(chan)) {
+    if (bytes_allowed > comm_get_txspace(chan)) { //OW is called after CHECK_PAYLOAD_SIZE(PARAM_VALUE) so should at least allow one
         bytes_allowed = comm_get_txspace(chan);
     }
     uint32_t count = bytes_allowed / size_for_one_param_value_msg;
@@ -63,7 +63,26 @@ GCS_MAVLINK::queued_param_send()
         return;
     }
     count -= async_replies_sent_count;
+//OW
+    //the above calculus is shocking nonsense
+    //   link_bw = 6 (that's what it gives for 57000 bps)
+    //   bytes_allowed = 6*26 * dt_ms = 156 * dt_ms
+    //   size_for_one_param_value_msg = 37
+    //   => count = 4.2 * dt_ms
+    //   => this would correspond to 4200 params/s ?!?!?!?
+    // it should be *0.3 instead of *26
+    // * 1024 * 0.3 * 0.001 = 0.3
+    //
+    // we allow for 30% bw, which means
+    //   5700 bytes/s * 0.3 = 1710 bytes/s => 46 params/s, but we only get about 10 params/s !!!!
 
+    //this is a damed bug
+    // if count = 0, the loop below is not traversed but _queued_parameter_send_time_ms is updated to tnow
+    // so it thinks it has send something even though it didn't
+    if (count == 0) {
+        return;
+    }
+//OWEND
     if (_queued_parameter == nullptr) {
         return;
     }

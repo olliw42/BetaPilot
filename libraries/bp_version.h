@@ -1,12 +1,15 @@
 #pragma once
 
-#define BETAPILOTVERSION " v049 "
+#define BETAPILOTVERSION " v049 rc05"
 
 #define ISV41 0
 
 
 /*
 search for //OW to find all changes
+2021.04.05:
+ upgraded to Copter4.0.7
+_PARAMS
 
 2021.02.05:
  upgraded to Copter4.0.6
