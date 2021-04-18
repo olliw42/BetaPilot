@@ -269,7 +269,7 @@ void GCS_MAVLINK::send_battery_status(const uint8_t instance) const
                                     battery.capacity_remaining_pct(instance),
                                     0, // time remaining, seconds (not provided)
                                     MAV_BATTERY_CHARGE_STATE_UNDEFINED,
-                                    cell_volts_ext); // Cell 11..14 voltages
+                                    cell_volts_ext ,0,0); // Cell 11..14 voltages //OW
 }
 
 // returns true if all battery instances were reported
@@ -1400,6 +1400,10 @@ void GCS_MAVLINK::packetReceived(const mavlink_status_t &status,
         // e.g. enforce-sysid says we shouldn't look at this packet
         return;
     }
+//OW
+    AP_Mount *mount = AP::mount();
+    if (mount != nullptr) mount->handle_msg(msg);
+//OWEND
     handleMessage(msg);
 }
 
@@ -1641,6 +1645,9 @@ void GCS_MAVLINK::send_rc_channels() const
     if (rssi != nullptr) {
         receiver_rssi = rssi->read_receiver_rssi_uint8();
     }
+//OW THIS IS A DAMMED BUG
+    if (rssi == nullptr) { receiver_rssi = UINT8_MAX; } else { if (receiver_rssi == UINT8_MAX) receiver_rssi = UINT8_MAX-1; }
+//OWEND
 
     uint16_t values[18] = {};
     rc().get_radio_in(values, ARRAY_SIZE(values));
@@ -1692,6 +1699,9 @@ void GCS_MAVLINK::send_rc_channels_raw() const
     if (rssi != nullptr) {
         receiver_rssi = rssi->read_receiver_rssi_uint8();
     }
+//OW THIS IS A DAMMED BUG
+    if (rssi == nullptr) { receiver_rssi = UINT8_MAX; } else { if (receiver_rssi == UINT8_MAX) receiver_rssi = UINT8_MAX-1; }
+//OWEND
     uint16_t values[8] = {};
     rc().get_radio_in(values, ARRAY_SIZE(values));
 
@@ -2265,7 +2275,7 @@ void GCS_MAVLINK::handle_set_mode(const mavlink_message_t &msg)
     // exist, but if it did we'd probably be acking something
     // completely unrelated to setting modes.
     if (HAVE_PAYLOAD_SPACE(chan, COMMAND_ACK)) {
-        mavlink_msg_command_ack_send(chan, MAVLINK_MSG_ID_SET_MODE, result);
+        mavlink_msg_command_ack_send(chan, MAVLINK_MSG_ID_SET_MODE, result ,255,0,0,0); //OW
     }
 }
 
@@ -2835,7 +2845,7 @@ MAV_RESULT GCS_MAVLINK::handle_preflight_reboot(const mavlink_command_long_t &pa
     }
 
     // send ack before we reboot
-    mavlink_msg_command_ack_send(chan, packet.command, MAV_RESULT_ACCEPTED);
+    mavlink_msg_command_ack_send(chan, packet.command, MAV_RESULT_ACCEPTED ,255,0,0,0); //OW
 
     // when packet.param1 == 3 we reboot to hold in bootloader
     const bool hold_in_bootloader = is_equal(packet.param1, 3.0f);
@@ -3668,6 +3678,11 @@ void GCS_MAVLINK::send_banner()
             send_text(MAV_SEVERITY_INFO, "%s", banner_msg);
         }
     }
+
+//OW
+    AP_Mount *mount = AP::mount();
+    if (mount != nullptr) mount->send_banner();
+//OWEND
 }
 
 
@@ -4316,7 +4331,7 @@ void GCS_MAVLINK::handle_command_long(const mavlink_message_t &msg)
     const MAV_RESULT result = handle_command_long_packet(packet);
 
     // send ACK or NAK
-    mavlink_msg_command_ack_send(chan, packet.command, result);
+    mavlink_msg_command_ack_send(chan, packet.command, result ,255,0,0,0); //OW
 
     // log the packet:
     mavlink_command_int_t packet_int;
@@ -4503,7 +4518,7 @@ void GCS_MAVLINK::handle_command_int(const mavlink_message_t &msg)
     const MAV_RESULT result = handle_command_int_packet(packet);
 
     // send ACK or NAK
-    mavlink_msg_command_ack_send(chan, packet.command, result);
+    mavlink_msg_command_ack_send(chan, packet.command, result ,255,0,0,0); //OW
 
     AP::logger().Write_Command(packet, result);
 
