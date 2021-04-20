@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION " v049 rc06"
+#define BETAPILOTVERSION " v050 rc01"
 
 
 /*
@@ -35,7 +35,7 @@ Libraries:
 - AP_Mount_Backend.h:   1x  (+1 comment, no change)
 - AP_Mount.cpp:         7x  (+1 comment, no change)
 - AP_Mount.h:           5x
-- GCS_Common.cpp:       9x (11x ????)
+- GCS_Common.cpp:       9x (was 11x ????)
 - GCS.h:                1x
 - MAVLink_routing.cpp:  1x
 - MAVLink_routing.h:    1x
