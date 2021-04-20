@@ -459,13 +459,25 @@ void BP_Mount_STorM32_MAVLink::set_target_angles(void)
 
         // point mount to a GPS point given by the mission planner
         case MAV_MOUNT_MODE_GPS_POINT:
-            if (calc_angle_to_roi_target(_angle_ef_target_rad, true, true)) {
+            if (calc_angle_to_roi_target(_angle_ef_target_rad, true, true, true)) {
+                set_target = true;
+            }
+            break;
+
+        case MAV_MOUNT_MODE_HOME_LOCATION:
+            // constantly update the home location:
+            if (!AP::ahrs().home_is_set()) {
+                break;
+            }
+            _state._roi_target = AP::ahrs().get_home();
+            _state._roi_target_set = true;
+            if (calc_angle_to_roi_target(_angle_ef_target_rad, true, true, true)) {
                 set_target = true;
             }
             break;
 
         case MAV_MOUNT_MODE_SYSID_TARGET:
-            if (calc_angle_to_sysid_target(_angle_ef_target_rad, true, true)) {
+            if (calc_angle_to_sysid_target(_angle_ef_target_rad, true, true, true)) {
                 set_target = true;
             }
             break;
@@ -539,11 +551,20 @@ void BP_Mount_STorM32_MAVLink::set_target_angles_qshot(void)
             break;
 
         case MAV_QSHOT_MODE_POI_TARGETING:
-            if (!calc_angle_to_roi_target(_angle_ef_target_rad, true, true)) return;
+            if (!calc_angle_to_roi_target(_angle_ef_target_rad, true, true, true)) return;
             break;
 
         case MAV_QSHOT_MODE_SYSID_TARGETING:
-            if (!calc_angle_to_sysid_target(_angle_ef_target_rad, true, true)) return;
+            if (!calc_angle_to_sysid_target(_angle_ef_target_rad, true, true, true)) return;
+            break;
+
+/* not yet existing
+        case MAV_QSHOT_MODE_HOME_TARGETING:*/
+        case 9:
+            if (!AP::ahrs().home_is_set()) return;
+            _state._roi_target = AP::ahrs().get_home();
+            _state._roi_target_set = true;
+            if (!calc_angle_to_roi_target(_angle_ef_target_rad, true, true, true)) return;
             break;
 
         default:
