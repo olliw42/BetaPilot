@@ -19,8 +19,8 @@ In order to build BetaCopter 4.1, do this:
 - Follow the instructions in the ArduPilot wiki for installing the build environment.
 - Clone the BetaPilot fork and checkout the desired BetaPilot (BetaCopter/BetaPlane) branch.
 - Ensure that all git submodules are there. Run git submodule update --init --recursive.
-- Copy the two files common.xml and storm32_4ap.xml from the \mavlink_withmostbasicadditions folder to the ardupilot\modules\mavlink\message_definitions\v1.0 folder. This will overwrite files existing there. (This step is crucuial since ArduPilot does not support the latest MAVLink standard, which STorM32 needs).
-- If you are using cygwin on Win7, then copy Task.py to \modules\waf\waflib and toolchain.py to \Tools\ardupilotwaf.
+- Copy the three files minimal.xml, common.xml and storm32_4ap.xml in the folder \mavlink_withmostbasicadditions to the folder ardupilot\modules\mavlink\message_definitions\v1.0. This will overwrite files existing there. (This step is crucuial since ArduPilot does not support the latest MAVLink standard, which STorM32 needs).
+- If you are using cygwin, then copy Task.py to \modules\waf\waflib and toolchain.py to \Tools\ardupilotwaf.
 - Compile for your board following the instructions in the ArduPilot wiki for compiling.
 
 
