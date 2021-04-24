@@ -1,13 +1,13 @@
 #pragma once
 
-#define BETAPILOTVERSION " v050 rc01"
+#define BETAPILOTVERSION "v050.02"
 
 
 /*
 search for //OW to find all changes
 2021.04.18:
+ auto mode
  upgraded to Copter4.1.0-beta1
- need to shorten some names for avoiding cygwin limits
 
 2021.04.05:
  upgraded to Copter4.0.7
