@@ -1,21 +1,24 @@
-# BetaPilot 4.0
+# BetaPilot: BetaPlane 4.0
 
-This is the BetaPilot (inlcuding BetaCopter, BetaPlane) fork of the ArduPilot project.
+BetaPilot is a fork of the ArduPilot project.
 
-I use it for developing new features, mainly related to the [STorM32 gimbal controller](http://www.olliw.eu/2013/storm32bgc/) project.
+This here is the BetaPlane 4.0 branch of BetaPilot. It is based on Arduplane 4.0 stable.
+
+I use BetaPilot for developing new features, mainly related to the [STorM32 gimbal controller](http://www.olliw.eu/2013/storm32bgc/) project.
 
 
 ## Usage and Release Notes ##
 
-Please see http://www.olliw.eu/storm32bgc-wiki/Using_STorM32_with_ArduPilot for information on the usage and features of BetaPilot (BetaCopter/BetaPlane).
+
+Please see http://www.olliw.eu/storm32bgc-wiki/Using_STorM32_with_BetaPilot for information on the usage and features of BetaPilot (BetaCopter/BetaPlane).
 
 
 ## Build, Compile Notes ##
 
-In order to build BetaPilot 4.0 (BetaCopter/BetaPlane), do this:
+In order to build BetaPlane 4.0, do this:
 
 - Follow the instructions in the ArduPilot wiki for installing the build environment.
-- Clone this fork and checkout the desired BetaPilot (BetaCopter/BetaPlane) branch.
+- Clone the BetaPilot fork and checkout the desired BetaPilot (BetaCopter/BetaPlane) branch.
 - Ensure that all git submodules are there. Run git submodule update --init --recursive.
 - Copy the three files ardupilotmega.xml, common.xml, and storm32_4ap.xml from the \mavlink_withmostbasicadditions folder to the ardupilot\modules\mavlink\message_definitions\v1.0 folder. This will overwrite files existing there. (This step is crucuial since ArduPilot does not support the latest MAVLink standard, which STorM32 needs).
 - Compile for your board follow the instructions in the ArduPilot wiki for compiling.
