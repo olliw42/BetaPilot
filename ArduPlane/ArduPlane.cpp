@@ -167,6 +167,13 @@ void Plane::ahrs_update()
 
     // update inertial_nav for quadplane
     quadplane.inertial_nav.update();
+
+//OW
+#if MOUNT == ENABLED
+    // camera mount's fast update
+    camera_mount.update_fast();
+#endif
+//OWEND
 }
 
 /*
