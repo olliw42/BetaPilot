@@ -13,7 +13,8 @@
 #include <AP_Mount/STorM32_lib.h>
 
 
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //300000 //90000 //AP's startup has become quite slow, so give it plenty of time, set to 0 to disable
+#define USE_FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //set to 0 to disable
+#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  300000 //90000 //AP's startup has become quite slow, so give it plenty of time
 
 #define USE_GIMBAL_ZFLAGS  1
 
@@ -47,6 +48,9 @@ public:
     // pre arm checks
     bool pre_arm_checks(void) override;
 
+    // send banner
+    void send_banner(void) override;
+
 private:
     // internal variables
     bool _initialised;              // true once the driver has been fully initialised
@@ -58,7 +62,9 @@ private:
     uint8_t _compid;                // component id of gimbal
     mavlink_channel_t _chan;        // mavlink channel used to communicate with gimbal
 
+    void determine_auto_mode(const mavlink_message_t &msg);
     void find_gimbal(void);
+    void find_gimbal_oneonly(void);
 
     // rc channels
     bool is_rc_failsafe(void);
@@ -88,8 +94,8 @@ private:
 
     // storm32 gimbal protocol
     bool _use_protocolv2;
+    bool _use_gimbalmanager;
     bool _sendonly;
-    bool _for_gimbalmanager;
     bool _is_active;                // true when autopilot client is active
     struct {
         uint8_t mode;
@@ -120,6 +126,17 @@ private:
     };
     uint32_t _task_time_last;
     uint16_t _task_counter;
+
+    // automatic operation mode detection
+    #define AUTOMODE_CNT   10
+    enum AUTOMODEENUM {
+        AUTOMODE_UNDEFINED = 0,
+        AUTOMODE_V1,
+        AUTOMODE_GIMBALDEVICE,
+        AUTOMODE_GIMBALMANAGER,
+    };
+    uint8_t _auto_mode;
+    uint8_t _auto_mode_cntdown;
 
     // interface to STorM32_lib
     enum MAV_TUNNEL_PAYLOAD_TYPE_STORM32_ENUM {

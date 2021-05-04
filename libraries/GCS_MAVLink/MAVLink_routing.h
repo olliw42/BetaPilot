@@ -43,6 +43,9 @@ public:
       returns true if a match is found
      */
     bool find_by_mavtype(uint8_t mavtype, uint8_t &sysid, uint8_t &compid, mavlink_channel_t &channel);
+//OW
+    bool find_by_mavtype_and_compid(uint8_t mavtype, uint8_t compid, uint8_t &sysid, mavlink_channel_t &channel);
+//OWEND
 
 private:
     // a simple linear routing table. We don't expect to have a lot of

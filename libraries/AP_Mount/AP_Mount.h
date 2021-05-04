@@ -36,6 +36,8 @@ class AP_Mount_SToRM32;
 class AP_Mount_SToRM32_serial;
 //OW
 class BP_Mount_STorM32_MAVLink;
+#undef AP_MOUNT_MAX_INSTANCES
+#define AP_MOUNT_MAX_INSTANCES 1
 //OWEND
 
 /*
@@ -142,6 +144,9 @@ public:
 
     // pre arm checks
     bool pre_arm_checks(void);
+
+    // send banner
+    void send_banner(void);
 //OWEND
 
 protected:
