@@ -2,7 +2,7 @@
 
 BetaPilot is a fork of the ArduPilot project.
 
-This here is the BetaCopter branch of BetaPilot. It is based on ArduCopter stable.
+This here is the BetaCopter 4.0 branch of BetaPilot. It is based on ArduCopter 4.0 stable.
 
 I use BetaPilot for developing new features, mainly related to the [STorM32 gimbal controller](http://www.olliw.eu/2013/storm32bgc/) project.
 

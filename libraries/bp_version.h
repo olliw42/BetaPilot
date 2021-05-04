@@ -1,12 +1,14 @@
 #pragma once
 
-#define BETAPILOTVERSION " v049 rc05"
+#define BETAPILOTVERSION " v050 rc01"
 
 #define ISV41 0
 
 
 /*
 search for //OW to find all changes
+2021.05.04:
+ upgraded to include latest changes form BetaCopter4.1.0-beta1 v050
 2021.04.05:
  upgraded to Copter4.0.7
 _PARAMS
@@ -35,6 +37,7 @@ Libraries:
 - AP_Mount.cpp:         7x  (+1 comment, no change)
 - AP_Mount.h:           5x
 - GCS_Common.cpp:       11x
+- GCS_Param.cpp:        1x  (+1 comment, no change)
 - GCS.h:                1x
 - MAVLink_routing.cpp:  1x
 - MAVLink_routing.h:    1x

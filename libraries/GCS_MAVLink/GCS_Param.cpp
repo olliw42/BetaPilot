@@ -74,7 +74,7 @@ GCS_MAVLINK::queued_param_send()
     // * 1024 * 0.3 * 0.001 = 0.3
     //
     // we allow for 30% bw, which means
-    //   5700 bytes/s * 0.3 = 1710 bytes/s => 46 params/s, but we only get about 10 params/s !!!!
+    //   5700 bytes/s * 0.3 = 1710 bytes/s => 46 params/s, we indeed get about 50 params/s
 
     //this is a damed bug
     // if count = 0, the loop below is not traversed but _queued_parameter_send_time_ms is updated to tnow
