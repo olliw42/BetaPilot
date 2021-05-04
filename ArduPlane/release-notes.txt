@@ -1,3 +1,126 @@
+Release 4.0.9, 23rd February 2021
+---------------------------------
+
+This is a minor release with just bug fixes:
+
+ - added automatic backup/restore of parameters in case of FRAM
+   corruption for F7/H7 boards with 32k FRAM parameter storage
+
+ - fixed a bug in EKF2/EKF3 that could cause memory corruption if
+   external naviagtion sources (such as vision based position and
+   velocity data) is supplied before the EKF has initialised
+
+ - fixed a problem with low accuracy data from UAVCAN GPS modules when
+   GPS blending is enabled
+
+ - fixed an arming check failure with u-blox M9 based GPS modules
+
+ - added mRoControlZeroH7 support
+
+The main reason for this release is the parameter backup/restore. This
+has been an ongoing issue for quite some time. The symptom is an
+unexpected full parameter reset on boards using FRAM (also known as
+RAMTRON) for storage, particularly those using F7 or H7 based
+MCUs. The issue has most commonly been seen on the Hex CubeOrange
+board, but has been seen on boards from other vendors as well.
+
+The issue has been frustratingly difficult to reproduce. We did narrow
+down one cause last year which was a floating CS pin in the bootloader
+triggering corruption before ArduPilot starts. An updated bootloader
+reduced the occurrance of the issue a lot and we thought it was
+solved. Since then the problem has still happened a few times on
+boards that have had a bootloader update.
+
+This release avoids the issue by keeping a complete second copy of the
+parameters in the 2nd half of 32k FRAM devices. On boot we check the
+integrity of the primary parameter storage area via a simple signature
+check and if it has been corruptted then we restore from the backup
+area. We also raise an internal error named "params_restored". You
+will then need to reboot to clear the error, but your parameters will
+have been automatically recovered, avoiding the need to reload
+parameters and re-calibrate.
+
+If you get this internal error then it would be appreciated if you
+could send us the contents of your APM/STRG_BAK directory on the
+microSD card so we can analyse the corruption that happened and ensure
+that the fix covers all real cases.
+
+Happy flying!
+
+Release 4.0.8, 26th January 2021
+--------------------------------
+
+This is a minor release with just bug fixes:
+
+ - fixed a bug where an unhealthy airspeed sensor could be fused in EKF2/EKF3
+
+ - fixed FPort RSSI scaling
+
+ - fixed timestamp on RAW_IMU data to be 64 bit
+
+ - fixed an issue with BLHeli pass-thru on some ESCs
+
+Happy flying!
+
+Release 4.0.7, 3rd November 2020
+--------------------------------
+
+This is a minor release over 4.0.6. The changes are:
+
+ - enable telem3 on Durandal
+
+ - fixed SBUS output when scanning for FPort on IOMCU
+
+ - keep a backup of storage of last 100 boots
+
+ - fixed a race condition in handling UART DMA transmit
+
+ - Fixed F32Lightening board IMU fast sampling issue
+
+ - fixed issue with EKF2 and EKF3 with use of high accuracy GPS modules. This is important for anyone flying with a RTK GPS
+
+ - Fixed KakuteF7 DShot glitch issue
+
+ - Fixes issue with checking for valid RC input in ICE disable channel
+
+ - fixed an interrupt flood issue with any sensor that uses interrupt timing measurement, such as RPM sensors.
+
+ - Modified RM3100 driver to problem all 4 possible I2C addresses
+
+ - Fixed UDP RC input on Linux boards to accept up to 16 RC inputs on UDP
+
+The most critical fixes in the above list are:
+
+ISR Flood Issue
+---------------
+
+The ISR flood issue happens when a misbehaving external sensor (such
+as an RPM sensor for a petrol motor) starts providing pulses faster
+than the flight controller can process them. If this happens then the
+CPU can be overloaded in the interrupt handling for the sensor and
+stop flying the vehicle. The level of interrupt rate needed to cause
+this issue is around 500k interrupts per second, so to be safe we have
+added a limit of 100k interrupts per second. If a single interrupt
+source produces more than 10k interrupts in a single 0.1 second period
+then we disable that interrupt source, print a warning to the user and
+raise an internal error.
+
+SBUS Issue
+----------
+
+When the dedicated SBUS output port is used on boards with a IOMCU
+(such as Hex Cube or Holybro Duandal) then SBUS would be interrupted
+on loss of RC input. The problem was that the same UART was used for
+both SBUS output and RC input. When RC input is lost the RC protocol
+system starts searching for a receiver, which involves changing
+baudrate on that UART. That baudrate change affected SBUS output. This
+means if your aircraft depends on SBUS output to fly and you get an RC
+failsafe you risk losing RC outputs. The fix is to not change
+baudrates on that port when SBUS output is enabled (which means
+protocols like FPort can't be used when IOMCU SBUS output is used).
+
+Happy flying!
+
 Release 4.0.6, 7th September 2020
 ---------------------------------
 

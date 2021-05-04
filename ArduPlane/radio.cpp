@@ -179,8 +179,6 @@ void Plane::read_radio()
 {
     if (!rc().read_input()) {
         control_failsafe();
-        airspeed_nudge_cm = 0;
-        throttle_nudge = 0;
         return;
     }
 
@@ -204,6 +202,8 @@ void Plane::read_radio()
 
     control_failsafe();
 
+    airspeed_nudge_cm = 0;
+    throttle_nudge = 0;
     if (g.throttle_nudge && channel_throttle->get_control_in() > 50 && geofence_stickmixing()) {
         float nudge = (channel_throttle->get_control_in() - 50) * 0.02f;
         if (ahrs.airspeed_sensor_enabled()) {
@@ -211,9 +211,6 @@ void Plane::read_radio()
         } else {
             throttle_nudge = (aparm.throttle_max - aparm.throttle_cruise) * nudge;
         }
-    } else {
-        airspeed_nudge_cm = 0;
-        throttle_nudge = 0;
     }
 
     rudder_arm_disarm_check();
@@ -261,6 +258,9 @@ void Plane::control_failsafe()
         channel_roll->set_control_in(0);
         channel_pitch->set_control_in(0);
         channel_rudder->set_control_in(0);
+
+        airspeed_nudge_cm = 0;
+        throttle_nudge = 0;
 
         switch (control_mode->mode_number()) {
             case Mode::Number::QSTABILIZE:
