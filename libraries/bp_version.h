@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION "v049rc00"
+#define BETAPILOTVERSION "v050"
 
 #define ISV41 0
 
