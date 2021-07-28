@@ -1,23 +1,23 @@
 #pragma once
 
-#define BETAPILOTVERSION "v051.01"
+#define BETAPILOTVERSION "v051.02"
 
 
 /*
 search for //OW to find all changes
+
+2021.07.28:
+ upgraded to Copter4.1.0-beta6
 2021.04.18:
  auto mode
  upgraded to Copter4.1.0-beta1
-
 2021.04.05:
  upgraded to Copter4.0.7
 _PARAMS
-
 2021.02.05:
  upgraded to Copter4.0.6
  upgraded to storm32.xml v 4. Feb. 2021, 600xx ranges
  dual mount support if enabled
-
 2020.11.25:
  upgraded to Copter4.0.5
  upgraded to storm32.xml v 25. Nov. 2020
