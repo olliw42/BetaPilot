@@ -506,7 +506,8 @@ def _build_dynamic_sources(bld):
     if not bld.env.BOOTLOADER:
         bld(
             features='mavgen',
-            # //OW source='modules/mavlink/message_definitions/v1.0/ardupilotmega.xml',
+            # //OW 
+            #source='modules/mavlink/message_definitions/v1.0/ardupilotmega.xml',
             source='bp_mavlink/ardupilotmega.xml',
             # //OWEND
             output_dir='libraries/GCS_MAVLink/include/mavlink/v2.0/',
