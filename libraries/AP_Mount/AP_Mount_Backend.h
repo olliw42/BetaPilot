@@ -84,6 +84,8 @@ public:
     virtual void send_gimbal_report(const mavlink_channel_t chan) {}
 
 //OW
+    virtual void handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet);
+
     // handle msg - allows to process a msg from a gimbal
     virtual void handle_msg(const mavlink_message_t &msg) {}
 

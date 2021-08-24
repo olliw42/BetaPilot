@@ -154,4 +154,7 @@ private:
     void send_cmd_settargetlocation(void);
     bool _tx_hasspace(const size_t size);
     size_t _write(const uint8_t* buffer, size_t size);
+
+    //logging
+    bool _should_log;
 };
