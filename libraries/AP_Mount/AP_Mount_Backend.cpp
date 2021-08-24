@@ -242,39 +242,18 @@ bool AP_Mount_Backend::calc_angle_to_location(const struct Location &target, Vec
 }
 
 //OW
-void AP_Mount_Backend::handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet)
+bool AP_Mount_Backend::handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet)
 {
     if (_state._target_sysid != msg_sysid) {
-        return;
+        return false;
     }
     _state._target_sysid_location.lat = packet.lat;
     _state._target_sysid_location.lng = packet.lon;
     // global_position_int.alt is *UP*, so is location.
-    _state._target_sysid_location.set_alt_cm(packet.alt*0.1,
-                                             Location::AltFrame::ABSOLUTE);
+    _state._target_sysid_location.set_alt_cm(packet.alt*0.1, Location::AltFrame::ABSOLUTE);
     _state._target_sysid_location_set = true;
 
-    int32_t abs_alt, rel_alt;
-    if (!_state._target_sysid_location.get_alt_cm(Location::AltFrame::ABSOLUTE, abs_alt)) abs_alt = INT32_MAX;
-    if (!_state._target_sysid_location.get_alt_cm(Location::AltFrame::ABOVE_HOME, rel_alt)) rel_alt = INT32_MAX;
-
-    char logname[5] = "MTG0";
-    logname[3] += _instance;
-    AP::logger().Write(logname,
-             "TimeUS,SysId,Lat,Lon,Alt,RelAlt,LAlt,LAbsAlt,LRelAlt",  // labels
-             "s-DUmmmmm",    // units
-             "F---CCBBB",    // mults
-             "QBLLiiiii",    // fmt
-             AP_HAL::micros64(),
-             _state._target_sysid,
-             _state._target_sysid_location.lat,
-             _state._target_sysid_location.lng,
-             packet.alt,
-             packet.relative_alt,
-             _state._target_sysid_location.alt,
-             abs_alt,
-             rel_alt
-             );
+    return true;
 }
 //OWEND
 #endif // HAL_MOUNT_ENABLED

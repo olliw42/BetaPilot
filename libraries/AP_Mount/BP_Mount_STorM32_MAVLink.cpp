@@ -122,7 +122,14 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
         "FFF----------", \
         "QIIfffffffHBB"
 
+#define BP_LOG_MTG_HEADER \
+         "TimeUS,SysId,Lat,Lon,Alt,RelAlt,LAlt,LAbsAlt,LRelAlt", \
+         "s-DUmmmmm", \
+         "F---CCBBB", \
+         "QBLLiiiii"
+
 #define BP_LOG(m,h,...) if (_should_log){char logn[5] = m; logn[3] += _instance; AP::logger().Write(logn, h, AP_HAL::micros64(), __VA_ARGS__);}
+
 
 // constructor
 BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount::mount_state &state, uint8_t instance) :
@@ -220,17 +227,8 @@ void BP_Mount_STorM32_MAVLink::update_fast()
     // however, sadly, plane runs at 50 Hz only, so we update at 25 Hz and 12.5 Hz respectively
     // not soo nice
     // not clear what it means for STorM32Link, probably not too bad, maybe even good
-/*
-    #define PERIOD_US   20000 //20 ms = 50 Hz
 
-    uint32_t now_us = AP_HAL::micros();
-    if ((now_us - _task_time_last) >= PERIOD_US) {
-        // _task_time_last = now_us;
-        // this gives MUCH higher precision!!!:
-        _task_time_last += PERIOD_US;
-        if ((now_us - _task_time_last) > 5000) _task_time_last = now_us; //we got out of sync, so get back in sync
-*/
-    //why don't we use just a counter to decimate the 400 Hz loop to 50 Hz? ins't this the best we can do anyhow?
+    // we simply use a counter to decimate the 400 Hz loop to 50 Hz, is the best we can do anyhow
     // scheduler rate can be only 50 to 2000 Hz
     // uint16_t scheduler.get_loop_rate_hz(), uint32_t scheduler.get_loop_period_us()
     static uint16_t loop_rate_hz = 0;
@@ -884,13 +882,6 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_mount_control_to_gimbal(float roll_de
         0, 0, 0,  //param4 ~ param6 unused
         mode);
 
-/*    log_control(
-        0, //indicate DO_MOUNT_CONTROL
-        roll_deg, pitch_deg, yaw_deg,
-        0,
-        0,
-        _target.mode,
-        _qshot.mode);*/
     BP_LOG("MTC0", BP_LOG_MTC_HEADER,
         (uint8_t)0, //indicate DO_MOUNT_CONTROL
         roll_deg, pitch_deg, yaw_deg,
@@ -1001,12 +992,6 @@ ugly as we will have vehicle dependency here
         //float vx, float vy, float vz, uint32_t v_estimated_delay_us,
         //float feed_forward_angular_velocity_z, uint16_t estimator_status, uint8_t landed_state)
 
-/*    log_storm32link(
-        q[0],q[1],q[2],q[3],
-        vel.x, vel.y, vel.z,
-        _estimator_status,
-        _landed_state,
-        status);*/
     BP_LOG("MTL0", BP_LOG_MTL_HEADER,
 (uint32_t)(time32_fastloop_cur - time32_fastloop_last),
 (uint32_t)(AP_HAL::micros() - time32_fastloop_cur),
@@ -1043,13 +1028,6 @@ void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_device_control_to_gimbal(floa
         //const float *q,
         //float angular_velocity_x, float angular_velocity_y, float angular_velocity_z)
 
-/*    log_control(
-        1, //indicate GIMBAL_DEVICE_CONTROL
-        roll_deg, pitch_deg, yaw_deg,
-        flags,
-        0,
-        _target.mode,
-        _qshot.mode);*/
     BP_LOG("MTC0", BP_LOG_MTC_HEADER,
         (uint8_t)1, //indicate GIMBAL_DEVICE_CONTROL
         roll_deg, pitch_deg, yaw_deg,
@@ -1086,14 +1064,6 @@ void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control_to_gimbal(flo
         //uint8_t gimbal_id, uint8_t client, uint16_t device_flags, uint16_t manager_flags,
         //const float *q, float angular_velocity_x, float angular_velocity_y, float angular_velocity_z)
 
-/* for reasons I really don't understand, calling this as function doesn't work, it gets mixed up with MTH0
-    log_control(
-        2, //indicate GIMBAL_MANAGER_CONTROL
-        roll_deg, pitch_deg, yaw_deg,
-        device_flags,
-        manager_flags,
-        _target.mode,
-        _qshot.mode);*/
     BP_LOG("MTC0", BP_LOG_MTC_HEADER,
         (uint8_t)2, //indicate GIMBAL_MANAGER_CONTROL
         roll_deg, pitch_deg, yaw_deg,
@@ -1136,6 +1106,34 @@ void BP_Mount_STorM32_MAVLink::send_to_ground(uint32_t msgid, const char *pkt)
 
 
 //------------------------------------------------------
+// overwrites
+//------------------------------------------------------
+
+bool BP_Mount_STorM32_MAVLink::handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet)
+{
+    if (!AP_Mount_Backend::handle_global_position_int(msg_sysid, packet)) {
+        return false;
+    }
+
+    int32_t abs_alt, rel_alt;
+    if (!_state._target_sysid_location.get_alt_cm(Location::AltFrame::ABSOLUTE, abs_alt)) abs_alt = INT32_MAX;
+    if (!_state._target_sysid_location.get_alt_cm(Location::AltFrame::ABOVE_HOME, rel_alt)) rel_alt = INT32_MAX;
+
+    BP_LOG("MTG0", BP_LOG_MTG_HEADER,
+        _state._target_sysid,
+        _state._target_sysid_location.lat,
+        _state._target_sysid_location.lng,
+        packet.alt,
+        packet.relative_alt,
+        _state._target_sysid_location.alt,
+        abs_alt,
+        rel_alt);
+
+    return true;
+}
+
+
+//------------------------------------------------------
 // interfaces to STorM32_MAVLink_class
 //------------------------------------------------------
 
@@ -1148,7 +1146,7 @@ bool BP_Mount_STorM32_MAVLink::_tx_hasspace(const size_t size)
     // gladly, we can put it into one tunnel message
     // so check if it fits into the tunnel payload, and if there is space
 
-    if ( size > MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN ) return false;
+    if (size > MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN) return false;
 
     return HAVE_PAYLOAD_SPACE(_chan, TUNNEL);
 }
@@ -1167,7 +1165,7 @@ size_t BP_Mount_STorM32_MAVLink::_write(const uint8_t* buffer, size_t size)
     uint8_t payload[MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN+1];
     memset(payload, 0, sizeof(payload));
 
-    if( size > MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN ) size = MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN; //should not happen, but play it safe
+    if (size > MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN) size = MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN; //should not happen, but play it safe
     memcpy(payload, buffer, size);
 
     mavlink_msg_tunnel_send(
@@ -1249,14 +1247,8 @@ void BP_Mount_STorM32_MAVLink::send_cmd_storm32link_v2(void)
     t.vz = vel.z;
     storm32_finalize_STorM32LinkV2(&t);
 
-    _write( (uint8_t*)(&t), sizeof(tSTorM32LinkV2) );
+    _write((uint8_t*)(&t), sizeof(tSTorM32LinkV2));
 
-/*    log_storm32link(
-        quat.q1,quat.q2,quat.q3,quat.q4,
-        vel.x, vel.y, vel.z,
-        0,
-        0,
-        status);*/
     BP_LOG("MTL0", BP_LOG_MTL_HEADER,
 (uint32_t)(time32_fastloop_cur - time32_fastloop_last),
 (uint32_t)(AP_HAL::micros() - time32_fastloop_cur),
@@ -1291,7 +1283,7 @@ void BP_Mount_STorM32_MAVLink::send_cmd_sethomelocation(void)
     t.status = status;
     storm32_finalize_CmdSetHomeLocation(&t);
 
-    _write( (uint8_t*)(&t), sizeof(tSTorM32CmdSetHomeTargetLocation) );
+    _write((uint8_t*)(&t), sizeof(tSTorM32CmdSetHomeTargetLocation));
 }
 
 
@@ -1311,7 +1303,7 @@ void BP_Mount_STorM32_MAVLink::send_cmd_settargetlocation(void)
     t.status = status;
     storm32_finalize_CmdSetTargetLocation(&t);
 
-    _write( (uint8_t*)(&t), sizeof(tSTorM32CmdSetHomeTargetLocation) );
+    _write((uint8_t*)(&t), sizeof(tSTorM32CmdSetHomeTargetLocation));
 }
 
 
