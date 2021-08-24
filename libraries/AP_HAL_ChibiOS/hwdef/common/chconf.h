@@ -119,7 +119,10 @@ extern "C" {
  *          this value.
  */
 #ifndef CH_CFG_ST_TIMEDELTA
+//OW
 #define CH_CFG_ST_TIMEDELTA                 2
+//new#define CH_CFG_ST_TIMEDELTA                 10
+//OWEND
 #endif
 
 /*

@@ -12,6 +12,8 @@
 #include <AP_GPS/AP_GPS.h>
 #include <AP_Notify/AP_Notify.h>
 #include <AP_RTC/AP_RTC.h>
+#include <AP_Logger/AP_Logger.h>
+#include <AP_Scheduler/AP_Scheduler.h>
 #include "BP_Mount_STorM32_MAVLink.h"
 #include "bp_version.h"
 
@@ -98,6 +100,30 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
 // BP_Mount_STorM32_MAVLink, that's the main class
 //******************************************************
 
+// for reasons I really don't understand, calling them as log methods didn't work
+// the MTC got mixed up with MTH, i.e., no MTC0 was there but a MTH0 with the MTC params...
+// so done as macro in-place, which works fine
+
+#define BP_LOG_MTS_HEADER \
+        "TimeUS,Roll,Pitch,Yaw,YawAbs,YawAhrs,Flags,FailFlags", \
+        "s-------", \
+        "F-------", \
+        "QfffffHH"
+
+#define BP_LOG_MTC_HEADER \
+        "TimeUS,Type,Roll,Pitch,Yaw,DFlags,MFlags,TMode,QMode", \
+        "s--------", \
+        "F--------", \
+        "QBfffHHBB"
+
+#define BP_LOG_MTL_HEADER \
+        "TimeUS,dTs,dTl,q1,q2,q3,q4,vx,vy,vz,Est,Land,SL", \
+        "sss----nnn---", \
+        "FFF----------", \
+        "QIIfffffffHBB"
+
+#define BP_LOG(m,h,...) if (_should_log){char logn[5] = m; logn[3] += _instance; AP::logger().Write(logn, h, AP_HAL::micros64(), __VA_ARGS__);}
+
 // constructor
 BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount::mount_state &state, uint8_t instance) :
     AP_Mount_Backend(frontend, state, instance)
@@ -141,6 +167,8 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
         if (_state._zflags & 0x08) _sendonly = true;
     }
 #endif
+
+  _should_log = true; // for the moment we simply just always log
 }
 
 
@@ -176,6 +204,10 @@ void BP_Mount_STorM32_MAVLink::update()
 }
 
 
+uint32_t time32_fastloop_cur = 0;
+uint32_t time32_fastloop_last = 0;
+
+
 // 400 Hz loop
 void BP_Mount_STorM32_MAVLink::update_fast()
 {
@@ -187,8 +219,8 @@ void BP_Mount_STorM32_MAVLink::update_fast()
     // so that updates are at 20 Hz, especially for STorM32-Link
     // however, sadly, plane runs at 50 Hz only, so we update at 25 Hz and 12.5 Hz respectively
     // not soo nice
-    // not clear what it does for STorM32Link, probably not too bad, maybe even good
-
+    // not clear what it means for STorM32Link, probably not too bad, maybe even good
+/*
     #define PERIOD_US   20000 //20 ms = 50 Hz
 
     uint32_t now_us = AP_HAL::micros();
@@ -197,10 +229,28 @@ void BP_Mount_STorM32_MAVLink::update_fast()
         // this gives MUCH higher precision!!!:
         _task_time_last += PERIOD_US;
         if ((now_us - _task_time_last) > 5000) _task_time_last = now_us; //we got out of sync, so get back in sync
+*/
+    //why don't we use just a counter to decimate the 400 Hz loop to 50 Hz? ins't this the best we can do anyhow?
+    // scheduler rate can be only 50 to 2000 Hz
+    // uint16_t scheduler.get_loop_rate_hz(), uint32_t scheduler.get_loop_period_us()
+    static uint16_t loop_rate_hz = 0;
+    static uint8_t decimate_counter_max = 0;
+    static uint8_t decimate_counter = 0;
+    if (loop_rate_hz != AP::scheduler().get_loop_rate_hz()) { //let's cope with loop rate changes
+        loop_rate_hz = AP::scheduler().get_loop_rate_hz(); //only 50 to 2000 Hz allowed, thus can't be less than 50
+        decimate_counter_max = (uint16_t)(loop_rate_hz + 24)/50 - 1;
+        decimate_counter = 0;
+    }
+    if (decimate_counter) {
+        decimate_counter--; //count down
+    } else {
+        decimate_counter = decimate_counter_max;
 
         switch (_task_counter) {
             case TASK_SLOT0:
             case TASK_SLOT2:
+time32_fastloop_last = (time32_fastloop_last) ? time32_fastloop_cur : AP_HAL::micros();
+time32_fastloop_cur = AP_HAL::micros();
                 if (_use_protocolv2) {
                     send_autopilot_state_for_gimbal_device_to_gimbal();
                 } else {
@@ -209,7 +259,7 @@ void BP_Mount_STorM32_MAVLink::update_fast()
                 break;
 
             case TASK_SLOT1:
-                if (_sendonly) break; //don't send any control messages
+                if (_sendonly) break; //don't handle any control messages
                 if (_use_protocolv2) {
                     if (_qshot.mode == MAV_QSHOT_MODE_UNDEFINED) {
                         set_target_angles();
@@ -229,7 +279,7 @@ void BP_Mount_STorM32_MAVLink::update_fast()
         }
 
         _task_counter++;
-        if (_task_counter > TASK_SLOT3) _task_counter = 0;
+        if (_task_counter > TASK_SLOT3) _task_counter = TASK_SLOT0;
     }
 }
 
@@ -280,7 +330,9 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             switch (payload.command) {
                 case MAV_CMD_QSHOT_DO_CONFIGURE: //62020
                     uint8_t new_mode = payload.param1;
-                    if (new_mode == MAV_QSHOT_MODE_UNDEFINED) _qshot.mode = MAV_QSHOT_MODE_UNDEFINED;
+                    if (new_mode == MAV_QSHOT_MODE_UNDEFINED) {
+                        _qshot.mode = MAV_QSHOT_MODE_UNDEFINED;
+                    }
                     if (new_mode != _qshot.mode) {
                         _qshot.mode = UINT8_MAX; //mode change requested, so put it into hold, must be acknowledged by qshot status
                     }
@@ -292,7 +344,7 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             if (!_use_protocolv2) break;
             mavlink_qshot_status_t payload;
             mavlink_msg_qshot_status_decode( &msg, &payload );
-            _qshot.mode = payload.mode;
+            _qshot.mode = payload.mode; //also sets it if it was put on hold in the above
             }break;
     }
 
@@ -362,6 +414,19 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             _status.yaw_deg = degrees(yaw_rad);
             _status.yaw_deg_absolute = degrees(payload.yaw_absolute);
             send_mountstatus = true;
+
+            /*log_gimbal_device_status(
+                _status.roll_deg, _status.pitch_deg, _status.yaw_deg,
+                _status.yaw_deg_absolute,
+                degrees(AP::ahrs().yaw),
+                payload.flags,
+                payload.failure_flags);*/
+            BP_LOG("MTS0", BP_LOG_MTS_HEADER,
+                _status.roll_deg, _status.pitch_deg, _status.yaw_deg,
+                _status.yaw_deg_absolute,
+                degrees(AP::ahrs().yaw),
+                payload.flags,
+                payload.failure_flags);
             }break;
     }
 
@@ -483,7 +548,7 @@ void BP_Mount_STorM32_MAVLink::set_target_angles(void)
             break;
 
         case MAV_MOUNT_MODE_SYSID_TARGET:
-            if (calc_angle_to_sysid_target(_angle_ef_target_rad, true, true, true)) {
+            if (calc_angle_to_sysid_target(_angle_ef_target_rad, false, true, true)) {
                 set_target = true;
             }
             break;
@@ -529,6 +594,10 @@ void BP_Mount_STorM32_MAVLink::send_target_angles_to_gimbal(void)
 
 void BP_Mount_STorM32_MAVLink::set_target_angles_qshot(void)
 {
+    bool calc_tilt = false;
+    bool calc_pan = true;
+    bool relative_pan = true;
+
     switch (_qshot.mode) {
         case MAV_QSHOT_MODE_UNDEFINED:
             return;
@@ -557,18 +626,21 @@ void BP_Mount_STorM32_MAVLink::set_target_angles_qshot(void)
             break;
 
         case MAV_QSHOT_MODE_POI_TARGETING:
-            if (!calc_angle_to_roi_target(_angle_ef_target_rad, true, true, true)) return;
-            break;
-
-        case MAV_QSHOT_MODE_SYSID_TARGETING:
-            if (!calc_angle_to_sysid_target(_angle_ef_target_rad, true, true, true)) return;
+            //if (!calc_angle_to_roi_target(_angle_ef_target_rad, true, true, true)) return;
+            if (!calc_angle_to_roi_target(_angle_ef_target_rad, calc_tilt, calc_pan, relative_pan)) return;
             break;
 
         case MAV_QSHOT_MODE_HOME_TARGETING:
             if (!AP::ahrs().home_is_set()) return;
             _state._roi_target = AP::ahrs().get_home();
             _state._roi_target_set = true;
-            if (!calc_angle_to_roi_target(_angle_ef_target_rad, true, true, true)) return;
+            //if (!calc_angle_to_roi_target(_angle_ef_target_rad, true, true, true)) return;
+            if (!calc_angle_to_roi_target(_angle_ef_target_rad, calc_tilt, calc_pan, relative_pan)) return;
+            break;
+
+        case MAV_QSHOT_MODE_SYSID_TARGETING:
+            //if (!calc_angle_to_sysid_target(_angle_ef_target_rad, true, true, true)) return;
+            if (!calc_angle_to_sysid_target(_angle_ef_target_rad, calc_tilt, calc_pan, relative_pan)) return;
             break;
 
         default:
@@ -811,6 +883,21 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_mount_control_to_gimbal(float roll_de
         yaw_deg,
         0, 0, 0,  //param4 ~ param6 unused
         mode);
+
+/*    log_control(
+        0, //indicate DO_MOUNT_CONTROL
+        roll_deg, pitch_deg, yaw_deg,
+        0,
+        0,
+        _target.mode,
+        _qshot.mode);*/
+    BP_LOG("MTC0", BP_LOG_MTC_HEADER,
+        (uint8_t)0, //indicate DO_MOUNT_CONTROL
+        roll_deg, pitch_deg, yaw_deg,
+        (uint16_t)0,
+        (uint16_t)0,
+        _target.mode,
+        _qshot.mode);
 }
 
 
@@ -913,6 +1000,19 @@ ugly as we will have vehicle dependency here
         //uint64_t time_boot_us, const float *q, uint32_t q_estimated_delay_us,
         //float vx, float vy, float vz, uint32_t v_estimated_delay_us,
         //float feed_forward_angular_velocity_z, uint16_t estimator_status, uint8_t landed_state)
+
+/*    log_storm32link(
+        q[0],q[1],q[2],q[3],
+        vel.x, vel.y, vel.z,
+        _estimator_status,
+        _landed_state,
+        status);*/
+    BP_LOG("MTL0", BP_LOG_MTL_HEADER,
+        q[0],q[1],q[2],q[3],
+        vel.x, vel.y, vel.z,
+        _estimator_status,
+        _landed_state,
+        status);
 }
 
 
@@ -940,6 +1040,21 @@ void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_device_control_to_gimbal(floa
         //uint16_t flags,
         //const float *q,
         //float angular_velocity_x, float angular_velocity_y, float angular_velocity_z)
+
+/*    log_control(
+        1, //indicate GIMBAL_DEVICE_CONTROL
+        roll_deg, pitch_deg, yaw_deg,
+        flags,
+        0,
+        _target.mode,
+        _qshot.mode);*/
+    BP_LOG("MTC0", BP_LOG_MTC_HEADER,
+        (uint8_t)1, //indicate GIMBAL_DEVICE_CONTROL
+        roll_deg, pitch_deg, yaw_deg,
+        flags,
+        (uint16_t)0,
+        _target.mode,
+        _qshot.mode);
 }
 
 
@@ -968,6 +1083,22 @@ void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control_to_gimbal(flo
         NAN, NAN, NAN);
         //uint8_t gimbal_id, uint8_t client, uint16_t device_flags, uint16_t manager_flags,
         //const float *q, float angular_velocity_x, float angular_velocity_y, float angular_velocity_z)
+
+/* for reasons I really don't understand, calling this as function doesn't work, it gets mixed up with MTH0
+    log_control(
+        2, //indicate GIMBAL_MANAGER_CONTROL
+        roll_deg, pitch_deg, yaw_deg,
+        device_flags,
+        manager_flags,
+        _target.mode,
+        _qshot.mode);*/
+    BP_LOG("MTC0", BP_LOG_MTC_HEADER,
+        (uint8_t)2, //indicate GIMBAL_MANAGER_CONTROL
+        roll_deg, pitch_deg, yaw_deg,
+        device_flags,
+        manager_flags,
+        _target.mode,
+        _qshot.mode);
 }
 
 
@@ -1118,6 +1249,18 @@ void BP_Mount_STorM32_MAVLink::send_cmd_storm32link_v2(void)
 
     _write( (uint8_t*)(&t), sizeof(tSTorM32LinkV2) );
 
+/*    log_storm32link(
+        quat.q1,quat.q2,quat.q3,quat.q4,
+        vel.x, vel.y, vel.z,
+        0,
+        0,
+        status);*/
+    BP_LOG("MTL0", BP_LOG_MTL_HEADER,
+        quat.q1, quat.q2, quat.q3, quat.q4,
+        vel.x, vel.y, vel.z,
+        (uint16_t)0,
+        (uint8_t)0,
+        status);
 #endif
 }
 
@@ -1166,8 +1309,6 @@ void BP_Mount_STorM32_MAVLink::send_cmd_settargetlocation(void)
 
     _write( (uint8_t*)(&t), sizeof(tSTorM32CmdSetHomeTargetLocation) );
 }
-
-
 
 
 
