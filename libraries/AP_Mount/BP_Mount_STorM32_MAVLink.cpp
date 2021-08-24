@@ -548,7 +548,7 @@ void BP_Mount_STorM32_MAVLink::set_target_angles(void)
             break;
 
         case MAV_MOUNT_MODE_SYSID_TARGET:
-            if (calc_angle_to_sysid_target(_angle_ef_target_rad, false, true, true)) {
+            if (calc_angle_to_sysid_target(_angle_ef_target_rad, true, true, true)) {
                 set_target = true;
             }
             break;
@@ -1008,6 +1008,8 @@ ugly as we will have vehicle dependency here
         _landed_state,
         status);*/
     BP_LOG("MTL0", BP_LOG_MTL_HEADER,
+(uint32_t)(time32_fastloop_cur - time32_fastloop_last),
+(uint32_t)(AP_HAL::micros() - time32_fastloop_cur),
         q[0],q[1],q[2],q[3],
         vel.x, vel.y, vel.z,
         _estimator_status,
@@ -1256,6 +1258,8 @@ void BP_Mount_STorM32_MAVLink::send_cmd_storm32link_v2(void)
         0,
         status);*/
     BP_LOG("MTL0", BP_LOG_MTL_HEADER,
+(uint32_t)(time32_fastloop_cur - time32_fastloop_last),
+(uint32_t)(AP_HAL::micros() - time32_fastloop_cur),
         quat.q1, quat.q2, quat.q3, quat.q4,
         vel.x, vel.y, vel.z,
         (uint16_t)0,
