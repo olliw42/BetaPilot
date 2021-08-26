@@ -117,12 +117,19 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
         "QBfffHHBB"
 
 #define BP_LOG_MTL_HEADER \
-        "TimeUS,dTs,dTl,q1,q2,q3,q4,vx,vy,vz,Est,Land,SL", \
-        "sss----nnn---", \
-        "FFF----------", \
-        "QIIfffffffHBB"
+        "TimeUS,dTs,dTl,s,q1,q2,q3,q4,vx,vy,vz,Est,Land,SL", \
+        "sss-----nnn---", \
+        "FFF-----------", \
+        "QIIBfffffffHBB"
+
+#define BP_LOG_MTG_HEADER \
+         "TimeUS,SysId,Lat,Lon,Alt,RelAlt,LAlt,LAbsAlt,LRelAlt", \
+         "s-DUmmmmm", \
+         "F---CCBBB", \
+         "QBLLiiiii"
 
 #define BP_LOG(m,h,...) if (_should_log){char logn[5] = m; logn[3] += _instance; AP::logger().Write(logn, h, AP_HAL::micros64(), __VA_ARGS__);}
+
 
 // constructor
 BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount::mount_state &state, uint8_t instance) :
@@ -929,9 +936,9 @@ void BP_Mount_STorM32_MAVLink::send_system_time_to_gimbal(void)
 
 void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_to_gimbal(void)
 {
-    if (!HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE)) {
-        return;
-    }
+//XX    if (!HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE)) {
+//XX        return;
+//XX    }
 
     const AP_AHRS_NavEKF &ahrs = AP::ahrs_navekf();
     const AP_GPS &gps = AP::gps();
@@ -974,6 +981,9 @@ ugly as we will have vehicle dependency here
 */
     uint8_t _landed_state = MAV_LANDED_STATE_UNDEFINED;
 
+uint8_t send = 0;
+if (HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE)) {
+
     mavlink_msg_autopilot_state_for_gimbal_device_send(
         _chan,
         _sysid, _compid,
@@ -988,9 +998,12 @@ ugly as we will have vehicle dependency here
         //float vx, float vy, float vz, uint32_t v_estimated_delay_us,
         //float feed_forward_angular_velocity_z, uint16_t estimator_status, uint8_t landed_state)
 
+send = 1;
+}
     BP_LOG("MTL0", BP_LOG_MTL_HEADER,
 (uint32_t)(time32_fastloop_cur - time32_fastloop_last),
 (uint32_t)(AP_HAL::micros() - time32_fastloop_cur),
+send,
         q[0],q[1],q[2],q[3],
         vel.x, vel.y, vel.z,
         _estimator_status,
@@ -1102,6 +1115,34 @@ void BP_Mount_STorM32_MAVLink::send_to_ground(uint32_t msgid, const char *pkt)
 
 
 //------------------------------------------------------
+// overwrites
+//------------------------------------------------------
+
+bool BP_Mount_STorM32_MAVLink::handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet)
+{
+    if (!AP_Mount_Backend::handle_global_position_int(msg_sysid, packet)) {
+        return false;
+    }
+
+    int32_t abs_alt, rel_alt;
+    if (!_state._target_sysid_location.get_alt_cm(Location::AltFrame::ABSOLUTE, abs_alt)) abs_alt = INT32_MAX;
+    if (!_state._target_sysid_location.get_alt_cm(Location::AltFrame::ABOVE_HOME, rel_alt)) rel_alt = INT32_MAX;
+
+    BP_LOG("MTG0", BP_LOG_MTG_HEADER,
+        _state._target_sysid,
+        _state._target_sysid_location.lat,
+        _state._target_sysid_location.lng,
+        packet.alt,
+        packet.relative_alt,
+        _state._target_sysid_location.alt,
+        abs_alt,
+        rel_alt);
+
+    return true;
+}
+
+
+//------------------------------------------------------
 // interfaces to STorM32_MAVLink_class
 //------------------------------------------------------
 
@@ -1114,7 +1155,7 @@ bool BP_Mount_STorM32_MAVLink::_tx_hasspace(const size_t size)
     // gladly, we can put it into one tunnel message
     // so check if it fits into the tunnel payload, and if there is space
 
-    if ( size > MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN ) return false;
+    if (size > MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN) return false;
 
     return HAVE_PAYLOAD_SPACE(_chan, TUNNEL);
 }
@@ -1133,7 +1174,7 @@ size_t BP_Mount_STorM32_MAVLink::_write(const uint8_t* buffer, size_t size)
     uint8_t payload[MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN+1];
     memset(payload, 0, sizeof(payload));
 
-    if( size > MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN ) size = MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN; //should not happen, but play it safe
+    if (size > MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN) size = MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN; //should not happen, but play it safe
     memcpy(payload, buffer, size);
 
     mavlink_msg_tunnel_send(
@@ -1158,9 +1199,9 @@ void BP_Mount_STorM32_MAVLink::send_cmd_storm32link_v2(void)
 {
 #if AP_AHRS_NAVEKF_AVAILABLE
 
-    if (!_tx_hasspace(sizeof(tSTorM32LinkV2))) {
-        return;
-    }
+//XX    if (!_tx_hasspace(sizeof(tSTorM32LinkV2))) {
+//XX        return;
+//XX    }
 
     //from tests, 2018-02-10/11, I concluded
     // ahrs.healthy():     indicates Q is OK, ca. 15 secs, Q is doing a square dance before, so must wait for this
@@ -1215,11 +1256,17 @@ void BP_Mount_STorM32_MAVLink::send_cmd_storm32link_v2(void)
     t.vz = vel.z;
     storm32_finalize_STorM32LinkV2(&t);
 
-    _write( (uint8_t*)(&t), sizeof(tSTorM32LinkV2) );
+uint8_t send = 0;
+if (_tx_hasspace(sizeof(tSTorM32LinkV2))) {
 
+    _write((uint8_t*)(&t), sizeof(tSTorM32LinkV2));
+
+send = 1;
+}
     BP_LOG("MTL0", BP_LOG_MTL_HEADER,
 (uint32_t)(time32_fastloop_cur - time32_fastloop_last),
 (uint32_t)(AP_HAL::micros() - time32_fastloop_cur),
+send,
         quat.q1, quat.q2, quat.q3, quat.q4,
         vel.x, vel.y, vel.z,
         (uint16_t)0,
@@ -1251,7 +1298,7 @@ void BP_Mount_STorM32_MAVLink::send_cmd_sethomelocation(void)
     t.status = status;
     storm32_finalize_CmdSetHomeLocation(&t);
 
-    _write( (uint8_t*)(&t), sizeof(tSTorM32CmdSetHomeTargetLocation) );
+    _write((uint8_t*)(&t), sizeof(tSTorM32CmdSetHomeTargetLocation));
 }
 
 
@@ -1271,10 +1318,8 @@ void BP_Mount_STorM32_MAVLink::send_cmd_settargetlocation(void)
     t.status = status;
     storm32_finalize_CmdSetTargetLocation(&t);
 
-    _write( (uint8_t*)(&t), sizeof(tSTorM32CmdSetHomeTargetLocation) );
+    _write((uint8_t*)(&t), sizeof(tSTorM32CmdSetHomeTargetLocation));
 }
-
-
 
 
 

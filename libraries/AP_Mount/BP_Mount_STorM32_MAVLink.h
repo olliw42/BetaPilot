@@ -51,6 +51,8 @@ public:
     // send banner
     void send_banner(void) override;
 
+    bool handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet) override;
+
 private:
     // internal variables
     bool _initialised;              // true once the driver has been fully initialised
@@ -122,7 +124,6 @@ private:
         TASK_SLOT1,
         TASK_SLOT2,
         TASK_SLOT3,
-        TASK_SLOT4,
     };
     uint32_t _task_time_last;
     uint16_t _task_counter;
