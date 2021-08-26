@@ -413,12 +413,6 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             _status.yaw_deg_absolute = degrees(payload.yaw_absolute);
             send_mountstatus = true;
 
-            /*log_gimbal_device_status(
-                _status.roll_deg, _status.pitch_deg, _status.yaw_deg,
-                _status.yaw_deg_absolute,
-                degrees(AP::ahrs().yaw),
-                payload.flags,
-                payload.failure_flags);*/
             BP_LOG("MTS0", BP_LOG_MTS_HEADER,
                 _status.roll_deg, _status.pitch_deg, _status.yaw_deg,
                 _status.yaw_deg_absolute,
