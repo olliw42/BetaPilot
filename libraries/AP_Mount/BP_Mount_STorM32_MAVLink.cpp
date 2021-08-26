@@ -117,10 +117,10 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
         "QBfffHHBB"
 
 #define BP_LOG_MTL_HEADER \
-        "TimeUS,dTs,dTl,q1,q2,q3,q4,vx,vy,vz,Est,Land,SL", \
-        "sss----nnn---", \
-        "FFF----------", \
-        "QIIfffffffHBB"
+        "TimeUS,dTs,dTl,s,q1,q2,q3,q4,vx,vy,vz,Est,Land,SL", \
+        "sss-----nnn---", \
+        "FFF-----------", \
+        "QIIBfffffffHBB"
 
 #define BP_LOG_MTG_HEADER \
          "TimeUS,SysId,Lat,Lon,Alt,RelAlt,LAlt,LAbsAlt,LRelAlt", \
@@ -927,9 +927,9 @@ void BP_Mount_STorM32_MAVLink::send_system_time_to_gimbal(void)
 
 void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_to_gimbal(void)
 {
-    if (!HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE)) {
-        return;
-    }
+//XX    if (!HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE)) {
+//XX        return;
+//XX    }
 
     const AP_AHRS_NavEKF &ahrs = AP::ahrs_navekf();
     const AP_GPS &gps = AP::gps();
@@ -972,6 +972,9 @@ ugly as we will have vehicle dependency here
 */
     uint8_t _landed_state = MAV_LANDED_STATE_UNDEFINED;
 
+uint8_t send = 0;
+if (HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE)) {
+
     mavlink_msg_autopilot_state_for_gimbal_device_send(
         _chan,
         _sysid, _compid,
@@ -986,9 +989,12 @@ ugly as we will have vehicle dependency here
         //float vx, float vy, float vz, uint32_t v_estimated_delay_us,
         //float feed_forward_angular_velocity_z, uint16_t estimator_status, uint8_t landed_state)
 
+send = 1;
+}
     BP_LOG("MTL0", BP_LOG_MTL_HEADER,
 (uint32_t)(time32_fastloop_cur - time32_fastloop_last),
 (uint32_t)(AP_HAL::micros() - time32_fastloop_cur),
+send,
         q[0],q[1],q[2],q[3],
         vel.x, vel.y, vel.z,
         _estimator_status,
@@ -1184,9 +1190,9 @@ void BP_Mount_STorM32_MAVLink::send_cmd_storm32link_v2(void)
 {
 #if AP_AHRS_NAVEKF_AVAILABLE
 
-    if (!_tx_hasspace(sizeof(tSTorM32LinkV2))) {
-        return;
-    }
+//XX    if (!_tx_hasspace(sizeof(tSTorM32LinkV2))) {
+//XX        return;
+//XX    }
 
     //from tests, 2018-02-10/11, I concluded
     // ahrs.healthy():     indicates Q is OK, ca. 15 secs, Q is doing a square dance before, so must wait for this
@@ -1241,11 +1247,17 @@ void BP_Mount_STorM32_MAVLink::send_cmd_storm32link_v2(void)
     t.vz = vel.z;
     storm32_finalize_STorM32LinkV2(&t);
 
+uint8_t send = 0;
+if (_tx_hasspace(sizeof(tSTorM32LinkV2))) {
+
     _write((uint8_t*)(&t), sizeof(tSTorM32LinkV2));
 
+send = 1;
+}
     BP_LOG("MTL0", BP_LOG_MTL_HEADER,
 (uint32_t)(time32_fastloop_cur - time32_fastloop_last),
 (uint32_t)(AP_HAL::micros() - time32_fastloop_cur),
+send,
         quat.q1, quat.q2, quat.q3, quat.q4,
         vel.x, vel.y, vel.z,
         (uint16_t)0,
