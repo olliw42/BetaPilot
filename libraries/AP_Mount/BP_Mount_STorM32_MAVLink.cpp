@@ -52,8 +52,9 @@ void BP_Mount_STorM32_MAVLink::init(void)
 void BP_Mount_STorM32_MAVLink::update()
 {
     if (!_initialised) {
-        find_gimbal();
-        return;
+        if (GCS_MAVLINK::find_by_mavtype(MAV_TYPE_GIMBAL, _sysid, _compid, _chan)) {
+            _initialised = true;
+        }
     }
 }
 
@@ -88,46 +89,6 @@ void BP_Mount_STorM32_MAVLink::update_fast()
         _task_counter++;
         if (_task_counter > TASK_SLOT3) _task_counter = TASK_SLOT0;
     }
-}
-
-
-
-// is periodically called for as long as _initialised = false
-// that's the old method, we use it as fallback
-void BP_Mount_STorM32_MAVLink::find_gimbal_oneonly(void)
-{
-#if USE_FIND_GIMBAL_MAX_SEARCH_TIME_MS
-    uint32_t now_ms = AP_HAL::millis();
-
-    if (now_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
-        _initialised = false; //should be already false, but it can't hurt to ensure that
-        return;
-    }
-#else
-    const AP_Notify &notify = AP::notify();
-    if (notify.flags.armed) {
-        return; //do not search if armed, this implies we are going to fly soon
-    }
-#endif
-
-    //TODO: should we double check that gimbal sysid == autopilot sysid?
-    // yes, we should, but we don't bother, and consider it user error LOL
-
-    // find_by_mavtype()  finds a gimbal and also sets _sysid, _compid, _chan
-    if (GCS_MAVLINK::find_by_mavtype(MAV_TYPE_GIMBAL, _sysid, _compid, _chan)) {
-        _initialised = true;
-    }
-
-    //proposal:
-    // change this function to allow an index, like find_by_mavtype(index, ....)
-    // we then can call it repeatedly until it returns false, whereby increasing index as 0,1,...
-    // we then can define that the first mavlink mount is that with lowest ID, and so on
-}
-
-
-void BP_Mount_STorM32_MAVLink::find_gimbal(void)
-{
-    find_gimbal_oneonly();
 }
 
 

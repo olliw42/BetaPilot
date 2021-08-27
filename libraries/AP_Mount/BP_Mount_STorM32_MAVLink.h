@@ -47,10 +47,6 @@ private:
     uint8_t _compid;                // component id of gimbal
     mavlink_channel_t _chan;        // mavlink channel used to communicate with gimbal
 
-    void find_gimbal(void);
-    void find_gimbal_oneonly(void);
-
-
     void send_autopilot_state_for_gimbal_device_to_gimbal(void);
 
     // internal task variables
