@@ -22,11 +22,16 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
     _task_time_last = 0;
     _task_counter = TASK_SLOT0;
 
-    // we set things by hand
+    // we set this by hand
     _sysid = 1; // g.sysid_this_mav;
     _compid = MAV_COMP_ID_GIMBAL3;
     _chan = MAVLINK_COMM_1;
 }
+
+
+// we set this by hand
+#define USE_WINCH_STATUS  1
+#define USE_AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_FULL  1
 
 
 // init - performs any required initialisation for this instance
@@ -59,7 +64,11 @@ void BP_Mount_STorM32_MAVLink::update_fast()
         switch (_task_counter) {
             case TASK_SLOT0:
             case TASK_SLOT2:
+#if USE_WINCH_STATUS
+                send_winch_status_to_gimbal();
+#else
                 send_autopilot_state_for_gimbal_device_to_gimbal();
+#endif
                 break;
         }
 
@@ -75,6 +84,7 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_to_gimbal(
         return;
     }
 
+#if USE_AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_FULL
     const AP_AHRS_NavEKF &ahrs = AP::ahrs_navekf();
     const AP_GPS &gps = AP::gps();
     const AP_Notify &notify = AP::notify();
@@ -107,22 +117,10 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_to_gimbal(
 
     float yawrate = NAN; //0.0f;
 
-/* estimator status
-no support by ArduPilot whatsoever
-*/
     uint16_t _estimator_status = 0;
     if (status & STORM32LINK_FCSTATUS_AP_AHRSHEALTHY) _estimator_status |= ESTIMATOR_ATTITUDE;
     if (status & STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED) _estimator_status |= ESTIMATOR_VELOCITY_VERT;
 
-/* landed state
-GCS_Common.cpp: virtual MAV_LANDED_STATE landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
-Copter has it: GCS_MAVLINK_Copter::landed_state()
-Plane does NOT have it ????
-but it is protected, so we can't use it, need to redo it anyways
-we can identify this be MAV_LANDED_STATE_UNDEFINED as value
-we probably want to also take into account the arming state to mock something up
-ugly as we will have vehicle dependency here
-*/
     uint8_t _landed_state = MAV_LANDED_STATE_UNDEFINED;
 
     mavlink_msg_autopilot_state_for_gimbal_device_send(
@@ -135,10 +133,40 @@ ugly as we will have vehicle dependency here
         0, //uint32_t v_estimated_delay_us,
         yawrate,
         _estimator_status, _landed_state);
-        //uint64_t time_boot_us, const float *q, uint32_t q_estimated_delay_us,
-        //float vx, float vy, float vz, uint32_t v_estimated_delay_us,
-        //float feed_forward_angular_velocity_z, uint16_t estimator_status, uint8_t landed_state)
+
+#else
+
+    float q[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
+
+    mavlink_msg_autopilot_state_for_gimbal_device_send(
+        _chan,
+        _sysid, _compid,
+        AP_HAL::micros64(),
+        q,
+        0, //uint32_t q_estimated_delay_us,
+        0.0f, 0.0f, 0.0f,
+        0,
+        NAN,
+        0, 0);
+
+#endif
 }
 
 
+void BP_Mount_STorM32_MAVLink::send_winch_status_to_gimbal(void)
+{
+    if (!HAVE_PAYLOAD_SPACE(_chan, WINCH_STATUS)) {
+        return;
+    }
 
+    mavlink_msg_winch_status_send(
+        _chan,
+        AP_HAL::micros64(),
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6);
+}

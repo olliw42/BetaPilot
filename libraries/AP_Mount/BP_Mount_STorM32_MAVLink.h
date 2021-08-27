@@ -44,6 +44,7 @@ private:
     mavlink_channel_t _chan;        // mavlink channel used to communicate with gimbal
 
     void send_autopilot_state_for_gimbal_device_to_gimbal(void);
+    void send_winch_status_to_gimbal(void);
 
     // internal task variables
     enum TASKENUM {
