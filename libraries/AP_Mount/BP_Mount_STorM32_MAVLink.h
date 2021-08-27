@@ -9,8 +9,6 @@
 
 #include "AP_Mount.h"
 #include "AP_Mount_Backend.h"
-#include <GCS_MAVLink/include/mavlink/v2.0/checksum.h>
-#include <AP_Mount/STorM32_lib.h>
 
 
 #define USE_FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //set to 0 to disable

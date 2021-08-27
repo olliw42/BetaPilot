@@ -1,9 +1,6 @@
 #include "AP_Mount_Backend.h"
 #if HAL_MOUNT_ENABLED
 #include <AP_AHRS/AP_AHRS.h>
-//OW
-#include <AP_Logger/AP_Logger.h>
-//OWEND
 
 extern const AP_HAL::HAL& hal;
 
@@ -51,11 +48,9 @@ void AP_Mount_Backend::handle_mount_configure(const mavlink_mount_configure_t &p
 // process MOUNT_CONTROL messages received from GCS. deprecated.
 void AP_Mount_Backend::handle_mount_control(const mavlink_mount_control_t &packet)
 {
-//OW this is a serious bug!
     control((int32_t)packet.input_a, (int32_t)packet.input_b, (int32_t)packet.input_c, _state._mode);
 }
 
-//OW this is a serious bug!
 void AP_Mount_Backend::control(int32_t pitch_or_lat, int32_t roll_or_lon, int32_t yaw_or_alt, MAV_MOUNT_MODE mount_mode)
 {
     _frontend.set_mode(_instance, mount_mode);
@@ -69,7 +64,6 @@ void AP_Mount_Backend::control(int32_t pitch_or_lat, int32_t roll_or_lon, int32_
 
         // set earth frame target angles from mavlink message
         case MAV_MOUNT_MODE_MAVLINK_TARGETING:
-//OW THIS IS A SERIOUS BUG !!!
             set_angle_targets(roll_or_lon*0.01f, pitch_or_lat*0.01f, yaw_or_alt*0.01f);
             break;
 
@@ -213,47 +207,14 @@ bool AP_Mount_Backend::calc_angle_to_location(const struct Location &target, Vec
     }
 
     // pan calcs
-    float rad_z = 0.0f; //OW
     if (calc_pan) {
         // calc absolute heading and then onvert to vehicle relative yaw
         angles_to_target_rad.z = atan2f(GPS_vector_x, GPS_vector_y);
-        rad_z = angles_to_target_rad.z; //OW
         if (relative_pan) {
             angles_to_target_rad.z = wrap_PI(angles_to_target_rad.z - AP::ahrs().yaw);
         }
     }
-//OW
-    char logname[5] = "MTH0";
-    logname[3] += _instance;
-    AP::logger().Write(logname,
-            "TimeUS,X,Y,Z,Dist,Roll,Pitch,Yaw,YawRaw,YawAhrs",  // labels
-            "smmmm-----",    // units
-            "F00BB-----",    // mults
-            "Qfffffffff",    // fmt
-            AP_HAL::micros64(),
-            GPS_vector_x, GPS_vector_y, GPS_vector_z,
-            target_distance,
-            degrees(angles_to_target_rad.x), degrees(angles_to_target_rad.y), degrees(angles_to_target_rad.z),
-            degrees(rad_z),
-            degrees(AP::ahrs().yaw)
-            );
-//OWEND
     return true;
 }
 
-//OW
-bool AP_Mount_Backend::handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet)
-{
-    if (_state._target_sysid != msg_sysid) {
-        return false;
-    }
-    _state._target_sysid_location.lat = packet.lat;
-    _state._target_sysid_location.lng = packet.lon;
-    // global_position_int.alt is *UP*, so is location.
-    _state._target_sysid_location.set_alt_cm(packet.alt*0.1, Location::AltFrame::ABSOLUTE);
-    _state._target_sysid_location_set = true;
-
-    return true;
-}
-//OWEND
 #endif // HAL_MOUNT_ENABLED

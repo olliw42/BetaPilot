@@ -52,8 +52,6 @@ class AP_Mount_SToRM32;
 class AP_Mount_SToRM32_serial;
 //OW
 class BP_Mount_STorM32_MAVLink;
-#undef AP_MOUNT_MAX_INSTANCES
-#define AP_MOUNT_MAX_INSTANCES 1
 //OWEND
 
 /*
@@ -156,18 +154,6 @@ public:
     // parameter var table
     static const struct AP_Param::GroupInfo        var_info[];
 
-//OW
-    // this is somewhat different to handle_message() in that it catches all messages
-    // with significant work it potentially could be combined, but let's play it safe and not introduce side effects
-    void handle_msg(const mavlink_message_t &msg);
-
-    // pre arm checks
-    bool pre_arm_checks(void);
-
-    // send banner
-    void send_banner(void);
-//OWEND
-
 protected:
 
     static AP_Mount *_singleton;
@@ -207,9 +193,6 @@ protected:
 
         AP_Float        _roll_stb_lead;     // roll lead control gain
         AP_Float        _pitch_stb_lead;    // pitch lead control gain
-//OW
-        AP_Int8         _zflags;
-//OWEND
 
         MAV_MOUNT_MODE  _mode;              // current mode (see MAV_MOUNT_MODE enum)
         struct Location _roi_target;        // roi target location

@@ -1384,10 +1384,6 @@ void GCS_MAVLINK::packetReceived(const mavlink_status_t &status,
         // e.g. enforce-sysid says we shouldn't look at this packet
         return;
     }
-//OW
-    AP_Mount *mount = AP::mount();
-    if (mount != nullptr) mount->handle_msg(msg);
-//OWEND
     handleMessage(msg);
 }
 
@@ -1623,9 +1619,6 @@ void GCS_MAVLINK::send_rc_channels() const
     if (rssi != nullptr) {
         receiver_rssi = rssi->read_receiver_rssi_uint8();
     }
-//OW THIS IS A DAMMED BUG
-    if (rssi == nullptr) { receiver_rssi = UINT8_MAX; } else { if (receiver_rssi == UINT8_MAX) receiver_rssi = UINT8_MAX-1; }
-//OWEND
 
     uint16_t values[18] = {};
     rc().get_radio_in(values, ARRAY_SIZE(values));
@@ -1677,9 +1670,6 @@ void GCS_MAVLINK::send_rc_channels_raw() const
     if (rssi != nullptr) {
         receiver_rssi = rssi->read_receiver_rssi_uint8();
     }
-//OW THIS IS A DAMMED BUG
-    if (rssi == nullptr) { receiver_rssi = UINT8_MAX; } else { if (receiver_rssi == UINT8_MAX) receiver_rssi = UINT8_MAX-1; }
-//OWEND
     uint16_t values[8] = {};
     rc().get_radio_in(values, ARRAY_SIZE(values));
 
@@ -3651,10 +3641,6 @@ void GCS_MAVLINK::send_banner()
         }
     }
 
-//OW
-    AP_Mount *mount = AP::mount();
-    if (mount != nullptr) mount->send_banner();
-//OWEND
 }
 
 

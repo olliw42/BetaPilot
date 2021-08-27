@@ -6,16 +6,12 @@
 //*****************************************************
 
 #include <AP_HAL/AP_HAL.h>
-#include <RC_Channel/RC_Channel.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_GPS/AP_GPS.h>
 #include <AP_Notify/AP_Notify.h>
-#include <AP_RTC/AP_RTC.h>
-#include <AP_Logger/AP_Logger.h>
 #include <AP_Scheduler/AP_Scheduler.h>
 #include "BP_Mount_STorM32_MAVLink.h"
-#include "bp_version.h"
 
 extern const AP_HAL::HAL& hal;
 
@@ -147,6 +143,15 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_to_gimbal(
 
     nav_filter_status nav_status;
     ahrs.get_filter_status(nav_status);
+
+    enum STORM32LINKFCSTATUSAPENUM {
+      STORM32LINK_FCSTATUS_AP_AHRSHEALTHY       = 0x01, // => Q ok, ca. 15 secs
+      STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED   = 0x02, // => vz ok, ca. 32 secs
+      STORM32LINK_FCSTATUS_AP_GPS3DFIX          = 0x04, // ca 60-XXs
+      STORM32LINK_FCSTATUS_AP_NAVHORIZVEL       = 0x08, // comes very late, after GPS fix and few secs after position_ok()
+      STORM32LINK_FCSTATUS_AP_ARMED             = 0x40, // tells when copter is about to take-off
+      STORM32LINK_FCSTATUS_ISARDUPILOT          = 0x80, // permanently set if it's ArduPilot, so STorM32 knows about and can act accordingly
+    };
 
     uint8_t status = STORM32LINK_FCSTATUS_ISARDUPILOT;
     if (ahrs.healthy()) { status |= STORM32LINK_FCSTATUS_AP_AHRSHEALTHY; }
