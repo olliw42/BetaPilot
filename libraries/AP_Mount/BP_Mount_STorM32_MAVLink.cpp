@@ -5,20 +5,12 @@
 // uses 100% MAVlink + storm32.xml
 //*****************************************************
 
-#include <AP_HAL/AP_HAL.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_GPS/AP_GPS.h>
 #include <AP_Notify/AP_Notify.h>
 #include <AP_Scheduler/AP_Scheduler.h>
 #include "BP_Mount_STorM32_MAVLink.h"
-
-extern const AP_HAL::HAL& hal;
-
-
-//******************************************************
-// BP_Mount_STorM32_MAVLink, that's the main class
-//******************************************************
 
 
 // constructor
@@ -27,35 +19,20 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
 {
     _initialised = false;
 
-    _sysid = 0;
-    _compid = 0;
-    _chan = MAVLINK_COMM_0; //this is a dummy, will be set correctly by find_gimbal()
-
     _task_time_last = 0;
     _task_counter = TASK_SLOT0;
+
+    // we set things by hand
+    _sysid = 1; // g.sysid_this_mav;
+    _compid = MAV_COMP_ID_GIMBAL3;
+    _chan = MAVLINK_COMM_1;
 }
 
-
-//------------------------------------------------------
-// BP_Mount_STorM32_MAVLink interface functions, ArduPilot Mount
-//------------------------------------------------------
 
 // init - performs any required initialisation for this instance
 void BP_Mount_STorM32_MAVLink::init(void)
 {
-    _initialised = false; //should be false but can't hurt to ensure that
-}
-
-
-// update mount position - should be called periodically
-// this function must be defined in any case
-void BP_Mount_STorM32_MAVLink::update()
-{
-    if (!_initialised) {
-        if (GCS_MAVLINK::find_by_mavtype(MAV_TYPE_GIMBAL, _sysid, _compid, _chan)) {
-            _initialised = true;
-        }
-    }
+    _initialised = true;
 }
 
 

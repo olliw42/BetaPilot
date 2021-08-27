@@ -11,10 +11,6 @@
 #include "AP_Mount_Backend.h"
 
 
-#define USE_FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //set to 0 to disable
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  300000 //90000 //AP's startup has become quite slow, so give it plenty of time
-
-
 // that's the main class
 class BP_Mount_STorM32_MAVLink : public AP_Mount_Backend
 {
@@ -26,7 +22,7 @@ public:
     void init() override;
 
     // update mount position - should be called periodically
-    void update() override;
+    void update() override {};
     void update_fast() override;
 
     // has_pan_control - returns true if this mount can control it's pan (required for multicopters)
@@ -58,5 +54,4 @@ private:
     };
     uint32_t _task_time_last;
     uint16_t _task_counter;
-
 };
