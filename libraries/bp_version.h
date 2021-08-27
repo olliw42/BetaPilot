@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION "v051.6"
+#define BETAPILOTVERSION "v051.7"
 
 
 /*
