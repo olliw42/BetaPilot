@@ -976,14 +976,14 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_to_gimbal(
     nav_filter_status nav_status;
     ahrs.get_filter_status(nav_status);
 
-    uint8_t status = STORM32LINK_FCSTATUS_ISARDUPILOT;
+    uint8_t status = 0;
     if (ahrs.healthy()) { status |= STORM32LINK_FCSTATUS_AP_AHRSHEALTHY; }
     if (ahrs.initialised()) { status |= STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED; }
     if (nav_status.flags.horiz_vel) { status |= STORM32LINK_FCSTATUS_AP_NAVHORIZVEL; }
     if (gps.status() >= AP_GPS::GPS_OK_FIX_3D) { status |= STORM32LINK_FCSTATUS_AP_GPS3DFIX; }
     if (notify.flags.armed) { status |= STORM32LINK_FCSTATUS_AP_ARMED; }
     // for copter this is !ap.land_complete, for plane this is new_is_flying
-    if (notify.flags.flying) { status |= STORM32LINK_FCSTATUS_AP_IS_FLYING; }
+    if (notify.flags.flying) { status |= STORM32LINK_FCSTATUS_AP_ISFLYING; }
 
     Quaternion quat;
     quat.from_rotation_matrix(ahrs.get_rotation_body_to_ned());
@@ -1250,12 +1250,13 @@ void BP_Mount_STorM32_MAVLink::send_cmd_storm32link_v2(void)
     nav_filter_status nav_status;
     ahrs.get_filter_status(nav_status);
 
-    uint8_t status = STORM32LINK_FCSTATUS_ISARDUPILOT;
+    uint8_t status = 0;
     if (ahrs.healthy()) { status |= STORM32LINK_FCSTATUS_AP_AHRSHEALTHY; }
     if (ahrs.initialised()) { status |= STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED; }
     if (nav_status.flags.horiz_vel) { status |= STORM32LINK_FCSTATUS_AP_NAVHORIZVEL; }
     if (gps.status() >= AP_GPS::GPS_OK_FIX_3D) { status |= STORM32LINK_FCSTATUS_AP_GPS3DFIX; }
     if (notify.flags.armed) { status |= STORM32LINK_FCSTATUS_AP_ARMED; }
+    if (notify.flags.flying) { status |= STORM32LINK_FCSTATUS_AP_ISFLYING; }
 
     Quaternion quat;
     quat.from_rotation_matrix(ahrs.get_rotation_body_to_ned());
