@@ -1001,6 +1001,10 @@ public:
 
     uint8_t get_channel_from_port_number(uint8_t port_num);
 
+//OW
+    uint8_t get_landed_state(void) const { return num_gcs() > 0 ? chan(0)->landed_state() : MAV_LANDED_STATE_UNDEFINED; }
+//OWEND
+
 protected:
 
     virtual uint8_t sysid_this_mav() const = 0;

@@ -120,7 +120,8 @@ enum STORM32LINKFCSTATUSAPENUM {
   STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED   = 0x02, // => vz ok, ca. 32 secs
   STORM32LINK_FCSTATUS_AP_GPS3DFIX          = 0x04, // ca 60-XXs
   STORM32LINK_FCSTATUS_AP_NAVHORIZVEL       = 0x08, // comes very late, after GPS fix and few secs after position_ok()
-  STORM32LINK_FCSTATUS_AP_ARMED             = 0x40, // tells when copter is about to take-off
+  STORM32LINK_FCSTATUS_AP_IS_FLYING         = 0x20, // tells when copter is takeing-off
+  STORM32LINK_FCSTATUS_AP_ARMED             = 0x40, // tells when copter is about to take-off (= is armed and will soon take-off)
   STORM32LINK_FCSTATUS_ISARDUPILOT          = 0x80, // permanently set if it's ArduPilot, so STorM32 knows about and can act accordingly
 };
 

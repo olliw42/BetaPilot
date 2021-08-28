@@ -116,9 +116,14 @@ private:
     void send_system_time_to_gimbal(void);
 
     // helper
+    uint8_t landed_state(void);
     void send_to_ground(uint32_t msgid, const char *pkt);
 
     // internal task variables
+    uint16_t _loop_rate_hz;
+    uint8_t _decimate_counter_max;
+    uint8_t _decimate_counter;
+
     enum TASKENUM {
         TASK_SLOT0 = 0,
         TASK_SLOT1,
@@ -138,14 +143,6 @@ private:
     };
     uint8_t _auto_mode;
     uint8_t _auto_mode_cntdown;
-
-    // interface to STorM32_lib
-    enum MAV_TUNNEL_PAYLOAD_TYPE_STORM32_ENUM {
-        MAV_TUNNEL_PAYLOAD_TYPE_STORM32_CHANNEL1_IN = 200, //MAV_TUNNEL_PAYLOAD_TYPE_STORM32_RESERVED0
-        MAV_TUNNEL_PAYLOAD_TYPE_STORM32_CHANNEL1_OUT, //MAV_TUNNEL_PAYLOAD_TYPE_STORM32_RESERVED1
-        MAV_TUNNEL_PAYLOAD_TYPE_STORM32_CHANNEL2_IN, //MAV_TUNNEL_PAYLOAD_TYPE_STORM32_RESERVED2
-        MAV_TUNNEL_PAYLOAD_TYPE_STORM32_CHANNEL2_OUT, //MAV_TUNNEL_PAYLOAD_TYPE_STORM32_RESERVED3
-    };
 
     // STorM32_MAVLink_class
     uint8_t _storm32link_seq;
