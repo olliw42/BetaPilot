@@ -7,7 +7,11 @@
 #include "ap_version.h"
 
 #define THISFIRMWARE "ArduPlane V4.1.0beta6"
-
+//OW
+#undef THISFIRMWARE
+#include "../libraries/bp_version.h"
+#define THISFIRMWARE "ArduPlane V4.1.0beta6 " BETAPILOTVERSION " 2021029"
+//OWEND
 // the following line is parsed by the autotest scripts
 #define FIRMWARE_VERSION 4,1,0,FIRMWARE_VERSION_TYPE_BETA+5
 
