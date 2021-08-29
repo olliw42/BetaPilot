@@ -1,11 +1,13 @@
 #pragma once
 
-#define BETAPILOTVERSION "v051.5"
+#define BETAPILOTVERSION "v051.8"
 
 
 /*
 search for //OW to find all changes
 
+2021.08.28:
+ upgraded to Copter4.1.0-beta8
 2021.08.17:
  upgraded to Copter4.1.0-beta7
 2021.07.28:
@@ -85,16 +87,19 @@ ESTIMATOR_STATUS
 EXTENDED_SYS_STATE
 
 MAV_CMD_DO_SET_ROI
+MAV_CMD_DO_SET_SYSID
 MAV_CMD_DO_MOUNT_CONTROL
 
 BUTTON_CHANGE MANUAL_CONTROL
 
 MAV_CMD_DO_SEND_BANNER
-
+EXTENDED_SYS_STATE
 
 FOLLOW
 copter.g2.follow.handle_msg(msg);
 GCS_MAVLINK_Copter::handle_command_int_packet() -> MAV_CMD_DO_FOLLOW -> copter.g2.follow.set_target_sysid((uint8_t)packet.param1);
 GCS_MAVLINK_Copter::handle_command_long_packet()-> MAV_CMD_DO_FOLLOW -> copter.g2.follow.set_target_sysid((uint8_t)packet.param1);
 
+GLOBAL_POSITION_INT
+FOLLOW_TARGET
 */

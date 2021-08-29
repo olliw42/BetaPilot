@@ -117,10 +117,10 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
         "QBfffHHBB"
 
 #define BP_LOG_MTL_HEADER \
-        "TimeUS,dTs,dTl,s,q1,q2,q3,q4,vx,vy,vz,Est,Land,SL", \
-        "sss-----nnn---", \
-        "FFF-----------", \
-        "QIIBfffffffHBB"
+        "TimeUS,q1,q2,q3,q4,vx,vy,vz,YawRate,Est,Land,SL", \
+        "s----nnn----", \
+        "F-----------", \
+        "QffffffffHBB"
 
 #define BP_LOG_MTG_HEADER \
          "TimeUS,SysId,Lat,Lon,Alt,RelAlt,LAlt,LAbsAlt,LRelAlt", \
@@ -143,6 +143,9 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
     _compid = 0;
     _chan = MAVLINK_COMM_0; //this is a dummy, will be set correctly by find_gimbal()
 
+    _loop_rate_hz = 0;
+    _decimate_counter_max = 0;
+    _decimate_counter = 0;
     _task_time_last = 0;
     _task_counter = TASK_SLOT0;
     _send_system_time_last = 0;
@@ -211,11 +214,7 @@ void BP_Mount_STorM32_MAVLink::update()
 }
 
 
-uint32_t time32_fastloop_cur = 0;
-uint32_t time32_fastloop_last = 0;
-
-
-// 400 Hz loop
+// 400 Hz loop on copter, is 50 Hz on plane
 void BP_Mount_STorM32_MAVLink::update_fast()
 {
     if (!_initialised) {
@@ -224,40 +223,26 @@ void BP_Mount_STorM32_MAVLink::update_fast()
 
     // we originally wanted to slow down everything to 100 Hz,
     // so that updates are at 20 Hz, especially for STorM32-Link
-    // however, sadly, plane runs at 50 Hz only, so we update at 25 Hz and 12.5 Hz respectively
+    // however, sadly, plane runs at 50 Hz, so we update at 25 Hz and 12.5 Hz respectively
     // not soo nice
     // not clear what it means for STorM32Link, probably not too bad, maybe even good
-/*
-    #define PERIOD_US   20000 //20 ms = 50 Hz
-
-    uint32_t now_us = AP_HAL::micros();
-    if ((now_us - _task_time_last) >= PERIOD_US) {
-        // _task_time_last = now_us;
-        // this gives MUCH higher precision!!!:
-        _task_time_last += PERIOD_US;
-        if ((now_us - _task_time_last) > 5000) _task_time_last = now_us; //we got out of sync, so get back in sync
-*/
-    //why don't we use just a counter to decimate the 400 Hz loop to 50 Hz? ins't this the best we can do anyhow?
-    // scheduler rate can be only 50 to 2000 Hz
+    // we simply use a counter to decimate the 400 Hz loop to 50 Hz, is the best we can do anyhow
+    // scheduler rate can be only 50 to 2000 Hz, so no division by zero issue
     // uint16_t scheduler.get_loop_rate_hz(), uint32_t scheduler.get_loop_period_us()
-    static uint16_t loop_rate_hz = 0;
-    static uint8_t decimate_counter_max = 0;
-    static uint8_t decimate_counter = 0;
-    if (loop_rate_hz != AP::scheduler().get_loop_rate_hz()) { //let's cope with loop rate changes
-        loop_rate_hz = AP::scheduler().get_loop_rate_hz(); //only 50 to 2000 Hz allowed, thus can't be less than 50
-        decimate_counter_max = (uint16_t)(loop_rate_hz + 24)/50 - 1;
-        decimate_counter = 0;
+
+    if (_loop_rate_hz != AP::scheduler().get_loop_rate_hz()) { // let's cope with loop rate changes, should not happen during operation, so is mostly initialization
+        _loop_rate_hz = AP::scheduler().get_loop_rate_hz(); // only 50 to 2000 Hz allowed, thus can't be less than 50
+        _decimate_counter_max = (uint16_t)(_loop_rate_hz + 24)/50 - 1;
+        _decimate_counter = 0;
     }
-    if (decimate_counter) {
-        decimate_counter--; //count down
+    if (_decimate_counter) {
+        _decimate_counter--; //count down
     } else {
-        decimate_counter = decimate_counter_max;
+        _decimate_counter = _decimate_counter_max;
 
         switch (_task_counter) {
             case TASK_SLOT0:
             case TASK_SLOT2:
-time32_fastloop_last = (time32_fastloop_last) ? time32_fastloop_cur : AP_HAL::micros();
-time32_fastloop_cur = AP_HAL::micros();
                 if (_use_protocolv2) {
                     send_autopilot_state_for_gimbal_device_to_gimbal();
                 } else {
@@ -595,7 +580,7 @@ void BP_Mount_STorM32_MAVLink::send_target_angles_to_gimbal(void)
 
 void BP_Mount_STorM32_MAVLink::set_target_angles_qshot(void)
 {
-    bool calc_tilt = false;
+    bool calc_tilt = true;
     bool calc_pan = true;
     bool relative_pan = true;
 
@@ -704,6 +689,7 @@ uint16_t gimbaldevice_flags, gimbalmanager_flags;
 
         //TODO: we could claim supervisor and activity if the qshot mode suggests so
         // what is then about missions ???? should qshots include a mission mode??
+        // it's not bad as it is
 
         send_storm32_gimbal_manager_control_to_gimbal(_target.roll_deg, _target.pitch_deg, _target.yaw_deg, gimbaldevice_flags, gimbalmanager_flags);
     } else {
@@ -779,17 +765,12 @@ void BP_Mount_STorM32_MAVLink::find_gimbal_oneonly(void)
     //TODO: should we double check that gimbal sysid == autopilot sysid?
     // yes, we should, but we don't bother, and consider it user error LOL
 
-    // find_by_mavtype()  finds a gimbal and also sets _sysid, _compid, _chan
+    // find_by_mavtype() finds a gimbal and also sets _sysid, _compid, _chan
     if (GCS_MAVLINK::find_by_mavtype(MAV_TYPE_GIMBAL, _sysid, _compid, _chan)) {
         if (!_auto_mode) return;
         _initialised = true;
         send_banner();
     }
-
-    //proposal:
-    // change this function to allow an index, like find_by_mavtype(index, ....)
-    // we then can call it repeatedly until it returns false, whereby increasing index as 0,1,...
-    // we then can define that the first mavlink mount is that with lowest ID, and so on
 }
 
 
@@ -821,9 +802,6 @@ void BP_Mount_STorM32_MAVLink::find_gimbal(void)
         return; //do not search if armed, this implies we are going to fly soon
     }
 #endif
-
-    //TODO: should we double check that gimbal sysid == autopilot sysid?
-    // yes, we should, but we don't bother, and consider it user error LOL
 
     // we expect that instance 0 has compid = GIMBAL, instance 1 has compid = GIMBAL2, instance 2 has compid = GIMBAL3, ...
     uint8_t mycompid = (_instance == 0) ? MAV_COMP_ID_GIMBAL : MAV_COMP_ID_GIMBAL2 + (_instance-1);
@@ -934,11 +912,62 @@ void BP_Mount_STorM32_MAVLink::send_system_time_to_gimbal(void)
 }
 
 
+//landed state:
+// this is not nice, but kind of the best we can currently do
+// plane does not support landed state at all, so we do have vehicle dependency here
+// copter does support it, but has it private, and in GCS_MAVLINK
+// so we end up redoing it in vehicle dependent way, which however gives us also the change to do it better
+//
+//copter's landed state
+// copter.ap.land_complete <-> MAV_LANDED_STATE_ON_GROUND
+// copter.flightmode->is_landing() <-> MAV_LANDED_STATE_LANDING
+// copter.flightmode->is_taking_off() <-> MAV_LANDED_STATE_TAKEOFF
+// else <-> MAV_LANDED_STATE_IN_AIR
+//
+//from tests 2021-08-28, in loiter with takeoff/land button, I conclude
+// get_landed_state():
+// 1 = MAV_LANDED_STATE_ON_GROUND  until motors ramp up
+// 3 = MAV_LANDED_STATE_TAKEOFF  for a moment of gaining high
+// 2 = MAV_LANDED_STATE_IN_AIR  during flight
+// 4 = MAV_LANDED_STATE_LANDING  while landing
+// 1 = MAV_LANDED_STATE_ON_GROUND  after landing
+// seems to exactly do what it is supposed to do, but doesn't reflect 2 sec pre-takeoff
+// SL status:
+// 143 = 0x8F until ca 4 sec before take off
+// 207 = 0xCF = ARMED  for ca 4 sec until take off
+// 239 = 0xEF = 0x20 + ARMED  at lake off and in flight
+// 143 = 0x8F after landing
+// this thus allows to catch the 4 sec pre-takeoff period
+// ARMING_DELAY_SEC 2.0f, MOT_SAFE_TIME 1.0f per default
+//with taking-off & landing in loiter with sticks, we get the same behavior at takeoff,
+//but when landing the state 4 = MAV_LANDED_STATE_LANDING is not there, makes sense as we just drop to ground
+
+enum THISWOULDBEGREATTOHAVE {
+    MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF = 5,
+};
+
+uint8_t BP_Mount_STorM32_MAVLink::landed_state(void)
+{
+    uint8_t landed_state = gcs().get_landed_state();
+
+#if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
+//for copter we modify the landed states such as to reflect the 2 sec pre-take-off period
+// the way it is done leads to a PREPARING_FOR_TAKEOFF before takeoff, but also after landing!
+// we somehow would have to catch that it was flying before to suppress it
+// but we don't care, the gimbal will do inits when ON_GROUND, and apply them when transitioned to PREPARING_FOR_TAKEOFF
+    const AP_Notify &notify = AP::notify();
+    if (landed_state == MAV_LANDED_STATE_ON_GROUND && notify.flags.armed) landed_state = MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF;
+#endif
+
+    return landed_state;
+}
+
+
 void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_to_gimbal(void)
 {
-//XX    if (!HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE)) {
-//XX        return;
-//XX    }
+    if (!HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE)) {
+        return;
+    }
 
     const AP_AHRS_NavEKF &ahrs = AP::ahrs_navekf();
     const AP_GPS &gps = AP::gps();
@@ -947,12 +976,14 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_to_gimbal(
     nav_filter_status nav_status;
     ahrs.get_filter_status(nav_status);
 
-    uint8_t status = STORM32LINK_FCSTATUS_ISARDUPILOT;
+    uint8_t status = 0;
     if (ahrs.healthy()) { status |= STORM32LINK_FCSTATUS_AP_AHRSHEALTHY; }
     if (ahrs.initialised()) { status |= STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED; }
     if (nav_status.flags.horiz_vel) { status |= STORM32LINK_FCSTATUS_AP_NAVHORIZVEL; }
     if (gps.status() >= AP_GPS::GPS_OK_FIX_3D) { status |= STORM32LINK_FCSTATUS_AP_GPS3DFIX; }
     if (notify.flags.armed) { status |= STORM32LINK_FCSTATUS_AP_ARMED; }
+    // for copter this is !ap.land_complete, for plane this is new_is_flying
+    if (notify.flags.flying) { status |= STORM32LINK_FCSTATUS_AP_ISFLYING; }
 
     Quaternion quat;
     quat.from_rotation_matrix(ahrs.get_rotation_body_to_ned());
@@ -972,17 +1003,14 @@ no support by ArduPilot whatsoever
 
 /* landed state
 GCS_Common.cpp: virtual MAV_LANDED_STATE landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
-Copter has it: GCS_MAVLINK_Copter::landed_state()
 Plane does NOT have it ????
+Copter has it: GCS_MAVLINK_Copter::landed_state()
 but it is protected, so we can't use it, need to redo it anyways
 we can identify this be MAV_LANDED_STATE_UNDEFINED as value
 we probably want to also take into account the arming state to mock something up
 ugly as we will have vehicle dependency here
 */
-    uint8_t _landed_state = MAV_LANDED_STATE_UNDEFINED;
-
-uint8_t send = 0;
-if (HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE)) {
+    uint8_t _landed_state = landed_state();
 
     mavlink_msg_autopilot_state_for_gimbal_device_send(
         _chan,
@@ -998,14 +1026,10 @@ if (HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE)) {
         //float vx, float vy, float vz, uint32_t v_estimated_delay_us,
         //float feed_forward_angular_velocity_z, uint16_t estimator_status, uint8_t landed_state)
 
-send = 1;
-}
     BP_LOG("MTL0", BP_LOG_MTL_HEADER,
-(uint32_t)(time32_fastloop_cur - time32_fastloop_last),
-(uint32_t)(AP_HAL::micros() - time32_fastloop_cur),
-send,
         q[0],q[1],q[2],q[3],
         vel.x, vel.y, vel.z,
+        degrees(yawrate),
         _estimator_status,
         _landed_state,
         status);
@@ -1181,7 +1205,7 @@ size_t BP_Mount_STorM32_MAVLink::_write(const uint8_t* buffer, size_t size)
             _chan,
             _sysid,
             _compid,
-            MAV_TUNNEL_PAYLOAD_TYPE_STORM32_CHANNEL2_IN,
+            MAV_STORM32_TUNNEL_PAYLOAD_TYPE_STORM32_CH2_IN,
             size,
             payload);
 
@@ -1199,9 +1223,9 @@ void BP_Mount_STorM32_MAVLink::send_cmd_storm32link_v2(void)
 {
 #if AP_AHRS_NAVEKF_AVAILABLE
 
-//XX    if (!_tx_hasspace(sizeof(tSTorM32LinkV2))) {
-//XX        return;
-//XX    }
+    if (!_tx_hasspace(sizeof(tSTorM32LinkV2))) {
+        return;
+    }
 
     //from tests, 2018-02-10/11, I concluded
     // ahrs.healthy():     indicates Q is OK, ca. 15 secs, Q is doing a square dance before, so must wait for this
@@ -1226,12 +1250,13 @@ void BP_Mount_STorM32_MAVLink::send_cmd_storm32link_v2(void)
     nav_filter_status nav_status;
     ahrs.get_filter_status(nav_status);
 
-    uint8_t status = STORM32LINK_FCSTATUS_ISARDUPILOT;
+    uint8_t status = 0;
     if (ahrs.healthy()) { status |= STORM32LINK_FCSTATUS_AP_AHRSHEALTHY; }
     if (ahrs.initialised()) { status |= STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED; }
     if (nav_status.flags.horiz_vel) { status |= STORM32LINK_FCSTATUS_AP_NAVHORIZVEL; }
     if (gps.status() >= AP_GPS::GPS_OK_FIX_3D) { status |= STORM32LINK_FCSTATUS_AP_GPS3DFIX; }
     if (notify.flags.armed) { status |= STORM32LINK_FCSTATUS_AP_ARMED; }
+    if (notify.flags.flying) { status |= STORM32LINK_FCSTATUS_AP_ISFLYING; }
 
     Quaternion quat;
     quat.from_rotation_matrix(ahrs.get_rotation_body_to_ned());
@@ -1256,19 +1281,12 @@ void BP_Mount_STorM32_MAVLink::send_cmd_storm32link_v2(void)
     t.vz = vel.z;
     storm32_finalize_STorM32LinkV2(&t);
 
-uint8_t send = 0;
-if (_tx_hasspace(sizeof(tSTorM32LinkV2))) {
-
     _write((uint8_t*)(&t), sizeof(tSTorM32LinkV2));
 
-send = 1;
-}
     BP_LOG("MTL0", BP_LOG_MTL_HEADER,
-(uint32_t)(time32_fastloop_cur - time32_fastloop_last),
-(uint32_t)(AP_HAL::micros() - time32_fastloop_cur),
-send,
         quat.q1, quat.q2, quat.q3, quat.q4,
         vel.x, vel.y, vel.z,
+        (float)yawrate,
         (uint16_t)0,
         (uint8_t)0,
         status);

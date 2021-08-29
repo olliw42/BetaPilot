@@ -3,7 +3,7 @@
 // STorM32 C library to handle serial RC commands
 // http://www.olliw.eu/storm32bgc-wiki/Serial_Communication#Serial_Communication_-_RC_Commands
 // (c) olliw, www.olliw.eu, GPL3
-// version 17. Nov. 2020
+// version 28. Aug. 2021
 //*****************************************************
 //
 //*****************************************************
@@ -120,8 +120,8 @@ enum STORM32LINKFCSTATUSAPENUM {
   STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED   = 0x02, // => vz ok, ca. 32 secs
   STORM32LINK_FCSTATUS_AP_GPS3DFIX          = 0x04, // ca 60-XXs
   STORM32LINK_FCSTATUS_AP_NAVHORIZVEL       = 0x08, // comes very late, after GPS fix and few secs after position_ok()
-  STORM32LINK_FCSTATUS_AP_ARMED             = 0x40, // tells when copter is about to take-off
-  STORM32LINK_FCSTATUS_ISARDUPILOT          = 0x80, // permanently set if it's ArduPilot, so STorM32 knows about and can act accordingly
+  STORM32LINK_FCSTATUS_AP_ISFLYING          = 0x20, // tells when copter is taking-off
+  STORM32LINK_FCSTATUS_AP_ARMED             = 0x40, // tells when copter is about to take-off (= is armed and will soon take-off)
 };
 
 
