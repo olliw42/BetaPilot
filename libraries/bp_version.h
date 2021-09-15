@@ -6,6 +6,8 @@
 /*
 search for //OW to find all changes
 
+2021.09.15:
+ upgraded to Copter4.1.0-rc2
 2021.08.28:
  upgraded to Copter4.1.0-beta8
 2021.08.17:
