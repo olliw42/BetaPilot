@@ -37,6 +37,7 @@ extern const AP_HAL::HAL& hal;
  in all modes sends MOUNT_STATUS to ground, so that "old" things like MP etc can see the gimbal orientation
  listens to ATTITUDE, MOUNT_STATUS, STORM32_GIMBAL_DEVICE_STATUS to send out MOUNT_STATUS in sync
 
+64: send RC_CHANNELS with rchal, not rcchannels
 128: prearming check is enabled
 */
 /*
@@ -879,18 +880,33 @@ void BP_Mount_STorM32_MAVLink::send_rc_channels_to_gimbal(void)
         return;
     }
 
-    // rc().channel(ch)->get_radio_in() or RC_Channels::get_radio_in(ch) and so on
-    // is not the same as hal.rcin->read(), since radio_in can be set by override
-    #define RCIN(ch_index)  hal.rcin->read(ch_index)
+    if (_state._zflags & 0x40) {
+        // rc().channel(ch)->get_radio_in() or RC_Channels::get_radio_in(ch) and so on
+        // is not the same as hal.rcin->read(), since radio_in can be set by override
+        #define RCHALIN(ch_index)  hal.rcin->read(ch_index)
 
-    mavlink_msg_rc_channels_send(
-        _chan,
-        AP_HAL::millis(),
-        16,
-        RCIN(0), RCIN(1), RCIN(2), RCIN(3), RCIN(4), RCIN(5), RCIN(6), RCIN(7),
-        RCIN(8), RCIN(9), RCIN(10), RCIN(11), RCIN(12), RCIN(13), RCIN(14), RCIN(15),
-        0, 0,
-        0);
+        mavlink_msg_rc_channels_send(
+            _chan,
+            AP_HAL::millis(),
+            16,
+            RCHALIN(0), RCHALIN(1), RCHALIN(2), RCHALIN(3), RCHALIN(4), RCHALIN(5), RCHALIN(6), RCHALIN(7),
+            RCHALIN(8), RCHALIN(9), RCHALIN(10), RCHALIN(11), RCHALIN(12), RCHALIN(13), RCHALIN(14), RCHALIN(15),
+            0, 0,
+            0);
+
+    } else {
+        //#define RCIN(ch_index)  rc().channel(ch_index)->get_radio_in()
+        #define RCIN(ch_index)  RC_Channels::get_radio_in(ch_index)
+
+        mavlink_msg_rc_channels_send(
+            _chan,
+            AP_HAL::millis(),
+            16,
+            RCIN(0), RCIN(1), RCIN(2), RCIN(3), RCIN(4), RCIN(5), RCIN(6), RCIN(7),
+            RCIN(8), RCIN(9), RCIN(10), RCIN(11), RCIN(12), RCIN(13), RCIN(14), RCIN(15),
+            0, 0,
+            0);
+    }
 }
 
 
