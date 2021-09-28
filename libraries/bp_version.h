@@ -1,11 +1,13 @@
 #pragma once
 
-#define BETAPILOTVERSION "v051.9"
+#define BETAPILOTVERSION "v051.10"
 
 
 /*
 search for //OW to find all changes
 
+2021.09.28:
+ upgraded to Copter4.1.0-rc3
 2021.09.15:
  upgraded to Copter4.1.0-rc2
 2021.08.28:
