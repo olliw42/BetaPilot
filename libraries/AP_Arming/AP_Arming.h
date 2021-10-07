@@ -176,6 +176,10 @@ protected:
 
     bool generator_checks(bool report) const;
 
+//OW
+    bool mount_checks(bool report);
+//OWEND
+
     virtual bool system_checks(bool report);
 
     bool can_checks(bool report);
