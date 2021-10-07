@@ -7,11 +7,10 @@
 #include "ap_version.h"
 
 #define THISFIRMWARE "ArduCopter V4.1.0-rc4"
-
 //OW
 #undef THISFIRMWARE
 #include "../libraries/bp_version.h"
-#define THISFIRMWARE "BetaCopter V4.1.0-rc3 " BETAPILOTVERSION " 20210928"
+#define THISFIRMWARE "BetaCopter V4.1.0-rc4 " BETAPILOTVERSION " 20211007"
 //OWEND
 
 // the following line is parsed by the autotest scripts
