@@ -613,10 +613,9 @@ MAV_RESULT AP_Mount::handle_command_do_mount_control(const mavlink_command_long_
     // send message to backend
 //OW this is a serious bug!
 // however, a proper solution needs quite some changes, someone really screwed this up heavily
-// so we just fake it here, this "works" since param1-param3 are always angles
-//    _backends[_primary]->control(packet.param1, packet.param2, packet.param3, (MAV_MOUNT_MODE) packet.param7);
-    _backends[_primary]->control(100.0f*packet.param1, 100.0f*packet.param2, 100.0f*packet.param3, (MAV_MOUNT_MODE) packet.param7);
-//OWEND
+// it should be _backends[_primary]->control(100.0f*packet.param1, 100.0f*packet.param2, 100.0f*packet.param3, (MAV_MOUNT_MODE) packet.param7);
+// we do not apply this correction, even if annoying, to not spoil other implementations
+    _backends[_primary]->control(packet.param1, packet.param2, packet.param3, (MAV_MOUNT_MODE) packet.param7);
 
     return MAV_RESULT_ACCEPTED;
 }

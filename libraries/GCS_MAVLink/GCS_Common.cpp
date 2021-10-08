@@ -1623,7 +1623,7 @@ void GCS_MAVLINK::send_rc_channels() const
     if (rssi != nullptr) {
         receiver_rssi = rssi->read_receiver_rssi_uint8();
     }
-//OW THIS IS A DAMMED BUG
+//OW THIS IS A DAMMED BUG, comment: a correction is in master, but sadly not in stable
     if (rssi == nullptr) { receiver_rssi = UINT8_MAX; } else { if (receiver_rssi == UINT8_MAX) receiver_rssi = UINT8_MAX-1; }
 //OWEND
 
@@ -1677,7 +1677,7 @@ void GCS_MAVLINK::send_rc_channels_raw() const
     if (rssi != nullptr) {
         receiver_rssi = rssi->read_receiver_rssi_uint8();
     }
-//OW THIS IS A DAMMED BUG
+//OW THIS IS A DAMMED BUG, comment: a correction is in master, but sadly not in stable
     if (rssi == nullptr) { receiver_rssi = UINT8_MAX; } else { if (receiver_rssi == UINT8_MAX) receiver_rssi = UINT8_MAX-1; }
 //OWEND
     uint16_t values[8] = {};

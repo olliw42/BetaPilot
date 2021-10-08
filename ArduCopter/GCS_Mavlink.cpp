@@ -718,9 +718,9 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_mount(const mavlink_command_long_t
             copter.flightmode->auto_yaw.set_yaw_angle_rate(
 //OW this is a serious bug!
 // however, a proper solution needs quite some changes, someone really screwed this up heavily
-//we don't correct it however since we use CMD_DO_MOUNT_CONTROL
-//                (float)packet.param3 * 0.01f,
-                (float)packet.param3,
+// it should be (float)packet.param3
+// we do not apply this correction, even if annoying, to not spoil other implementations
+                (float)packet.param3 * 0.01f,
                 0.0f);
         }
         break;
@@ -990,7 +990,7 @@ void GCS_MAVLINK_Copter::handle_mount_message(const mavlink_message_t &msg)
             copter.flightmode->auto_yaw.set_yaw_angle_rate(
 //OW this is a serious bug!
 // however, a proper solution needs quite some changes, someone really screwed this up heavily
-//we don't correct it however since we useCMD_DO_MOUNT_CONTROL
+// we do not correct it however since this message is deprecated and we do use CMD_DO_MOUNT_CONTROL
                 mavlink_msg_mount_control_get_input_c(&msg) * 0.01f,
                 0.0f);
 
