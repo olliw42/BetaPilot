@@ -152,3 +152,8 @@ define BOARD_PWM_COUNT_DEFAULT 4
 ROMFS_WILDCARD libraries/AP_OSD/fonts/font*.bin
 
 define HAL_MOUNT_ENABLED 0
+
+//OW
+undef HAL_MOUNT_ENABLED
+define HAL_MOUNT_ENABLED 1
+//OWEND
