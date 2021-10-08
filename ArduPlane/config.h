@@ -37,8 +37,6 @@
 // Optical flow sensor support
 //
 
-#define OPTFLOW DISABLED //OW
-
 #ifndef OPTFLOW
 #if AP_AHRS_NAVEKF_AVAILABLE
  # define OPTFLOW ENABLED

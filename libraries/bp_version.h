@@ -1,30 +1,17 @@
 #pragma once
 
-#define BETAPILOTVERSION "v051.11"
-
+#define BETAPILOTVERSION "v052"
 
 /*
 search for //OW to find all changes
 
-2021.10.07:
- upgraded to Copter4.1.0-rc4
+2021.10.08: v052
+ upgraded to Copter4.1.0
  upgraded to storm32.xml v 6. Okt. 2021
-2021.09.28:
- upgraded to Copter4.1.0-rc3
-2021.09.15:
- upgraded to Copter4.1.0-rc2
-2021.08.28:
- upgraded to Copter4.1.0-beta8
-2021.08.17:
- upgraded to Copter4.1.0-beta7
-2021.07.28:
- upgraded to Copter4.1.0-beta6
-2021.04.18:
- auto mode
- upgraded to Copter4.1.0-beta1
+ more zflags, logging
+ reverted correction to CMD_DO_MOUNT_CONTROL bug, it's not going to change and it's acknowledged
 2021.04.05:
  upgraded to Copter4.0.7
-_PARAMS
 2021.02.05:
  upgraded to Copter4.0.6
  upgraded to storm32.xml v 4. Feb. 2021, 600xx ranges
@@ -42,12 +29,12 @@ ArduCopter specific
 Libraries:
 - AP_Arming.cpp:        3x
 - AP_Arming.h:          1x
-- AP_Mount_Backend.cpp: (+ 3 comments, no changes)
+- AP_Mount_Backend.cpp: 5x  (+ 3 comments, no changes)
 - AP_Mount_Backend.h:   1x  (+1 comment, no change)
-- AP_Mount.cpp:         7x  (+1 comment, no change)
-- AP_Mount.h:           5x
-- GCS_Common.cpp:       9x (was 11x ????)
-- GCS.h:                1x
+- AP_Mount.cpp:         9x  (+1 comment, no change)
+- AP_Mount.h:           6x
+- GCS_Common.cpp:       9x
+- GCS.h:                2x
 - MAVLink_routing.cpp:  1x
 - MAVLink_routing.h:    1x
 

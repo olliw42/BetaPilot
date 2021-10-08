@@ -21,23 +21,23 @@ extern const AP_HAL::HAL& hal;
 
 
 /*
-0:  auto mode
-2:  old behavior
-    sends DO_MOUNT_CONTROL, DO_MOUNT_CONFIGURE for control, sends tunnel for STorM32-Link
-4:  like 2, but using new gimbal device messages
-    sends GIMBAL_DEVICE_SET_ATTITUDE for control, sends AUTOPILOT_STATE_FOR_GIMBAL for STorM32-Link
-    this mode is for testing, not for regular use
-1:  for gimbal manager
-    mode for when there is a gimbal manager in the system, e.g. on the STorM32 or on the companion
-    uses STorM32 gimbal manager messages
-8:  only streaming
-    only sends out RC_CHANNLES, AUTOPILOT_STATE_FOR_GIMBAL for STorM32-Link
-    this mode could in principle be replaced by asking for the streams, but since AP isn't streaming reliably we don't
+0:   auto mode
+2:   old behavior
+     sends DO_MOUNT_CONTROL, DO_MOUNT_CONFIGURE for control, sends tunnel for STorM32-Link
+4:   like 2, but using new gimbal device messages
+     sends GIMBAL_DEVICE_SET_ATTITUDE for control, sends AUTOPILOT_STATE_FOR_GIMBAL for STorM32-Link
+     this mode is for testing, not for regular use
+1:   for gimbal manager
+     mode for when there is a gimbal manager in the system, e.g. on the STorM32 or on the companion
+     uses STorM32 gimbal manager messages
+8:   only streaming
+     only sends out RC_CHANNLES, AUTOPILOT_STATE_FOR_GIMBAL for STorM32-Link
+     this mode could in principle be replaced by asking for the streams, but since AP isn't streaming reliably we don't
 
  in all modes sends MOUNT_STATUS to ground, so that "old" things like MP etc can see the gimbal orientation
  listens to ATTITUDE, MOUNT_STATUS, STORM32_GIMBAL_DEVICE_STATUS to send out MOUNT_STATUS in sync
 
-64: send RC_CHANNELS with rchal, not rcchannels
+64:  send RC_CHANNELS with rchal, not rcchannels
 128: prearming check is enabled
 */
 /*
@@ -105,31 +105,37 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
 // the MTC got mixed up with MTH, i.e., no MTC0 was there but a MTH0 with the MTC params...
 // so done as macro in-place, which works fine
 
+// log incoming MAVLINK_MSG_ID_STORM32_GIMBAL_DEVICE_STATUS
 #define BP_LOG_MTS_HEADER \
         "TimeUS,Roll,Pitch,Yaw,YawAbs,YawAhrs,Flags,FailFlags", \
         "s-------", \
         "F-------", \
         "QfffffHH"
 
+// log outgoing MAV_CMD_DO_MOUNT_CONTROL, STORM32_GIMBAL_DEVICE_CONTROL, STORM32_GIMBAL_MANAGER_CONTROL
 #define BP_LOG_MTC_HEADER \
         "TimeUS,Type,Roll,Pitch,Yaw,DFlags,MFlags,TMode,QMode", \
         "s--------", \
         "F--------", \
         "QBfffHHBB"
 
+// log outgoing AUTOPILOT_STATE_FOR_GIMBAL_DEVICE, TUNNEL:tSTorM32LinkV2
 #define BP_LOG_MTL_HEADER \
         "TimeUS,q1,q2,q3,q4,vx,vy,vz,YawRate,Est,Land,SL", \
         "s----nnn----", \
         "F-----------", \
         "QffffffffHBB"
 
+// log incoming handle_global_position_int
 #define BP_LOG_MTG_HEADER \
          "TimeUS,SysId,Lat,Lon,Alt,RelAlt,LAlt,LAbsAlt,LRelAlt", \
          "s-DUmmmmm", \
          "F---CCBBB", \
          "QBLLiiiii"
 
-#define BP_LOG(m,h,...) if (_should_log){char logn[5] = m; logn[3] += _instance; AP::logger().Write(logn, h, AP_HAL::micros64(), __VA_ARGS__);}
+// also calc_angle_to_location() is logged, with MTH0
+
+#define BP_LOG(m,h,...)  if(_should_log){char logn[5] = m; logn[3] += _instance; AP::logger().Write(logn, h, AP_HAL::micros64(), __VA_ARGS__);}
 
 
 // constructor
@@ -138,13 +144,13 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
 {
     _initialised = false;
     _armed = false;
-    _prearmchecks_ok = true; //true means it is not checked
+    _prearmchecks_ok = true; // true means they are not checked
 
     _sysid = 0;
     _compid = 0;
-    _chan = MAVLINK_COMM_0; //this is a dummy, will be set correctly by find_gimbal()
+    _chan = MAVLINK_COMM_0; // this is a dummy, will be set correctly by find_gimbal()
 
-    _loop_rate_hz = 0;
+    _loop_rate_hz = 0; // this will trigger that loop rate stuff is initialized in update_fast()
     _decimate_counter_max = 0;
     _decimate_counter = 0;
     _task_time_last = 0;
@@ -154,24 +160,24 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
     _target.mode_last = MAV_MOUNT_MODE_RC_TARGETING;
 
     _is_active = true;
-    _qshot.mode = MAV_QSHOT_MODE_UNDEFINED; //as soon as it becomes defined, we switch to using qshot instead of mount_mode
+    _qshot.mode = MAV_QSHOT_MODE_UNDEFINED; // as soon as it becomes defined, we switch to using qshot instead of mount_mode
     _qshot.mode_last = _qshot.mode;
 
     if (_state._zflags & 0x80) {
-        _prearmchecks_ok = false; //enable prearm checks
+        _prearmchecks_ok = false; // enable prearm checks
     }
 
-    _auto_mode = AUTOMODE_UNDEFINED; // determines operation mode
-    _auto_mode_cntdown = AUTOMODE_CNT;
+    _auto_mode = AUTOMODE_UNDEFINED; // determines gimbal operation mode
+    _auto_mode_cntdown = GIMBAL_AUTOMODE_TIMEOUT_CNT;
 
-    _use_protocolv2 = false;    //true means mode 1, 4, 8
-    _use_gimbalmanager = false; //true means mode 1
-    _sendonly = false;          //true means mode 8
+    _use_protocolv2 = false;    // true means 1, 4, 8
+    _use_gimbalmanager = false; // true means 1
+    _sendonly = false;          // true means 8
 #if USE_GIMBAL_ZFLAGS
-    if (_state._zflags & 0x02) { //2 set
+    if (_state._zflags & 0x02) { // 2 is set
         _auto_mode = AUTOMODE_V1;
     } else
-    if (_state._zflags & 0x0F) { //1, 4, 8 set
+    if (_state._zflags & 0x0F) { // 1, 4, 8 is set
         _use_protocolv2 = true;
         _auto_mode = AUTOMODE_GIMBALDEVICE;
         if (_state._zflags & 0x01) { _use_gimbalmanager = true; _auto_mode = AUTOMODE_GIMBALMANAGER; }
@@ -190,7 +196,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
 // init - performs any required initialisation for this instance
 void BP_Mount_STorM32_MAVLink::init(void)
 {
-    _initialised = false; //should be false but can't hurt to ensure that
+    _initialised = false; // should be false but can't hurt to ensure that
 
     // set mode to default value set by user via parameter
     set_mode((enum MAV_MOUNT_MODE)_state._default_mode.get());
@@ -208,7 +214,7 @@ void BP_Mount_STorM32_MAVLink::update()
 
     uint32_t now_ms = AP_HAL::millis();
 
-    if ((now_ms - _send_system_time_last) >= 5000) { //every 5 sec is really plenty
+    if ((now_ms - _send_system_time_last) >= 5000) { // every 5 sec is really plenty
         _send_system_time_last = now_ms;
         send_system_time_to_gimbal();
     }
@@ -225,19 +231,19 @@ void BP_Mount_STorM32_MAVLink::update_fast()
     // we originally wanted to slow down everything to 100 Hz,
     // so that updates are at 20 Hz, especially for STorM32-Link
     // however, sadly, plane runs at 50 Hz, so we update at 25 Hz and 12.5 Hz respectively
-    // not soo nice
+    // not soo nice, but
     // not clear what it means for STorM32Link, probably not too bad, maybe even good
     // we simply use a counter to decimate the 400 Hz loop to 50 Hz, is the best we can do anyhow
     // scheduler rate can be only 50 to 2000 Hz, so no division by zero issue
     // uint16_t scheduler.get_loop_rate_hz(), uint32_t scheduler.get_loop_period_us()
 
     if (_loop_rate_hz != AP::scheduler().get_loop_rate_hz()) { // let's cope with loop rate changes, should not happen during operation, so is mostly initialization
-        _loop_rate_hz = AP::scheduler().get_loop_rate_hz(); // only 50 to 2000 Hz allowed, thus can't be less than 50
+        _loop_rate_hz = AP::scheduler().get_loop_rate_hz(); // only 50 to 2000 Hz allowed, thus can't be less than 50 or zero
         _decimate_counter_max = (uint16_t)(_loop_rate_hz + 24)/50 - 1;
         _decimate_counter = 0;
     }
     if (_decimate_counter) {
-        _decimate_counter--; //count down
+        _decimate_counter--; // count down
     } else {
         _decimate_counter = _decimate_counter_max;
 
@@ -247,12 +253,12 @@ void BP_Mount_STorM32_MAVLink::update_fast()
                 if (_use_protocolv2) {
                     send_autopilot_state_for_gimbal_device_to_gimbal();
                 } else {
-                    send_cmd_storm32link_v2(); //2.3ms
+                    send_cmd_storm32link_v2(); // 2.3ms @ 115200bps
                 }
                 break;
 
             case TASK_SLOT1:
-                if (_sendonly) break; //don't handle any control messages
+                if (_sendonly) break; // don't handle any control messages
                 if (_use_protocolv2) {
                     if (_qshot.mode == MAV_QSHOT_MODE_UNDEFINED) {
                         set_target_angles();
@@ -304,7 +310,7 @@ void BP_Mount_STorM32_MAVLink::send_mount_status(mavlink_channel_t chan)
 void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
 {
     if (!_initialised) {
-        if (!_auto_mode) determine_auto_mode(msg);
+        if (_auto_mode == AUTOMODE_UNDEFINED) determine_auto_mode(msg);
         return;
     }
 
@@ -316,48 +322,48 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
     // listen to the qshot commands and messages to track changes in qshot mode
     // this may come from anywhere
     switch (msg.msgid) {
-        case MAVLINK_MSG_ID_COMMAND_LONG: { //76
+        case MAVLINK_MSG_ID_COMMAND_LONG: { // 76
             if (!_use_protocolv2) break;
             mavlink_command_long_t payload;
             mavlink_msg_command_long_decode( &msg, &payload );
             switch (payload.command) {
-                case MAV_CMD_QSHOT_DO_CONFIGURE: //62020
+                case MAV_CMD_QSHOT_DO_CONFIGURE: // 62020
                     uint8_t new_mode = payload.param1;
                     if (new_mode == MAV_QSHOT_MODE_UNDEFINED) {
                         _qshot.mode = MAV_QSHOT_MODE_UNDEFINED;
                     }
                     if (new_mode != _qshot.mode) {
-                        _qshot.mode = UINT8_MAX; //mode change requested, so put it into hold, must be acknowledged by qshot status
+                        _qshot.mode = UINT8_MAX; // mode change requested, so put it into hold, must be acknowledged by qshot status
                     }
                 break;
             }
             }break;
 
-        case MAVLINK_MSG_ID_QSHOT_STATUS: { //60020
+        case MAVLINK_MSG_ID_QSHOT_STATUS: { // 60020
             if (!_use_protocolv2) break;
             mavlink_qshot_status_t payload;
             mavlink_msg_qshot_status_decode( &msg, &payload );
-            _qshot.mode = payload.mode; //also sets it if it was put on hold in the above
+            _qshot.mode = payload.mode; // also sets it if it was put on hold in the above
             }break;
     }
 
-    if (msg.sysid != _sysid) { //this msg is not from our system
+    if (msg.sysid != _sysid) { // this msg is not from our system
         return;
     }
 
     // we use STORM32_GIMBAL_MANGER_STATUS to detect the activity of the autopilot client
     switch (msg.msgid) {
-        case MAVLINK_MSG_ID_STORM32_GIMBAL_MANAGER_STATUS: { //60011
+        case MAVLINK_MSG_ID_STORM32_GIMBAL_MANAGER_STATUS: { // 60011
             if (!_use_protocolv2) break;
             mavlink_storm32_gimbal_manager_status_t payload;
             mavlink_msg_storm32_gimbal_manager_status_decode( &msg, &payload );
-            if (payload.gimbal_id != _compid) break; //not for our gimbal device
-            _is_active = (payload.supervisor != MAV_STORM32_GIMBAL_MANAGER_CLIENT_NONE) && //a client is supervisor
-                         (payload.manager_flags & MAV_STORM32_GIMBAL_MANAGER_FLAGS_CLIENT_AUTOPILOT_ACTIVE); //and autopilot is active
+            if (payload.gimbal_id != _compid) break; // not for our gimbal device
+            _is_active = (payload.supervisor != MAV_STORM32_GIMBAL_MANAGER_CLIENT_NONE) && // a client is supervisor
+                         (payload.manager_flags & MAV_STORM32_GIMBAL_MANAGER_FLAGS_CLIENT_AUTOPILOT_ACTIVE); // and autopilot is active
             }break;
     }
 
-    if (msg.compid != _compid) { //this msg is not from our gimbal
+    if (msg.compid != _compid) { // this msg is not from our gimbal
         return;
     }
 
@@ -368,12 +374,12 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             mavlink_heartbeat_t payload;
             mavlink_msg_heartbeat_decode( &msg, &payload );
             _armed = is_normal_state(payload.custom_mode & 0xFF);
-            if( !(payload.custom_mode & 0x80000000) ){ //we don't follow all changes, but just toggle it to true once
+            if( !(payload.custom_mode & 0x80000000) ){ // we don't follow all changes, but just toggle it to true once
                 _prearmchecks_ok = true;
             }
             }break;
 
-        case MAVLINK_MSG_ID_ATTITUDE: { //30
+        case MAVLINK_MSG_ID_ATTITUDE: { // 30
             mavlink_attitude_t payload;
             mavlink_msg_attitude_decode( &msg, &payload );
             _status.pitch_deg = degrees(payload.pitch);
@@ -383,10 +389,10 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             send_mountstatus = true;
             }break;
 
-        case MAVLINK_MSG_ID_MOUNT_STATUS: { //158
+        case MAVLINK_MSG_ID_MOUNT_STATUS: { // 158
             mavlink_mount_status_t payload;
             mavlink_msg_mount_status_decode( &msg, &payload );
-            if (payload.target_system) break; //trigger sending of MOUNT_STATUS to ground only if target_sysid = 0
+            if (payload.target_system) break; // trigger sending of MOUNT_STATUS to ground only if target_sysid = 0
             _status.pitch_deg = (float)payload.pointing_a * 0.01f;
             _status.roll_deg = (float)payload.pointing_b * 0.01f;
             _status.yaw_deg = (float)payload.pointing_c * 0.01f;
@@ -394,11 +400,11 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             send_mountstatus = true;
             }break;
 
-        case MAVLINK_MSG_ID_STORM32_GIMBAL_DEVICE_STATUS: { //60001
+        case MAVLINK_MSG_ID_STORM32_GIMBAL_DEVICE_STATUS: { // 60001
             if (!_use_protocolv2) break;
             mavlink_storm32_gimbal_device_status_t payload;
             mavlink_msg_storm32_gimbal_device_status_decode( &msg, &payload );
-            if (payload.target_system) break; //trigger sending of MOUNT_STATUS to ground only if target_sysid = 0
+            if (payload.target_system) break; // trigger sending of MOUNT_STATUS to ground only if target_sysid = 0
             float roll_rad, pitch_rad, yaw_rad;
             GimbalQuaternion quat(payload.q[0], payload.q[1], payload.q[2], payload.q[3]);
             quat.to_gimbal_euler(roll_rad, pitch_rad, yaw_rad);
@@ -500,7 +506,7 @@ void BP_Mount_STorM32_MAVLink::set_target_angles(void)
             // NO!!: clear yaw since if has_pan == false the copter will yaw, so we must not forward it to the gimbal
             if (!has_pan_control()) {
                 const Vector3f &target = _state._neutral_angles.get();
-                _angle_ef_target_rad.z = radians(target.z); //clear yaw
+                _angle_ef_target_rad.z = radians(target.z); // clear yaw
             }
             set_target = true;
             break;
@@ -552,14 +558,14 @@ void BP_Mount_STorM32_MAVLink::set_target_angles(void)
         _target.pitch_deg = degrees(_angle_ef_target_rad.y);
         _target.yaw_deg = degrees(_angle_ef_target_rad.z);
     }
-    _target.mode = mount_mode; //we always set the mode
+    _target.mode = mount_mode; // we always set the mode
 }
 
 
 // is called by task loop at 25 Hz
 void BP_Mount_STorM32_MAVLink::send_target_angles_to_gimbal(void)
 {
-    if (_target.mode <= MAV_MOUNT_MODE_NEUTRAL) { //RETRACT and NEUTRAL
+    if (_target.mode <= MAV_MOUNT_MODE_NEUTRAL) { // RETRACT and NEUTRAL
         // only do it once, i.e., when mode has just changed
         if (_target.mode_last != _target.mode) {
             _target.mode_last = _target.mode;
@@ -678,10 +684,10 @@ uint16_t gimbaldevice_flags, gimbalmanager_flags;
     }
     _qshot.mode_last = _qshot.mode;
 
-    if (_qshot.mode == UINT8_MAX) return; //is in hold, don't send
+    if (_qshot.mode == UINT8_MAX) return; // is in hold, don't send
 
     if (_use_gimbalmanager) {
-        // when not active, don't send, this reduces traffic
+        // don't send when autopilot client is inactive, this reduces traffic
         if (!_is_active) return;
 
         // we play it simple and do not attempt to claim supervision nor activity
@@ -706,28 +712,28 @@ uint16_t gimbaldevice_flags, gimbalmanager_flags;
 // handle_msg - allows to process messages received from gimbal
 void BP_Mount_STorM32_MAVLink::determine_auto_mode(const mavlink_message_t &msg)
 {
-    if (msg.sysid != _sysid || msg.compid != _compid) { //this msg is not from our gimbal
+    if (msg.sysid != _sysid || msg.compid != _compid) { // this msg is not from our gimbal
         return;
     }
 
     switch (msg.msgid) {
-        case MAVLINK_MSG_ID_ATTITUDE: { //30
+        case MAVLINK_MSG_ID_ATTITUDE: { // 30
             _auto_mode = AUTOMODE_V1;
-            _auto_mode_cntdown = AUTOMODE_CNT;
+            _auto_mode_cntdown = GIMBAL_AUTOMODE_TIMEOUT_CNT;
             _use_protocolv2 = false;
             _use_gimbalmanager = false;
             }break;
 
-        case MAVLINK_MSG_ID_MOUNT_STATUS: { //158
+        case MAVLINK_MSG_ID_MOUNT_STATUS: { // 158
             _auto_mode = AUTOMODE_V1;
-            _auto_mode_cntdown = AUTOMODE_CNT;
+            _auto_mode_cntdown = GIMBAL_AUTOMODE_TIMEOUT_CNT;
             _use_protocolv2 = false;
             _use_gimbalmanager = false;
             }break;
 
-        case MAVLINK_MSG_ID_STORM32_GIMBAL_DEVICE_STATUS: { //60001
-            if (_auto_mode == AUTOMODE_GIMBALMANAGER) break;
-            if (_auto_mode_cntdown) _auto_mode_cntdown--;
+        case MAVLINK_MSG_ID_STORM32_GIMBAL_DEVICE_STATUS: { // 60001
+            if (_auto_mode == AUTOMODE_GIMBALMANAGER) break; // do not allow switching from gimbal manager mode to gimbal device mode
+            if (_auto_mode_cntdown) _auto_mode_cntdown--; // delay switching to gimbal device mode, to give gimbal manager messages a chance
             if (!_auto_mode_cntdown) {
                 _auto_mode = AUTOMODE_GIMBALDEVICE;
                 _use_protocolv2 = true;
@@ -735,9 +741,9 @@ void BP_Mount_STorM32_MAVLink::determine_auto_mode(const mavlink_message_t &msg)
             }
             }break;
 
-        case MAVLINK_MSG_ID_STORM32_GIMBAL_MANAGER_STATUS: { //60011
+        case MAVLINK_MSG_ID_STORM32_GIMBAL_MANAGER_STATUS: { // 60011
             _auto_mode = AUTOMODE_GIMBALMANAGER;
-            _auto_mode_cntdown = AUTOMODE_CNT;
+            _auto_mode_cntdown = GIMBAL_AUTOMODE_TIMEOUT_CNT;
             _use_protocolv2 = true;
             _use_gimbalmanager = true;
             }break;
@@ -753,13 +759,13 @@ void BP_Mount_STorM32_MAVLink::find_gimbal_oneonly(void)
     uint32_t now_ms = AP_HAL::millis();
 
     if (now_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
-        _initialised = false; //should be already false, but it can't hurt to ensure that
+        _initialised = false; // should be already false, but it can't hurt to ensure that
         return;
     }
 #else
     const AP_Notify &notify = AP::notify();
     if (notify.flags.armed) {
-        return; //do not search if armed, this implies we are going to fly soon
+        return; // do not search if armed, this implies we are going to fly soon
     }
 #endif
 
@@ -768,7 +774,7 @@ void BP_Mount_STorM32_MAVLink::find_gimbal_oneonly(void)
 
     // find_by_mavtype() finds a gimbal and also sets _sysid, _compid, _chan
     if (GCS_MAVLINK::find_by_mavtype(MAV_TYPE_GIMBAL, _sysid, _compid, _chan)) {
-        if (!_auto_mode) return;
+        if (_auto_mode == AUTOMODE_UNDEFINED) return; // we don't know yet what we should do
         _initialised = true;
         send_banner();
     }
@@ -777,12 +783,12 @@ void BP_Mount_STorM32_MAVLink::find_gimbal_oneonly(void)
 
 void BP_Mount_STorM32_MAVLink::find_gimbal(void)
 {
-    // we only have one instance at max
 #if AP_MOUNT_MAX_INSTANCES <= 1
+    // we only have one instance at max
     find_gimbal_oneonly();
-#else
 
-    // we allow several instances, but do have only one
+#else
+    // we allow several instances, but do have only one, so just look for one
     if (num_instances() <= 1) {
         find_gimbal_oneonly();
         return;
@@ -794,27 +800,28 @@ void BP_Mount_STorM32_MAVLink::find_gimbal(void)
     uint32_t now_ms = AP_HAL::millis();
 
     if (now_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
-        _initialised = false; //should be already false, but it can't hurt to ensure that
+        _initialised = false; // should be already false, but it can't hurt to ensure that
         return;
     }
 #else
     const AP_Notify &notify = AP::notify();
     if (notify.flags.armed) {
-        return; //do not search if armed, this implies we are going to fly soon
+        return; // do not search if armed, this implies we are going to fly soon
     }
 #endif
 
     // we expect that instance 0 has compid = GIMBAL, instance 1 has compid = GIMBAL2, instance 2 has compid = GIMBAL3, ...
-    uint8_t mycompid = (_instance == 0) ? MAV_COMP_ID_GIMBAL : MAV_COMP_ID_GIMBAL2 + (_instance-1);
+    uint8_t mycompid = (_instance == 0) ? MAV_COMP_ID_GIMBAL : MAV_COMP_ID_GIMBAL2 + (_instance - 1);
 
     // search routed gimbals
     if (GCS_MAVLINK::find_by_mavtype_and_compid(MAV_TYPE_GIMBAL, mycompid, _sysid, _chan)) {
         _compid = mycompid;
-        if (!_auto_mode) return;
+        if (_auto_mode == AUTOMODE_UNDEFINED) return; // we don't know yet what we should do
         _initialised = true;
         send_banner();
         return;
     }
+
 #endif
 }
 
@@ -857,15 +864,15 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_mount_control_to_gimbal(float roll_de
         _sysid,
         _compid,
         MAV_CMD_DO_MOUNT_CONTROL,
-        0,        //confirmation of zero means this is the first time this message has been sent
+        0,        // confirmation of zero means this is the first time this message has been sent
         pitch_deg,
         roll_deg,
         yaw_deg,
-        0, 0, 0,  //param4 ~ param6 unused
+        0, 0, 0,  // param4 ~ param6 unused
         mode);
 
     BP_LOG("MTC0", BP_LOG_MTC_HEADER,
-        (uint8_t)0, //indicate DO_MOUNT_CONTROL
+        (uint8_t)0, // indicate DO_MOUNT_CONTROL
         roll_deg, pitch_deg, yaw_deg,
         (uint16_t)0,
         (uint16_t)0,
@@ -917,9 +924,9 @@ void BP_Mount_STorM32_MAVLink::send_system_time_to_gimbal(void)
     }
 
     uint64_t time_unix = 0;
-    AP::rtc().get_utc_usec(time_unix); //may fail, leaving time_unix at 0
+    AP::rtc().get_utc_usec(time_unix); // may fail, leaving time_unix at 0
 
-    if (!time_unix) return; //no unix time available, so no reason to send
+    if (!time_unix) return; // no unix time available, so no reason to send
 
     mavlink_msg_system_time_send(
         _chan,
@@ -1003,10 +1010,10 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_to_gimbal(
 
     Quaternion quat;
     quat.from_rotation_matrix(ahrs.get_rotation_body_to_ned());
-    float q[4] = { quat.q1, quat.q2, quat.q3, quat.q4 }; //TODO: figure out how to do it correctly
+    float q[4] = { quat.q1, quat.q2, quat.q3, quat.q4 }; //TODO: can we avoid this or do it more elegantly?
 
     Vector3f vel;
-    if (!ahrs.get_velocity_NED(vel)) { vel.x = vel.y = vel.z = 0.0f; } //it returns a bool, so it's a good idea to consider it
+    if (!ahrs.get_velocity_NED(vel)) { vel.x = vel.y = vel.z = 0.0f; } // it returns a bool, so it's a good idea to consider it
 
     float yawrate = NAN; //0.0f;
 
@@ -1033,14 +1040,11 @@ ugly as we will have vehicle dependency here
         _sysid, _compid,
         AP_HAL::micros64(),
         q,
-        0, //uint32_t q_estimated_delay_us,
+        0, // uint32_t q_estimated_delay_us,
         vel.x, vel.y, vel.z,
-        0, //uint32_t v_estimated_delay_us,
+        0, // uint32_t v_estimated_delay_us,
         yawrate,
         _estimator_status, _landed_state);
-        //uint64_t time_boot_us, const float *q, uint32_t q_estimated_delay_us,
-        //float vx, float vy, float vz, uint32_t v_estimated_delay_us,
-        //float feed_forward_angular_velocity_z, uint16_t estimator_status, uint8_t landed_state)
 
     BP_LOG("MTL0", BP_LOG_MTL_HEADER,
         q[0],q[1],q[2],q[3],
@@ -1061,24 +1065,17 @@ void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_device_control_to_gimbal(floa
 
     GimbalQuaternion quat;
     quat.from_gimbal_euler( radians(roll_deg), radians(pitch_deg), radians(yaw_deg) );
-    float q[4];
-    q[0] = quat.q1;
-    q[1] = quat.q2;
-    q[2] = quat.q3;
-    q[3] = quat.q4;
+    float q[4] = { quat.q1, quat.q2, quat.q3, quat.q4 };
 
     mavlink_msg_storm32_gimbal_device_control_send(
         _chan,
         _sysid, _compid,
         flags,
         q,
-        NAN, NAN, NAN);
-        //uint16_t flags,
-        //const float *q,
-        //float angular_velocity_x, float angular_velocity_y, float angular_velocity_z)
+        NAN, NAN, NAN); // float angular_velocity_x, float angular_velocity_y, float angular_velocity_z
 
     BP_LOG("MTC0", BP_LOG_MTC_HEADER,
-        (uint8_t)1, //indicate GIMBAL_DEVICE_CONTROL
+        (uint8_t)1, // indicate GIMBAL_DEVICE_CONTROL
         roll_deg, pitch_deg, yaw_deg,
         flags,
         (uint16_t)0,
@@ -1096,25 +1093,19 @@ void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control_to_gimbal(flo
 
     GimbalQuaternion quat;
     quat.from_gimbal_euler( radians(roll_deg), radians(pitch_deg), radians(yaw_deg) );
-    float q[4];
-    q[0] = quat.q1;
-    q[1] = quat.q2;
-    q[2] = quat.q3;
-    q[3] = quat.q4;
+    float q[4] = { quat.q1, quat.q2, quat.q3, quat.q4 };
 
     mavlink_msg_storm32_gimbal_manager_control_send(
         _chan,
         _sysid, _compid,
-        _compid, //gimbal_id
+        _compid, // gimbal_id
         MAV_STORM32_GIMBAL_MANAGER_CLIENT_AUTOPILOT,
         device_flags, manager_flags,
         q,
-        NAN, NAN, NAN);
-        //uint8_t gimbal_id, uint8_t client, uint16_t device_flags, uint16_t manager_flags,
-        //const float *q, float angular_velocity_x, float angular_velocity_y, float angular_velocity_z)
+        NAN, NAN, NAN); // float angular_velocity_x, float angular_velocity_y, float angular_velocity_z
 
     BP_LOG("MTC0", BP_LOG_MTC_HEADER,
-        (uint8_t)2, //indicate GIMBAL_MANAGER_CONTROL
+        (uint8_t)2, // indicate GIMBAL_MANAGER_CONTROL
         roll_deg, pitch_deg, yaw_deg,
         device_flags,
         manager_flags,
@@ -1143,11 +1134,11 @@ void BP_Mount_STorM32_MAVLink::send_to_ground(uint32_t msgid, const char *pkt)
     for (uint8_t i=0; i<gcs().num_gcs(); i++) {
         GCS_MAVLINK &c = *gcs().chan(i);
 
-        if (c.get_chan() == _chan) continue; //the gimbal is on this channel
+        if (c.get_chan() == _chan) continue; // the gimbal is on this channel
 
         if (!c.is_active()) continue;
         if (entry->max_msg_len + GCS_MAVLINK::packet_overhead_chan(c.get_chan()) > c.get_uart()->txspace()) {
-            continue; //no room on this channel
+            continue; // no space on this channel
         }
         c.send_message(pkt, entry);
     }
@@ -1214,7 +1205,7 @@ size_t BP_Mount_STorM32_MAVLink::_write(const uint8_t* buffer, size_t size)
     uint8_t payload[MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN+1];
     memset(payload, 0, sizeof(payload));
 
-    if (size > MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN) size = MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN; //should not happen, but play it safe
+    if (size > MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN) size = MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN; // should not happen, but play it safe
     memcpy(payload, buffer, size);
 
     mavlink_msg_tunnel_send(
@@ -1225,7 +1216,7 @@ size_t BP_Mount_STorM32_MAVLink::_write(const uint8_t* buffer, size_t size)
             size,
             payload);
 
-    return PAYLOAD_SIZE(_chan, TUNNEL); //we don't know the actual written length, so use this as dummy
+    return PAYLOAD_SIZE(_chan, TUNNEL); // we don't know the actual written length, so use this as dummy
 }
 
 
@@ -1316,13 +1307,13 @@ void BP_Mount_STorM32_MAVLink::send_cmd_sethomelocation(void)
         return;
     }
 
-    uint16_t status = 0; //= LOCATION_INVALID
+    uint16_t status = 0; // = LOCATION_INVALID
     struct Location location = {};
 
     const AP_AHRS &ahrs = AP::ahrs();
 
     if (ahrs.get_position(location)) {
-        status = 0x0001; //= LOCATION_VALID
+        status = 0x0001; // = LOCATION_VALID
     }
 
     tSTorM32CmdSetHomeTargetLocation t;
@@ -1342,7 +1333,7 @@ void BP_Mount_STorM32_MAVLink::send_cmd_settargetlocation(void)
         return;
     }
 
-    uint16_t status = 0; //= LOCATION_INVALID
+    uint16_t status = 0; // = LOCATION_INVALID
     struct Location location = {};
 
     tSTorM32CmdSetHomeTargetLocation t;

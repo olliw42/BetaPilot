@@ -13,10 +13,12 @@
 #include <AP_Mount/STorM32_lib.h>
 
 
-#define USE_FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 //set to 0 to disable
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  300000 //90000 //AP's startup has become quite slow, so give it plenty of time
+#define USE_FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 // set to 0 to disable
+#define FIND_GIMBAL_MAX_SEARCH_TIME_MS  300000 // AP's startup has become quite slow, so give it plenty of time
 
 #define USE_GIMBAL_ZFLAGS  1
+
+#define GIMBAL_AUTOMODE_TIMEOUT_CNT  10
 
 
 // that's the main class
@@ -94,7 +96,7 @@ private:
     void send_mount_status_to_ground(void);
     void send_cmd_do_mount_control_to_gimbal(float roll_deg, float pitch_deg, float yaw_deg, enum MAV_MOUNT_MODE mode);
 
-    // storm32 gimbal protocol
+    // STorM32 gimbal protocol
     bool _use_protocolv2;
     bool _use_gimbalmanager;
     bool _sendonly;
@@ -133,13 +135,12 @@ private:
     uint32_t _task_time_last;
     uint16_t _task_counter;
 
-    // automatic operation mode detection
-    #define AUTOMODE_CNT   10
+    // automatic gimbal operation mode detection
     enum AUTOMODEENUM {
-        AUTOMODE_UNDEFINED = 0,
-        AUTOMODE_V1,
-        AUTOMODE_GIMBALDEVICE,
-        AUTOMODE_GIMBALMANAGER,
+        AUTOMODE_UNDEFINED = 0,     // we do not yet know
+        AUTOMODE_V1,                // gimbal uses plain old V1 gimbal protocol messages
+        AUTOMODE_GIMBALDEVICE,      // gimbal is a STorM32 gimbal device
+        AUTOMODE_GIMBALMANAGER,     // gimbal is a STorM32 gimbal manager
     };
     uint8_t _auto_mode;
     uint8_t _auto_mode_cntdown;
@@ -153,6 +154,6 @@ private:
     bool _tx_hasspace(const size_t size);
     size_t _write(const uint8_t* buffer, size_t size);
 
-    //logging
+    // logging
     bool _should_log;
 };
