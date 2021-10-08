@@ -5,7 +5,7 @@
 /*
 search for //OW to find all changes
 
-2021.10.08:
+2021.10.08: v052
  upgraded to Copter4.1.0
  upgraded to storm32.xml v 6. Okt. 2021
  more zflags, logging
