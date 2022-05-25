@@ -261,6 +261,20 @@ bool MAVLink_routing::find_by_mavtype(uint8_t mavtype, uint8_t &sysid, uint8_t &
     return false;
 }
 
+//OW
+bool MAVLink_routing::find_by_mavtype_and_compid(uint8_t mavtype, uint8_t compid, uint8_t &sysid, mavlink_channel_t &channel)
+{
+    for (uint8_t i=0; i<num_routes; i++) {
+        if ((routes[i].mavtype == mavtype) && (routes[i].compid == compid)) {
+            sysid = routes[i].sysid;
+            channel = routes[i].channel;
+            return true;
+        }
+    }
+    return false;
+}
+//OWEND
+
 /*
   see if the message is for a new route and learn it
 */
