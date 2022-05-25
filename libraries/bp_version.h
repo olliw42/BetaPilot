@@ -26,6 +26,10 @@ ArduCopter specific
 - GCS_Mavlink.cpp:      (2 comments, no change)
 - version.h:            1x
 
+ArduPlane specific
+- ArduPlane.cpp:        1x
+- version.h:            1x
+
 Libraries:
 - AP_Arming.cpp:        3x
 - AP_Arming.h:          1x
