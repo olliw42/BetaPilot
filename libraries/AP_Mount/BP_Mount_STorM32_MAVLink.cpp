@@ -144,7 +144,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount:
 {
     _initialised = false;
     _armed = false;
-    _prearmchecks_ok = true; // true means they are not checked
+    _prearmchecks_ok = true; // setting it to true here means they are not going to be checked
 
     _sysid = 0;
     _compid = 0;
@@ -939,7 +939,11 @@ void BP_Mount_STorM32_MAVLink::send_system_time_to_gimbal(void)
 // this is not nice, but kind of the best we can currently do
 // plane does not support landed state at all, so we do have vehicle dependency here
 // copter does support it, but has it private, and in GCS_MAVLINK
-// so we end up redoing it in vehicle dependent way, which however gives us also the change to do it better
+// so we end up redoing it in vehicle dependent way, which however gives us also the chance to do it better
+//
+// 26.05.2022:
+// Plane4.2 does now provide a basic landed_state(), returning IN_AIR when flying and ON_GROUND else
+// is this useful to us?
 //
 //copter's landed state
 // copter.ap.land_complete <-> MAV_LANDED_STATE_ON_GROUND
@@ -950,7 +954,7 @@ void BP_Mount_STorM32_MAVLink::send_system_time_to_gimbal(void)
 //from tests 2021-08-28, in loiter with takeoff/land button, I conclude
 // get_landed_state():
 // 1 = MAV_LANDED_STATE_ON_GROUND  until motors ramp up
-// 3 = MAV_LANDED_STATE_TAKEOFF  for a moment of gaining high
+// 3 = MAV_LANDED_STATE_TAKEOFF  for a moment of gaining height
 // 2 = MAV_LANDED_STATE_IN_AIR  during flight
 // 4 = MAV_LANDED_STATE_LANDING  while landing
 // 1 = MAV_LANDED_STATE_ON_GROUND  after landing

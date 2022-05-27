@@ -6,6 +6,8 @@
 search for //OW to find all changes
 
  upgraded to Copter4.2.0
+ upgraded to Plane4.2.1
+ Ardu is unfortunately still on storm32.xml v 4. Feb. 2021
 2021.10.08: v052
  upgraded to Copter4.1.0
  upgraded to storm32.xml v 6. Okt. 2021
