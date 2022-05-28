@@ -728,6 +728,10 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_mount(const mavlink_command_long_t
         if ((copter.camera_mount.get_mount_type() != copter.camera_mount.MountType::Mount_Type_None) &&
             !copter.camera_mount.has_pan_control()) {
             copter.flightmode->auto_yaw.set_yaw_angle_rate(
+//OW this is a serious bug!
+// however, a proper solution needs quite some changes, someone really screwed this up heavily
+// it should be (float)packet.param3
+// we do not apply this correction, even if annoying, to not spoil other implementations
                 (float)packet.param3 * 0.01f,
                 0.0f);
         }
@@ -1026,6 +1030,9 @@ void GCS_MAVLINK_Copter::handle_mount_message(const mavlink_message_t &msg)
         if ((copter.camera_mount.get_mount_type() != copter.camera_mount.MountType::Mount_Type_None) &&
             !copter.camera_mount.has_pan_control()) {
             copter.flightmode->auto_yaw.set_yaw_angle_rate(
+//OW this is a serious bug!
+// however, a proper solution needs quite some changes, someone really screwed this up heavily
+// we do not correct it however since this message is deprecated and we do use CMD_DO_MOUNT_CONTROL
                 mavlink_msg_mount_control_get_input_c(&msg) * 0.01f,
                 0.0f);
 
