@@ -1,12 +1,14 @@
 #pragma once
 
-#define BETAPILOTVERSION "v053.1"
+#define BETAPILOTVERSION "v053"
 
 /*
 search for //OW to find all changes
 
+2022.06.24: v053 only Betaplane
+ upgraded to Plane4.2.2
  upgraded to Copter4.2.0
- upgraded to Plane4.2.1
+ upgraded to Plane4.2.1, flight tested by sguricus
  Ardu is unfortunately still on storm32.xml v 4. Feb. 2021
 2021.10.08: v052
  upgraded to Copter4.1.0
