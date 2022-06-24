@@ -190,6 +190,14 @@ void Plane::ahrs_update()
     quadplane.inertial_nav.update();
 #endif
 
+//OW
+#if HAL_MOUNT_ENABLED
+    // camera mount's fast update
+    camera_mount.update_fast();
+#endif
+//OWEND
+
+
     if (should_log(MASK_LOG_VIDEO_STABILISATION)) {
         ahrs.write_video_stabilisation();
     }
