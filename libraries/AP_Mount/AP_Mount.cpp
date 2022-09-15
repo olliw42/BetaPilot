@@ -11,6 +11,10 @@
 #include "AP_Mount_SToRM32.h"
 #include "AP_Mount_SToRM32_serial.h"
 #include <AP_Math/location.h>
+//OW
+#include <AP_Logger/AP_Logger.h>
+#include "BP_Mount_STorM32_MAVLink.h"
+//OWEND
 
 const AP_Param::GroupInfo AP_Mount::var_info[] = {
 
@@ -215,6 +219,10 @@ const AP_Param::GroupInfo AP_Mount::var_info[] = {
 
     // 24 is AVAILABLE
 
+//OW
+    AP_GROUPINFO("_ZFLAGS", 20, AP_Mount, state[0]._zflags, 0),
+//OWEND
+
 #if AP_MOUNT_MAX_INSTANCES > 1
     // @Param: 2_DEFLT_MODE
     // @DisplayName: Mount default operating mode
@@ -395,6 +403,10 @@ const AP_Param::GroupInfo AP_Mount::var_info[] = {
     // @Values: 0:None, 1:Servo, 2:3DR Solo, 3:Alexmos Serial, 4:SToRM32 MAVLink, 5:SToRM32 Serial
     // @User: Standard
     AP_GROUPINFO("2_TYPE",           42, AP_Mount, state[1]._type, 0),
+
+//OW
+    AP_GROUPINFO("2_ZFLAGS", 43, AP_Mount, state[1]._zflags, 0),
+//OWEND
 #endif // AP_MOUNT_MAX_INSTANCES > 1
 
     AP_GROUPEND
@@ -466,6 +478,13 @@ void AP_Mount::init()
         } else if (mount_type == Mount_Type_SToRM32_serial) {
             _backends[instance] = new AP_Mount_SToRM32_serial(*this, state[instance], instance);
             _num_instances++;
+
+//OW
+        // check for STorM32_MAVLink mounts using MAVLink protocol
+        } else if (mount_type == Mount_Type_STorM32_MAVLink) {
+            _backends[instance] = new BP_Mount_STorM32_MAVLink(*this, state[instance], instance);
+            _num_instances++;
+//OWEND
         }
 
         // init new instance
@@ -590,6 +609,10 @@ MAV_RESULT AP_Mount::handle_command_do_mount_control(const mavlink_command_long_
     }
 
     // send message to backend
+//OW this is a serious bug!
+// however, a proper solution needs quite some changes, someone really screwed this up heavily
+// it should be _backends[_primary]->control(100.0f*packet.param1, 100.0f*packet.param2, 100.0f*packet.param3, (MAV_MOUNT_MODE) packet.param7);
+// we do not apply this correction, even if annoying, to not spoil other implementations
     _backends[_primary]->control(packet.param1, packet.param2, packet.param3, (MAV_MOUNT_MODE) packet.param7);
 
     return MAV_RESULT_ACCEPTED;
@@ -621,6 +644,57 @@ void AP_Mount::handle_global_position_int(const mavlink_message_t &msg)
         if (_backends[instance] != nullptr) {
             _backends[instance]->handle_global_position_int(msg.sysid, packet);
         }
+
+#if 0
+        if (_backends[instance] == nullptr) {
+            continue;
+        }
+        struct mount_state &_state = state[instance];
+        if (_state._target_sysid != msg.sysid) {
+            continue;
+        }
+        _state._target_sysid_location.lat = packet.lat;
+        _state._target_sysid_location.lng = packet.lon;
+        // global_position_int.alt is *UP*, so is location.
+        _state._target_sysid_location.set_alt_cm(packet.alt*0.1,
+                                                 Location::AltFrame::ABSOLUTE);
+/*
+//OW
+        //when being close to the ground, it can be better to use relative_alt, which is relative to ground
+        // so we check if it is not INT32_MAX, and if so, we use it
+        // ideally we would have a flag which would allow us to set it, maybe
+        if (packet.relative_alt != INT32_MAX) {
+            _state._target_sysid_location.set_alt_cm(packet.relative_alt*0.1f + 100.0f, Location::AltFrame::ABOVE_HOME);
+        } else {
+            _state._target_sysid_location.set_alt_cm(packet.alt*0.1f, Location::AltFrame::ABSOLUTE);
+        }
+//OWEND
+*/
+        _state._target_sysid_location_set = true;
+//OW
+        int32_t abs_alt, rel_alt;
+        if (!_state._target_sysid_location.get_alt_cm(Location::AltFrame::ABSOLUTE, abs_alt)) abs_alt = INT32_MAX;
+        if (!_state._target_sysid_location.get_alt_cm(Location::AltFrame::ABOVE_HOME, rel_alt)) rel_alt = INT32_MAX;
+
+        char logname[5] = "MTG0";
+        logname[3] += instance;
+        AP::logger().Write(logname,
+                "TimeUS,SysId,Lat,Lon,Alt,RelAlt,LAlt,LAbsAlt,LRelAlt",  // labels
+                "s-DUmmmmm",    // units
+                "F---CCBBBCC",    // mults
+                "QBLLiiiii",    // fmt
+                AP_HAL::micros64(),
+                _state._target_sysid,
+                _state._target_sysid_location.lat,
+                _state._target_sysid_location.lng,
+                packet.alt,
+                packet.relative_alt,
+                _state._target_sysid_location.alt,
+                abs_alt,
+                rel_alt
+                );
+//OWEND
+#endif
     }
 }
 
@@ -744,6 +818,36 @@ void AP_Mount::send_gimbal_report(mavlink_channel_t chan)
     }    
 }
 
+//OW
+void AP_Mount::handle_msg(const mavlink_message_t &msg)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            _backends[instance]->handle_msg(msg);
+        }
+    }
+}
+
+bool AP_Mount::pre_arm_checks(void)
+{
+    bool res = true;
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            res &= _backends[instance]->pre_arm_checks();
+        }
+    }
+    return res;
+}
+
+void AP_Mount::send_banner(void)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            _backends[instance]->send_banner();
+        }
+    }
+}
+//OWEND
 
 // singleton instance
 AP_Mount *AP_Mount::_singleton;

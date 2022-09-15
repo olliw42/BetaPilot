@@ -176,6 +176,10 @@ protected:
 
     bool camera_checks(bool display_failure);
 
+//OW
+    bool mount_checks(bool report);
+//OWEND
+
     bool osd_checks(bool display_failure) const;
 
     bool aux_auth_checks(bool display_failure);
