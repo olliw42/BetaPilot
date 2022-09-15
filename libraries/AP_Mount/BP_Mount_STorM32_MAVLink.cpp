@@ -622,7 +622,7 @@ void BP_Mount_STorM32_MAVLink::set_target_angles_qshot(void)
             //if (!calc_angle_to_roi_target(_angle_ef_target_rad, true, true, true)) return;
             if (!calc_angle_to_roi_target(_angle_ef_target_rad, calc_tilt, calc_pan, relative_pan)) return;
             break;
-/* temporarily out commented
+
         case MAV_QSHOT_MODE_HOME_TARGETING:
             if (!AP::ahrs().home_is_set()) return;
             _state._roi_target = AP::ahrs().get_home();
@@ -630,7 +630,7 @@ void BP_Mount_STorM32_MAVLink::set_target_angles_qshot(void)
             //if (!calc_angle_to_roi_target(_angle_ef_target_rad, true, true, true)) return;
             if (!calc_angle_to_roi_target(_angle_ef_target_rad, calc_tilt, calc_pan, relative_pan)) return;
             break;
-*/
+
         case MAV_QSHOT_MODE_SYSID_TARGETING:
             //if (!calc_angle_to_sysid_target(_angle_ef_target_rad, true, true, true)) return;
             if (!calc_angle_to_sysid_target(_angle_ef_target_rad, calc_tilt, calc_pan, relative_pan)) return;
