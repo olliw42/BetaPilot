@@ -1,10 +1,14 @@
 #pragma once
 
-#define BETAPILOTVERSION "v053.1"
+#define BETAPILOTVERSION "v053.4"
 
 /*
 search for //OW to find all changes
 
+ upgraded to Copter4.2.3
+ upgraded to Plane4.2.3
+ upgraded to Copter4.2.1
+ upgraded to Copter4.2.1-rc1
  upgraded to Copter4.2.0
  upgraded to Plane4.2.1
  Ardu is unfortunately still on storm32.xml v 4. Feb. 2021
