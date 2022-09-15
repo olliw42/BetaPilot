@@ -1440,6 +1440,10 @@ void GCS_MAVLINK::packetReceived(const mavlink_status_t &status,
         // e.g. enforce-sysid says we shouldn't look at this packet
         return;
     }
+//OW
+    AP_Mount *mount = AP::mount();
+    if (mount != nullptr) mount->handle_msg(msg);
+//OWEND
     handleMessage(msg);
 }
 
@@ -3841,6 +3845,11 @@ void GCS_MAVLINK::send_banner()
         }
     }
 #endif
+
+//OW
+    AP_Mount *mount = AP::mount();
+    if (mount != nullptr) mount->send_banner();
+//OWEND
 }
 
 
