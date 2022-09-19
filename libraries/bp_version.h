@@ -1,10 +1,11 @@
 #pragma once
 
-#define BETAPILOTVERSION "v053.4"
+#define BETAPILOTVERSION "v055.1"
 
 /*
 search for //OW to find all changes
 
+2022.09.19: v054
  upgraded to Copter4.2.3
  upgraded to Plane4.2.3
  upgraded to Copter4.2.1
