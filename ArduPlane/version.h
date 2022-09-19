@@ -11,7 +11,7 @@
 //OW
 #undef THISFIRMWARE
 #include "../libraries/bp_version.h"
-#define THISFIRMWARE "ArduPlane V4.2.2 " BETAPILOTVERSION " 20220624"
+#define THISFIRMWARE "ArduPlane V4.2.3 " BETAPILOTVERSION " 20220919"
 //OWEND
 
 // the following line is parsed by the autotest scripts
