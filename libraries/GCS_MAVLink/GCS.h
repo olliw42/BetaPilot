@@ -1141,6 +1141,10 @@ public:
     void enable_high_latency_connections(bool enabled);
 #endif // HAL_HIGH_LATENCY2_ENABLED
 
+//OW
+    uint8_t get_landed_state(void) const { return num_gcs() > 0 ? chan(0)->landed_state() : MAV_LANDED_STATE_UNDEFINED; }
+//OWEND
+
 protected:
 
     virtual uint8_t sysid_this_mav() const = 0;
