@@ -15,8 +15,6 @@
 #include <AP_Logger/AP_Logger.h>
 #include <AP_Scheduler/AP_Scheduler.h>
 #include "BP_Mount_STorM32_MAVLink.h"
-#include <GCS_MAVLink/include/mavlink/v2.0/checksum.h>
-#include "STorM32_lib.h"
 #include "bp_version.h"
 
 extern const AP_HAL::HAL& hal;
@@ -46,6 +44,33 @@ extern const AP_HAL::HAL& hal;
 /*
 TODO:
 */
+
+//******************************************************
+// STorM32 lib
+//******************************************************
+
+// STorM32 states
+enum STORM32STATEENUM {
+    STORM32STATE_STARTUP_MOTORS               = 0,
+    STORM32STATE_STARTUP_SETTLE,
+    STORM32STATE_STARTUP_CALIBRATE,
+    STORM32STATE_STARTUP_LEVEL,
+    STORM32STATE_STARTUP_MOTORDIRDETECT,
+    STORM32STATE_STARTUP_RELEVEL,
+    STORM32STATE_NORMAL,
+    STORM32STATE_STARTUP_FASTLEVEL,
+};
+
+
+enum STORM32LINKFCSTATUSAPENUM {
+    STORM32LINK_FCSTATUS_AP_AHRSHEALTHY       = 0x01, // => Q ok, ca. 15 secs
+    STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED   = 0x02, // => vz ok, ca. 32 secs
+    STORM32LINK_FCSTATUS_AP_GPS3DFIX          = 0x04, // ca 60-XXs
+    STORM32LINK_FCSTATUS_AP_NAVHORIZVEL       = 0x08, // comes very late, after GPS fix and few secs after position_ok()
+    STORM32LINK_FCSTATUS_AP_ISFLYING          = 0x20, // tells when copter is taking-off
+    STORM32LINK_FCSTATUS_AP_ARMED             = 0x40, // tells when copter is about to take-off (= is armed and will soon take-off)
+};
+
 
 
 //******************************************************
