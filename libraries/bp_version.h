@@ -1,11 +1,11 @@
 #pragma once
 
-#define BETAPILOTVERSION "v055.1"
+#define BETAPILOTVERSION "v055.2"
 
 /*
 search for //OW to find all changes
 
-
+ radio_rc_channels support added
  upgraded to Copter4.3.0-beta1
 2022.09.19: v054
  upgraded to Copter4.2.3

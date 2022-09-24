@@ -17,6 +17,9 @@
 #pragma once
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Common/AP_Common.h>
+//OW
+#include <GCS_MAVLink/GCS_MAVLink.h>
+//OWEND
 
 #define MAX_RCIN_CHANNELS 18
 #define MIN_RCIN_CHANNELS  5
@@ -53,6 +56,9 @@ public:
 #if AP_RCPROTOCOL_FASTSBUS_ENABLED
         FASTSBUS   = 12,
 #endif
+//OW
+        MAVLINK_RADIO = 13,
+//OWEND
         NONE    //last enum always is None
     };
     void init();
@@ -98,6 +104,9 @@ public:
         case CRSF:
         case ST24:
         case NONE:
+//OW
+        case MAVLINK_RADIO:
+//OWEND
             return false;
         }
         return false;
@@ -146,6 +155,18 @@ public:
     bool using_uart(void) const {
         return _detected_with_bytes;
     }
+
+//OW
+    void handle_radio_rc_channels(const mavlink_radio_rc_channels_t* packet);
+    void handle_radio_link_stats(mavlink_radio_link_stats_t* packet);
+
+    struct {
+        mavlink_radio_rc_channels_t rc_channels;
+        bool rc_channels_updated = false;
+        mavlink_radio_link_stats_t link_stats;
+        bool link_stats_updated = false;
+    } mavlink_radio;
+//OWEND
 
 private:
     void check_added_uart(void);

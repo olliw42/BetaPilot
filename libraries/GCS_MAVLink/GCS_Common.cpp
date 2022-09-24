@@ -3519,6 +3519,24 @@ void GCS_MAVLINK::handle_rc_channels_override(const mavlink_message_t &msg)
 
 }
 
+//OW
+void GCS_MAVLINK::handle_radio_rc_channels(const mavlink_message_t &msg)
+{
+    mavlink_radio_rc_channels_t packet;
+    mavlink_msg_radio_rc_channels_decode(&msg, &packet);
+
+    AP::RC().handle_radio_rc_channels(&packet);
+}
+
+void GCS_MAVLINK::handle_radio_link_stats(const mavlink_message_t &msg)
+{
+    mavlink_radio_link_stats_t packet;
+    mavlink_msg_radio_link_stats_decode(&msg, &packet);
+
+    AP::RC().handle_radio_link_stats(&packet);
+}
+//OWEND
+
 #if AP_OPTICALFLOW_ENABLED
 void GCS_MAVLINK::handle_optical_flow(const mavlink_message_t &msg)
 {
@@ -3828,6 +3846,16 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
     case MAVLINK_MSG_ID_RC_CHANNELS_OVERRIDE:
         handle_rc_channels_override(msg);
         break;
+
+//OW
+    case MAVLINK_MSG_ID_RADIO_RC_CHANNELS:
+        handle_radio_rc_channels(msg);
+        break;
+
+    case MAVLINK_MSG_ID_RADIO_LINK_STATS:
+        handle_radio_link_stats(msg);
+        break;
+//OWEND
 
 #if AP_OPTICALFLOW_ENABLED
     case MAVLINK_MSG_ID_OPTICAL_FLOW:
