@@ -816,6 +816,109 @@ void GCS_MAVLINK::handle_radio_status(const mavlink_message_t &msg, bool log_rad
     }
 }
 
+//OW
+static mavlink_radio_t ow_mavlink_radio_packet;
+
+void GCS_MAVLINK::handle_radio_link_stats(const mavlink_message_t &msg, bool log_radio)
+{
+    // let's see if we can try to skip out early if possible
+    AP_RSSI* rssi = AP::rssi();
+    if ((rssi != nullptr) && !rssi->enabled(AP_RSSI::RssiType::TELEMETRY_RADIO_RSSI)) return;
+
+    mavlink_radio_link_stats_t packet;
+    mavlink_msg_radio_link_stats_decode(&msg, &packet);
+
+    // convert it to what we would get from RADIO_STATUS
+    uint8_t _rssi = packet.rx_rssi1;
+    uint8_t _remrssi = (packet.tx_rssi1 == UINT8_MAX) ? 0 : packet.tx_rssi1;
+    uint8_t _noise = 0;
+    uint8_t _remnoise = 0;
+
+    // we fake it for logging
+    ow_mavlink_radio_packet.rssi = _rssi;
+    ow_mavlink_radio_packet.remrssi = _remrssi;
+    ow_mavlink_radio_packet.noise = _noise;
+    ow_mavlink_radio_packet.remnoise = _remnoise;
+
+    // now what it would do for RADIO_STATUS
+    const uint32_t now = AP_HAL::millis();
+
+    last_radio_status.received_ms = now;
+    last_radio_status.rssi = _rssi;
+
+    // record if the GCS has been receiving radio messages from
+    // the aircraft
+    if (_remrssi != 0) {
+        last_radio_status.remrssi_ms = now;
+    }
+
+    //log rssi, noise, etc if logging Performance monitoring data
+    if (log_radio) {
+        AP::logger().Write_Radio(ow_mavlink_radio_packet);
+    }
+
+static uint32_t tlast = 0;
+uint32_t tnow = AP_HAL::millis();
+if ((tnow - tlast) > 2000) {
+    tlast = tnow;
+    gcs().send_text(MAV_SEVERITY_INFO, "RADIO: rssi %u %u", packet.rx_rssi1, packet.rx_rssi2);
+}
+
+}
+
+void GCS_MAVLINK::handle_radio_link_flow_control(const mavlink_message_t &msg, bool log_radio)
+{
+    mavlink_radio_link_flow_control_t packet;
+    mavlink_msg_radio_link_flow_control_decode(&msg, &packet);
+
+    if (packet.txbuf == UINT8_MAX) return;
+
+    // convert it to what we would get from RADIO_STATUS
+    uint8_t _txbuf = packet.txbuf;
+
+    // we fake it for logging
+    ow_mavlink_radio_packet.txbuf = _txbuf;
+
+    // now what it would do for RADIO_STATUS
+    last_txbuf = _txbuf;
+
+    // use the state of the transmit buffer in the radio to
+    // control the stream rate, giving us adaptive software
+    // flow control
+    if (_txbuf < 20 && stream_slowdown_ms < 2000) {
+        // we are very low on space - slow down a lot
+        stream_slowdown_ms += 60;
+    } else if (_txbuf < 50 && stream_slowdown_ms < 2000) {
+        // we are a bit low on space, slow down slightly
+        stream_slowdown_ms += 20;
+    } else if (_txbuf > 95 && stream_slowdown_ms > 200) {
+        // the buffer has plenty of space, speed up a lot
+        stream_slowdown_ms -= 40;
+    } else if (_txbuf > 90 && stream_slowdown_ms != 0) {
+        // the buffer has enough space, speed up a bit
+        stream_slowdown_ms -= 20;
+    }
+
+#if GCS_DEBUG_SEND_MESSAGE_TIMINGS
+    if (stream_slowdown_ms > max_slowdown_ms) {
+        max_slowdown_ms = stream_slowdown_ms;
+    }
+#endif
+
+    //log rssi, noise, etc if logging Performance monitoring data
+    if (log_radio) {
+        AP::logger().Write_Radio(ow_mavlink_radio_packet);
+    }
+
+//static uint32_t tlast = 0;
+//uint32_t tnow = AP_HAL::millis();
+//if ((tnow - tlast) > 2000) {
+    gcs().send_text(MAV_SEVERITY_INFO, "RADIO: txbuf %u", _txbuf);
+//}
+
+}
+//OWEND
+
 /*
   handle an incoming mission item
   return true if this is the last mission item, otherwise false
@@ -3519,24 +3622,6 @@ void GCS_MAVLINK::handle_rc_channels_override(const mavlink_message_t &msg)
 
 }
 
-//OW
-void GCS_MAVLINK::handle_radio_rc_channels(const mavlink_message_t &msg)
-{
-    mavlink_radio_rc_channels_t packet;
-    mavlink_msg_radio_rc_channels_decode(&msg, &packet);
-
-    AP::RC().handle_radio_rc_channels(&packet);
-}
-
-void GCS_MAVLINK::handle_radio_link_stats(const mavlink_message_t &msg)
-{
-    mavlink_radio_link_stats_t packet;
-    mavlink_msg_radio_link_stats_decode(&msg, &packet);
-
-    AP::RC().handle_radio_link_stats(&packet);
-}
-//OWEND
-
 #if AP_OPTICALFLOW_ENABLED
 void GCS_MAVLINK::handle_optical_flow(const mavlink_message_t &msg)
 {
@@ -3847,16 +3932,6 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
         handle_rc_channels_override(msg);
         break;
 
-//OW
-    case MAVLINK_MSG_ID_RADIO_RC_CHANNELS:
-        handle_radio_rc_channels(msg);
-        break;
-
-    case MAVLINK_MSG_ID_RADIO_LINK_STATS:
-        handle_radio_link_stats(msg);
-        break;
-//OWEND
-
 #if AP_OPTICALFLOW_ENABLED
     case MAVLINK_MSG_ID_OPTICAL_FLOW:
         handle_optical_flow(msg);
@@ -3924,9 +3999,37 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
         AP_CheckFirmware::handle_msg(chan, msg);
         break;
 #endif
-    }
+//OW
+    case MAVLINK_MSG_ID_RADIO_RC_CHANNELS:
+        handle_radio_rc_channels(msg);
+        break;
 
+// MAVLINK_MSG_ID_RADIO_LINK_STATS, MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL are handled in vehicle library
+
+    case MAVLINK_MSG_ID_RADIO_LINK_STATS: //can we handle it twice, here and in vehicle lib? not nomrally, dirty trick used
+        handle_radio_link_stats_common(msg);
+        break;
+//OWEND
+    }
 }
+
+//OW
+void GCS_MAVLINK::handle_radio_rc_channels(const mavlink_message_t &msg)
+{
+    mavlink_radio_rc_channels_t packet;
+    mavlink_msg_radio_rc_channels_decode(&msg, &packet);
+
+    AP::RC().handle_radio_rc_channels(&packet);
+}
+
+void GCS_MAVLINK::handle_radio_link_stats_common(const mavlink_message_t &msg)
+{
+    mavlink_radio_link_stats_t packet;
+    mavlink_msg_radio_link_stats_decode(&msg, &packet);
+
+    AP::RC().handle_radio_link_stats(&packet);
+}
+//OWEND
 
 void GCS_MAVLINK::handle_common_mission_message(const mavlink_message_t &msg)
 {
@@ -6072,6 +6175,16 @@ bool GCS_MAVLINK::accept_packet(const mavlink_status_t &status,
         msg.msgid == MAVLINK_MSG_ID_RADIO_STATUS) {
         return true;
     }
+
+//OW
+    // we want to handle messages from a radio
+    // we currently narrow it down to "ours" to play it safe
+    if ((msg.compid == MAV_COMP_ID_TELEMETRY_RADIO) &&
+        (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS ||
+         msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL || msg.msgid == MAVLINK_MSG_ID_RADIO_STATUS)) {
+        return true;
+    }
+//OWEND
 
     if (!sysid_enforce()) {
         return true;

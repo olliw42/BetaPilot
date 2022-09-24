@@ -32,6 +32,7 @@
 #include "AP_RCProtocol_FPort2.h"
 //OW
 #include "AP_RCProtocol_MavlinkRadio.h"
+#include <GCS_MAVLink/GCS.h>
 //OWEND
 #include <AP_Math/AP_Math.h>
 #include <RC_Channel/RC_Channel.h>
@@ -358,10 +359,20 @@ void AP_RCProtocol::handle_radio_link_stats(mavlink_radio_link_stats_t* packet)
         return;
     }
 
+    // we need to decide if we want to handle this like CRSF or like RADIO_STATUS
+    // no, we don't, since user does via RssiType::RECEIVER / RssiType::TELEMETRY_RADIO_RSSI setting
     memcpy(&(mavlink_radio.link_stats), packet, sizeof(mavlink_radio_link_stats_t));
     mavlink_radio.link_stats_updated = true;
 
     backend[_detected_protocol]->update();
+
+static uint32_t tlast = 0;
+uint32_t tnow = AP_HAL::millis();
+if ((tnow - tlast) > 2000) {
+    tlast = tnow;
+    gcs().send_text(MAV_SEVERITY_INFO, "RC: rssi %u %u", packet->rx_rssi1, packet->rx_rssi2);
+}
+
 }
 //OWEND
 

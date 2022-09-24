@@ -1392,6 +1392,21 @@ void GCS_MAVLINK_Copter::handleMessage(const mavlink_message_t &msg)
         handle_radio_status(msg, copter.should_log(MASK_LOG_PM));
         break;
     }
+//OW
+    case MAVLINK_MSG_ID_RADIO_LINK_STATS:
+    {
+        handle_radio_link_stats(msg, copter.should_log(MASK_LOG_PM));
+        // let's see if we can try to skip out early if possible
+        AP_RSSI* rssi = AP::rssi();
+        if ((rssi != nullptr) && !rssi->enabled(AP_RSSI::RssiType::RECEIVER)) break;
+        handle_common_message(msg); // dirty! this makes it also go through handle_common_message(msg)!!
+        break;
+    }
+
+    case MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL:
+        handle_radio_link_flow_control(msg, copter.should_log(MASK_LOG_PM));
+        break;
+//OWEND
 
     case MAVLINK_MSG_ID_TERRAIN_DATA:
     case MAVLINK_MSG_ID_TERRAIN_CHECK:

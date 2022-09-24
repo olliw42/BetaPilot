@@ -501,7 +501,9 @@ protected:
     void handle_vision_position_delta(const mavlink_message_t &msg);
 //OW
     void handle_radio_rc_channels(const mavlink_message_t &msg);
-    void handle_radio_link_stats(const mavlink_message_t &msg);
+    void handle_radio_link_stats(const mavlink_message_t &msg, bool log_radio);
+    void handle_radio_link_flow_control(const mavlink_message_t &msg, bool log_radio);
+    void handle_radio_link_stats_common(const mavlink_message_t &msg);
 //OWEND
 
     void handle_common_message(const mavlink_message_t &msg);

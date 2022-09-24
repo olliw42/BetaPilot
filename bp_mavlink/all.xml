@@ -34,5 +34,8 @@
     commands: 60050 - 60099
   -->
   <include>AVSSUAS.xml</include>
+  <!-- //OW -->
+  <include>mlrs.xml</include>
+  <!-- //OWEND -->
   <messages/>
 </mavlink>

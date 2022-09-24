@@ -47,6 +47,10 @@ void AP_RCProtocol_MavlinkRadio::update(void)
         frontend.mavlink_radio.link_stats_updated = false;
 
         link_quality = frontend.mavlink_radio.link_stats.rx_LQ;
+        if (frontend.mavlink_radio.link_stats.rx_receive_antenna == UINT8_MAX ||
+            frontend.mavlink_radio.link_stats.rx_rssi2 == UINT8_MAX) {
+            rssi = frontend.mavlink_radio.link_stats.rx_rssi1;
+        } else
         if (frontend.mavlink_radio.link_stats.rx_receive_antenna == 1) {
             rssi = frontend.mavlink_radio.link_stats.rx_rssi2;
         } else {
