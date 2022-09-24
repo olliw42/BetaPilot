@@ -856,14 +856,6 @@ void GCS_MAVLINK::handle_radio_link_stats(const mavlink_message_t &msg, bool log
     if (log_radio) {
         AP::logger().Write_Radio(ow_mavlink_radio_packet);
     }
-
-static uint32_t tlast = 0;
-uint32_t tnow = AP_HAL::millis();
-if ((tnow - tlast) > 2000) {
-    tlast = tnow;
-    gcs().send_text(MAV_SEVERITY_INFO, "RADIO: rssi %u %u", packet.rx_rssi1, packet.rx_rssi2);
-}
-
 }
 
 void GCS_MAVLINK::handle_radio_link_flow_control(const mavlink_message_t &msg, bool log_radio)
@@ -909,13 +901,6 @@ void GCS_MAVLINK::handle_radio_link_flow_control(const mavlink_message_t &msg, b
     if (log_radio) {
         AP::logger().Write_Radio(ow_mavlink_radio_packet);
     }
-
-//static uint32_t tlast = 0;
-//uint32_t tnow = AP_HAL::millis();
-//if ((tnow - tlast) > 2000) {
-    gcs().send_text(MAV_SEVERITY_INFO, "RADIO: txbuf %u", _txbuf);
-//}
-
 }
 //OWEND
 
