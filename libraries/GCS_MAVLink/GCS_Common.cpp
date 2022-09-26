@@ -834,6 +834,25 @@ void GCS_MAVLINK::handle_radio_link_stats(const mavlink_message_t &msg, bool log
     uint8_t _noise = 0;
     uint8_t _remnoise = 0;
 
+    if (packet.flags & RADIO_LINK_STATS_FLAGS_RSSI_DBM) {
+        // the rssi values are not in MAVLink standard, but negative dBm
+        // so we convert using ArduPilot's CRSF conversion, see AP_RCProtocol_CRSF::process_link_stats_frame()
+        if (_rssi < 50) {
+            _rssi = 254;
+        } else if (_rssi > 120) {
+            _rssi = 0;
+        } else {
+            _rssi = int16_t(roundf((1.0f - (_rssi - 50.0f) / 70.0f) * 254.0f));
+        }
+        if (_remrssi < 50) {
+            _remrssi = 254;
+        } else if (_remrssi > 120) {
+            _remrssi = 0;
+        } else {
+            _remrssi = int16_t(roundf((1.0f - (_remrssi - 50.0f) / 70.0f) * 254.0f));
+        }
+    }
+
     // we fake it for logging
     ow_mavlink_radio_packet.rssi = _rssi;
     ow_mavlink_radio_packet.remrssi = _remrssi;
