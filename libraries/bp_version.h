@@ -1,10 +1,11 @@
 #pragma once
 
-#define BETAPILOTVERSION "v055.3"
+#define BETAPILOTVERSION "v055.4"
 
 /*
 search for //OW to find all changes
 
+ frsky_passthrough_array support, new param SRx_FRPT added to set stream rate
  radio_rc_channels, radio_link_flow_control, radio_link_stats support added
  upgraded to Copter4.3.0-beta1
 2022.09.19: v054
