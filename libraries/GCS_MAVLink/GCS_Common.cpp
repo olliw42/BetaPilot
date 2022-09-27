@@ -4010,7 +4010,7 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
 
 // MAVLINK_MSG_ID_RADIO_LINK_STATS, MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL are handled in vehicle library
 
-    case MAVLINK_MSG_ID_RADIO_LINK_STATS: //can we handle it twice, here and in vehicle lib? not nomrally, dirty trick used
+    case MAVLINK_MSG_ID_RADIO_LINK_STATS: // we play a dirty trick in the vehicle lib, so it is called here too
         handle_radio_link_stats_common(msg);
         break;
 //OWEND
@@ -6185,7 +6185,7 @@ bool GCS_MAVLINK::accept_packet(const mavlink_status_t &status,
     // we currently narrow it down to "ours" to play it safe
     if ((msg.compid == MAV_COMP_ID_TELEMETRY_RADIO) &&
         (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS ||
-         msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL || msg.msgid == MAVLINK_MSG_ID_RADIO_STATUS)) {
+         msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL || msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_STATS)) {
         return true;
     }
 //OWEND

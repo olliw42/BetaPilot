@@ -132,7 +132,7 @@ bool MAVLink_routing::check_and_forward(mavlink_channel_t in_channel, const mavl
     // we want to handle messages from a radio as if they had target_system = our system, target_component = 0
     // we currently narrow it down to "our" messages to play it safe
     if ((msg.compid == MAV_COMP_ID_TELEMETRY_RADIO) &&
-        (msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL || msg.msgid == MAVLINK_MSG_ID_RADIO_STATUS ||
+        (msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL || msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_STATS ||
          msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS)) {
         target_system = mavlink_system.sysid;
         target_component = 0;
