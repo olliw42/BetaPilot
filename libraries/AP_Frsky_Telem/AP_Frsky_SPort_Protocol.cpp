@@ -89,16 +89,19 @@ bool AP_Frsky_SPort_Protocol::is_available_batt(uint8_t instance)
     return (AP::battery().num_instances() > instance);
 }
 
+
 bool AP_Frsky_SPort_Protocol::is_available_ap_status(void)
 {
     return gcs().vehicle_initialised();
 }
+
 
 bool AP_Frsky_SPort_Protocol::is_available_rpm(uint8_t instance)
 {
     const AP_RPM* rpm = AP::rpm();
     return (rpm != nullptr) && (rpm->num_sensors() > instance);
 }
+
 
 bool AP_Frsky_SPort_Protocol::is_available_terrain(void)
 {
@@ -109,17 +112,20 @@ bool AP_Frsky_SPort_Protocol::is_available_terrain(void)
     return false;
 }
 
+
 bool AP_Frsky_SPort_Protocol::is_available_wind(void)
 {
 #if !APM_BUILD_TYPE(APM_BUILD_Rover)
     float a;
-    WITH_SEMAPHORE(AP::ahrs().get_semaphore());
-    return AP::ahrs().airspeed_estimate_true(a); // if we have an airspeed estimate then we have a valid wind estimate
+    AP_AHRS &ahrs = AP::ahrs();
+    WITH_SEMAPHORE(ahrs.get_semaphore());
+    return ahrs.airspeed_estimate_true(a); // if we have an airspeed estimate then we have a valid wind estimate
 #else
     const AP_WindVane* windvane = AP::windvane();
     return (windvane != nullptr) && windvane->enabled();
 #endif
 }
+
 
 bool AP_Frsky_SPort_Protocol::is_available_waypoint(void)
 {
@@ -154,6 +160,7 @@ uint32_t AP_Frsky_SPort_Protocol::calc_gps_latlng(bool &send_latitude)
 uint32_t AP_Frsky_SPort_Protocol::calc_gps_status(void)
 {
     const AP_GPS &gps = AP::gps();
+    const Location &loc = gps.location();
 
     // number of GPS satellites visible (limit to 15 (0xF) since the value is stored on 4 bits)
     uint32_t gps_status = (gps.num_sats() < GPS_SATS_LIMIT) ? gps.num_sats() : GPS_SATS_LIMIT;
@@ -164,7 +171,6 @@ uint32_t AP_Frsky_SPort_Protocol::calc_gps_status(void)
     // GPS receiver advanced status (0: no advanced fix, 1: GPS_OK_FIX_3D_DGPS, 2: GPS_OK_FIX_3D_RTK_FLOAT, 3: GPS_OK_FIX_3D_RTK_FIXED)
     gps_status |= ((gps.status() > GPS_STATUS_LIMIT) ? gps.status()-GPS_STATUS_LIMIT : 0) << GPS_ADVSTATUS_OFFSET;
     // Altitude MSL in dm
-    const Location &loc = gps.location();
     gps_status |= prep_number(roundf(loc.alt * 0.1f), 2, 2) << GPS_ALTMSL_OFFSET;
     return gps_status;
 }
@@ -172,15 +178,23 @@ uint32_t AP_Frsky_SPort_Protocol::calc_gps_status(void)
 
 uint32_t AP_Frsky_SPort_Protocol::calc_attiandrng(void)
 {
-    const RangeFinder *_rng = RangeFinder::get_singleton();
+    const RangeFinder* rng = AP::rangefinder();
+    int32_t roll_sensor;
+    int32_t pitch_sensor;
 
-    AP_AHRS &_ahrs = AP::ahrs();
+    {
+        AP_AHRS &ahrs = AP::ahrs();
+        WITH_SEMAPHORE(ahrs.get_semaphore());
+        roll_sensor = ahrs.roll_sensor;
+        pitch_sensor = ahrs.pitch_sensor;
+    }
+
     // roll from [-18000;18000] centidegrees to unsigned .2 degree increments [0;1800] (just in case, limit to 2047 (0x7FF) since the value is stored on 11 bits)
-    uint32_t attiandrng = ((uint16_t)roundf((_ahrs.roll_sensor + 18000) * 0.05f) & ATTIANDRNG_ROLL_LIMIT);
+    uint32_t attiandrng = ((uint16_t)roundf((roll_sensor + 18000) * 0.05f) & ATTIANDRNG_ROLL_LIMIT);
     // pitch from [-9000;9000] centidegrees to unsigned .2 degree increments [0;900] (just in case, limit to 1023 (0x3FF) since the value is stored on 10 bits)
-    attiandrng |= ((uint16_t)roundf((_ahrs.pitch_sensor + 9000) * 0.05f) & ATTIANDRNG_PITCH_LIMIT) << ATTIANDRNG_PITCH_OFFSET;
+    attiandrng |= ((uint16_t)roundf((pitch_sensor + 9000) * 0.05f) & ATTIANDRNG_PITCH_LIMIT) << ATTIANDRNG_PITCH_OFFSET;
     // rangefinder measurement in cm
-    attiandrng |= prep_number(_rng ? _rng->distance_cm_orient(ROTATION_PITCH_270) : 0, 3, 1) << ATTIANDRNG_RNGFND_OFFSET;
+    attiandrng |= prep_number(rng ? rng->distance_cm_orient(ROTATION_PITCH_270) : 0, 3, 1) << ATTIANDRNG_RNGFND_OFFSET;
     return attiandrng;
 }
 
@@ -192,13 +206,17 @@ uint32_t AP_Frsky_SPort_Protocol::calc_velandyaw(bool airspeed_enabled, bool sen
     uint32_t velandyaw = prep_number(roundf(vspd * 10), 2, 1);
     float airspeed_m;       // m/s
     float hspeed_m;         // m/s
+    int32_t yaw_sensor;
     bool airspeed_estimate_true;
-    AP_AHRS &_ahrs = AP::ahrs();
+
     {
-        WITH_SEMAPHORE(_ahrs.get_semaphore());
-        hspeed_m = _ahrs.groundspeed(); // default is to use groundspeed
-        airspeed_estimate_true = AP::ahrs().airspeed_estimate_true(airspeed_m);
+        AP_AHRS &ahrs = AP::ahrs();
+        WITH_SEMAPHORE(ahrs.get_semaphore());
+        hspeed_m = ahrs.groundspeed(); // default is to use groundspeed
+        airspeed_estimate_true = ahrs.airspeed_estimate_true(airspeed_m);
+        yaw_sensor = ahrs.yaw_sensor;
     }
+
     // airspeed estimate + airspeed option disabled (default) => send airspeed (we give priority to airspeed over groundspeed)
     // airspeed estimate + airspeed option enabled => alternate airspeed/groundspeed, i.e send airspeed only when _passthrough.send_airspeed==true
     if (airspeed_estimate_true && (!airspeed_enabled || send_airspeed)) {
@@ -207,7 +225,7 @@ uint32_t AP_Frsky_SPort_Protocol::calc_velandyaw(bool airspeed_enabled, bool sen
     // horizontal velocity in dm/s
     velandyaw |= prep_number(roundf(hspeed_m * 10), 2, 1) << VELANDYAW_XYVEL_OFFSET;
     // yaw from [0;36000] centidegrees to .2 degree increments [0;1800] (just in case, limit to 2047 (0x7FF) since the value is stored on 11 bits)
-    velandyaw |= ((uint16_t)roundf(_ahrs.yaw_sensor * 0.05f) & VELANDYAW_YAW_LIMIT) << VELANDYAW_YAW_OFFSET;
+    velandyaw |= ((uint16_t)roundf(yaw_sensor * 0.05f) & VELANDYAW_YAW_LIMIT) << VELANDYAW_YAW_OFFSET;
     // flag the airspeed bit if required
     if (airspeed_estimate_true && airspeed_enabled && send_airspeed) {
         velandyaw |= (1U << VELANDYAW_ARSPD_OFFSET);
@@ -218,18 +236,18 @@ uint32_t AP_Frsky_SPort_Protocol::calc_velandyaw(bool airspeed_enabled, bool sen
 
 uint32_t AP_Frsky_SPort_Protocol::calc_batt(uint8_t instance)
 {
-    const AP_BattMonitor &_battery = AP::battery();
+    const AP_BattMonitor &battery = AP::battery();
 
     float current, consumed_mah;
-    if (!_battery.current_amps(current, instance)) {
+    if (!battery.current_amps(current, instance)) {
         current = 0;
     }
-    if (!_battery.consumed_mah(consumed_mah, instance)) {
+    if (!battery.consumed_mah(consumed_mah, instance)) {
         consumed_mah = 0;
     }
 
     // battery voltage in decivolts, can have up to a 12S battery (4.25Vx12S = 51.0V)
-    uint32_t batt = (((uint16_t)roundf(_battery.voltage(instance) * 10.0f)) & BATT_VOLTAGE_LIMIT);
+    uint32_t batt = (((uint16_t)roundf(battery.voltage(instance) * 10.0f)) & BATT_VOLTAGE_LIMIT);
     // battery current draw in deciamps
     batt |= prep_number(roundf(current * 10.0f), 2, 1) << BATT_CURRENT_OFFSET;
     // battery current drawn since power on in mAh (limit to 32767 (0x7FFF) since value is stored on 15 bits)
@@ -263,7 +281,7 @@ uint32_t AP_Frsky_SPort_Protocol::calc_ap_status(void)
     ap_status |= (uint8_t)(AP_Notify::flags.failsafe_battery||AP_Notify::flags.failsafe_ekf||AP_Notify::flags.failsafe_gcs||AP_Notify::flags.failsafe_radio) << AP_FS_OFFSET;
 #if AP_FENCE_ENABLED
     // fence status
-    AC_Fence *fence = AP::fence();
+    AC_Fence* fence = AP::fence();
     if (fence != nullptr) {
         ap_status |= (uint8_t)(fence->enabled() && fence->present()) << AP_FENCE_PRESENT_OFFSET;
         ap_status |= (uint8_t)(fence->get_breaches() > 0) << AP_FENCE_BREACH_OFFSET;
@@ -286,10 +304,10 @@ uint32_t AP_Frsky_SPort_Protocol::calc_home(void)
     float _relative_home_altitude = 0;
 
     {
-        AP_AHRS &_ahrs = AP::ahrs();
-        WITH_SEMAPHORE(_ahrs.get_semaphore());
-        got_position = _ahrs.get_location(loc);
-        home_loc = _ahrs.get_home();
+        AP_AHRS &ahrs = AP::ahrs();
+        WITH_SEMAPHORE(ahrs.get_semaphore());
+        got_position = ahrs.get_location(loc);
+        home_loc = ahrs.get_home();
     }
 
     if (got_position) {
@@ -315,21 +333,21 @@ uint32_t AP_Frsky_SPort_Protocol::calc_home(void)
 
 uint32_t AP_Frsky_SPort_Protocol::calc_rpm(void)
 {
-    const AP_RPM *ap_rpm = AP::rpm();
-    if (ap_rpm == nullptr) {
+    const AP_RPM* rpm = AP::rpm();
+    if (rpm == nullptr) {
         return 0;
     }
 
     uint32_t value = 0;
     // we send: rpm_value*0.1 as 16 bits signed
-    float rpm;
+    float rpm_value;
     // bits 0-15 for rpm instance 0
-    if (ap_rpm->get_rpm(0, rpm)) {
-        value |= (int16_t)roundf(rpm * 0.1f);
+    if (rpm->get_rpm(0, rpm_value)) {
+        value |= (int16_t)roundf(rpm_value * 0.1f);
     }
     // bits 16-31 for rpm instance 1
-    if (ap_rpm->get_rpm(1, rpm)) {
-        value |= (int16_t)roundf(rpm * 0.1f) << 16;
+    if (rpm->get_rpm(1, rpm_value)) {
+        value |= (int16_t)roundf(rpm_value * 0.1f) << 16;
     }
     return value;
 }
@@ -355,15 +373,15 @@ uint32_t AP_Frsky_SPort_Protocol::calc_terrain(void)
 {
     uint32_t value = 0;
 #if AP_TERRAIN_AVAILABLE
-    AP_Terrain *terrain = AP::terrain();
+    AP_Terrain* terrain = AP::terrain();
     if (terrain == nullptr || !terrain->enabled()) {
-        return value;
+        return 0;
     }
 
-    float height_above_terrain;
-    if (terrain->height_above_terrain(height_above_terrain, true)) {
+    float height_above_terrain_value;
+    if (terrain->height_above_terrain(height_above_terrain_value, true)) {
         // vehicle height above terrain
-        value |= prep_number(roundf(height_above_terrain * 10.0f), 3, 2);
+        value |= prep_number(roundf(height_above_terrain_value * 10.0f), 3, 2);
     }
     // terrain unhealthy flag
     value |= (uint8_t)(terrain->status() == AP_Terrain::TerrainStatus::TerrainStatusUnhealthy) << TERRAIN_UNHEALTHY_OFFSET;
@@ -381,23 +399,26 @@ uint32_t AP_Frsky_SPort_Protocol::calc_wind(void)
         WITH_SEMAPHORE(ahrs.get_semaphore());
         v = ahrs.wind_estimate();
     }
+
     // wind angle in 3 degree increments 0,360 (unsigned)
     uint32_t value = prep_number(roundf(wrap_360(degrees(atan2f(-v.y, -v.x))) * (1.0f/3.0f)), 2, 0);
     // wind speed in dm/s
     value |= prep_number(roundf(v.length() * 10.0f), 2, 1) << WIND_SPEED_OFFSET;
 #else
     const AP_WindVane* windvane = AP_WindVane::get_singleton();
-    uint32_t value = 0;
-    if (windvane != nullptr && windvane->enabled()) {
-        // true wind angle in 3 degree increments 0,360 (unsigned)
-        value = prep_number(roundf(wrap_360(degrees(windvane->get_true_wind_direction_rad())) * (1.0f/3.0f)), 2, 0);
-        // true wind speed in dm/s
-        value |= prep_number(roundf(windvane->get_true_wind_speed() * 10.0f), 2, 1) << WIND_SPEED_OFFSET;
-        // apparent wind angle in 3 degree increments -180,180 (signed)
-        value |= prep_number(roundf(degrees(windvane->get_apparent_wind_direction_rad()) * (1.0f/3.0f)), 2, 0);
-        // apparent wind speed in dm/s
-        value |= prep_number(roundf(windvane->get_apparent_wind_speed() * 10.0f), 2, 1) << WIND_APPARENT_SPEED_OFFSET;
+    if (windvane == nullptr || !windvane->enabled()) {
+        return 0;
     }
+
+    uint32_t value = 0;
+    // true wind angle in 3 degree increments 0,360 (unsigned)
+    value = prep_number(roundf(wrap_360(degrees(windvane->get_true_wind_direction_rad())) * (1.0f/3.0f)), 2, 0);
+    // true wind speed in dm/s
+    value |= prep_number(roundf(windvane->get_true_wind_speed() * 10.0f), 2, 1) << WIND_SPEED_OFFSET;
+    // apparent wind angle in 3 degree increments -180,180 (signed)
+    value |= prep_number(roundf(degrees(windvane->get_apparent_wind_direction_rad()) * (1.0f/3.0f)), 2, 0);
+    // apparent wind speed in dm/s
+    value |= prep_number(roundf(windvane->get_apparent_wind_speed() * 10.0f), 2, 1) << WIND_APPARENT_SPEED_OFFSET;
 #endif
     return value;
 }
@@ -405,8 +426,8 @@ uint32_t AP_Frsky_SPort_Protocol::calc_wind(void)
 
 uint32_t AP_Frsky_SPort_Protocol::calc_waypoint(void)
 {
-    const AP_Mission *mission = AP::mission();
-    const AP_Vehicle *vehicle = AP::vehicle();
+    const AP_Mission* mission = AP::mission();
+    const AP_Vehicle* vehicle = AP::vehicle();
     if (mission == nullptr || vehicle == nullptr) {
         return 0;
     }
@@ -424,7 +445,7 @@ uint32_t AP_Frsky_SPort_Protocol::calc_waypoint(void)
     // distance to next waypoint
     value |= prep_number(wp_distance, 3, 2) << WP_DISTANCE_OFFSET;
     // bearing encoded in 3 degrees increments
-    value |= ((uint8_t)roundf(wrap_360(angle) * 0.333f)) << WP_BEARING_OFFSET;
+    value |= ((uint8_t)roundf(wrap_360(angle) * (1.0f/3.0f))) << WP_BEARING_OFFSET;
     return value;
 }
 
@@ -450,10 +471,10 @@ uint32_t AP_Frsky_SPort_Protocol::calc_param(uint8_t* param_id)
         break;
     case TELEMETRY_FEATURES:
 #if HAL_WITH_FRSKY_TELEM_BIDIRECTIONAL
-        BIT_SET(param_value, PassthroughFeatures::BIDIR);
+        BIT_SET(param_value, FEATURES_BIDIR);
 #endif
 #if AP_SCRIPTING_ENABLED
-        BIT_SET(param_value, PassthroughFeatures::SCRIPTING);
+        BIT_SET(param_value, FEATURES_SCRIPTING);
 #endif
         *param_id = FRAME_TYPE;
         break;
@@ -463,28 +484,21 @@ uint32_t AP_Frsky_SPort_Protocol::calc_param(uint8_t* param_id)
 }
 
 
-void AP_Frsky_SPort_Protocol::pack_packet(uint8_t* buf, uint8_t count, uint16_t id, uint32_t data)
-{
-    memcpy(&(buf[count*6]), &id, 2);
-    memcpy(&(buf[count*6 + 2]), &data, 4);
-}
-
-
 float AP_Frsky_SPort_Protocol::get_vspeed_ms(void)
 {
     {
         // release semaphore as soon as possible
-        AP_AHRS &_ahrs = AP::ahrs();
         Vector3f v;
-        WITH_SEMAPHORE(_ahrs.get_semaphore());
-        if (_ahrs.get_velocity_NED(v)) {
+        AP_AHRS &ahrs = AP::ahrs();
+        WITH_SEMAPHORE(ahrs.get_semaphore());
+        if (ahrs.get_velocity_NED(v)) {
             return -v.z;
         }
     }
 
-    auto &_baro = AP::baro();
-    WITH_SEMAPHORE(_baro.get_semaphore());
-    return _baro.get_climb_rate();
+    auto &baro = AP::baro();
+    WITH_SEMAPHORE(baro.get_semaphore());
+    return baro.get_climb_rate();
 }
 
 
@@ -493,13 +507,13 @@ float AP_Frsky_SPort_Protocol::get_current_height_cm(void) // in centimeters abo
     Location loc;
     float current_height = 0.0f;
 
-    AP_AHRS &_ahrs = AP::ahrs();
-    WITH_SEMAPHORE(_ahrs.get_semaphore());
-    if (_ahrs.get_location(loc)) {
+    AP_AHRS &ahrs = AP::ahrs();
+    WITH_SEMAPHORE(ahrs.get_semaphore());
+    if (ahrs.get_location(loc)) {
         current_height = loc.alt * 0.01f;
         if (!loc.relative_alt) {
             // loc.alt has home altitude added, remove it
-            current_height -= _ahrs.get_home().alt * 0.01f;
+            current_height -= ahrs.get_home().alt * 0.01f;
         }
     }
     return current_height;
@@ -571,6 +585,81 @@ uint16_t AP_Frsky_SPort_Protocol::prep_number(int32_t number, uint8_t digits, ui
         }
     }
     return res;
+}
+
+
+void AP_Frsky_SPort_Protocol::pack_packet(uint8_t* buf, uint8_t count, uint16_t id, uint32_t data)
+{
+    memcpy(&(buf[count*6]), &id, 2);
+    memcpy(&(buf[count*6 + 2]), &data, 4);
+}
+
+
+void AP_Frsky_SPort_Protocol::assemble_array(uint8_t* packet_buf, uint8_t* count, uint8_t count_max, uint32_t tnow_ms)
+{
+    *count = 0;
+
+    pack_packet(packet_buf, *count, FRSKY_ID_ATTITUDE_RANGE, calc_attiandrng());
+    (*count)++;
+
+    bool send_latitude = true;
+    pack_packet(packet_buf, *count, FRSKY_ID_GPS_LAT_LON, calc_gps_latlng(send_latitude)); // true -> lat
+    (*count)++;
+    pack_packet(packet_buf, *count, FRSKY_ID_GPS_LAT_LON, calc_gps_latlng(send_latitude)); // false -> lng
+    (*count)++;
+
+    pack_packet(packet_buf, *count, FRSKY_ID_VEL_YAW, calc_velandyaw(true, false)); // groundspeed
+    (*count)++;
+    pack_packet(packet_buf, *count, FRSKY_ID_VEL_YAW, calc_velandyaw(true, true)); // airspeed
+    (*count)++;
+
+    if (is_available_ap_status()) {
+        pack_packet(packet_buf, *count, FRSKY_ID_AP_STATUS, calc_ap_status());
+        (*count)++;
+    }
+
+    pack_packet(packet_buf, *count, FRSKY_ID_GPS_STATUS, calc_gps_status());
+    (*count)++;
+
+    pack_packet(packet_buf, *count, FRSKY_ID_HOME, calc_home());
+    (*count)++;
+
+    pack_packet(packet_buf, *count, FRSKY_ID_BATT_1, calc_batt(0));
+    (*count)++;
+    if (is_available_batt(1)) {
+        pack_packet(packet_buf, *count, FRSKY_ID_BATT_2, calc_batt(1));
+        (*count)++;
+    }
+
+    if (is_available_rpm()) {
+        pack_packet(packet_buf, *count, FRSKY_ID_RPM, calc_rpm());
+        (*count)++;
+    }
+
+    if (is_available_terrain()) {
+        pack_packet(packet_buf, *count, FRSKY_ID_TERRAIN, calc_terrain());
+        (*count)++;
+    }
+
+    if (is_available_wind()) {
+        pack_packet(packet_buf, *count, FRSKY_ID_WIND, calc_wind());
+        (*count)++;
+    }
+
+    if (is_available_waypoint()) {
+        pack_packet(packet_buf, *count, FRSKY_ID_WAYPOINT_V2, calc_waypoint());
+        (*count)++;
+    }
+
+    // TODO: we don't need to send it so often
+    static uint8_t param_id = PassthroughParam::NONE;
+
+    uint32_t param_data = calc_param(&param_id);
+    if (param_id == PassthroughParam::TELEMETRY_FEATURES) {
+        param_data = 0; // we don't have any telemetry features
+    }
+    pack_packet(packet_buf, *count, FRSKY_ID_PARAM, param_data);
+    (*count)++;
 }
 
 
