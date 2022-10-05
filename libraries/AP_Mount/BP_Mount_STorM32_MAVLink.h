@@ -41,17 +41,14 @@ public:
     // returns true if this mount can control its pan (required for multicopters)
     bool has_pan_control() const override { return false; }
 
-    // set mount's mode
-    void set_mode(enum MAV_MOUNT_MODE mode) override { _mode = mode; }
+    // handle a GLOBAL_POSITION_INT message
+    bool handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet) override;
 
     // handle GIMBAL_DEVICE_INFORMATION message
     void handle_gimbal_device_information(const mavlink_message_t &msg) override {}
 
     // handle GIMBAL_DEVICE_ATTITUDE_STATUS message
     void handle_gimbal_device_attitude_status(const mavlink_message_t &msg) override {}
-
-    // handle a GLOBAL_POSITION_INT message
-    bool handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet) override;
 
 protected:
 
