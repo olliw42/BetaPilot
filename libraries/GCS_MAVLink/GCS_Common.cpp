@@ -55,6 +55,9 @@
 #include <AP_Frsky_Telem/AP_Frsky_Telem.h>
 #include <RC_Channel/RC_Channel.h>
 #include <AP_VisualOdom/AP_VisualOdom.h>
+//OW
+#include <AP_Frsky_Telem/AP_Frsky_SPort_Protocol.h>
+//OWEND
 
 #include "MissionItemProtocol_Waypoints.h"
 #include "MissionItemProtocol_Rally.h"
@@ -816,6 +819,113 @@ void GCS_MAVLINK::handle_radio_status(const mavlink_message_t &msg, bool log_rad
     }
 }
 
+//OW
+static mavlink_radio_t ow_mavlink_radio_packet;
+
+void GCS_MAVLINK::handle_radio_link_stats(const mavlink_message_t &msg, bool log_radio)
+{
+    // let's see if we can try to skip out early if possible
+    AP_RSSI* rssi = AP::rssi();
+    if ((rssi != nullptr) && !rssi->enabled(AP_RSSI::RssiType::TELEMETRY_RADIO_RSSI)) return;
+
+    mavlink_radio_link_stats_t packet;
+    mavlink_msg_radio_link_stats_decode(&msg, &packet);
+
+    // convert it to what we would get from RADIO_STATUS
+    uint8_t _rssi = packet.rx_rssi1;
+    uint8_t _remrssi = (packet.tx_rssi1 == UINT8_MAX) ? 0 : packet.tx_rssi1;
+    uint8_t _noise = 0;
+    uint8_t _remnoise = 0;
+
+    if (packet.flags & RADIO_LINK_STATS_FLAGS_RSSI_DBM) {
+        // the rssi values are not in MAVLink standard, but negative dBm
+        // so we convert using ArduPilot's CRSF conversion, see AP_RCProtocol_CRSF::process_link_stats_frame()
+        if (_rssi < 50) {
+            _rssi = 254;
+        } else if (_rssi > 120) {
+            _rssi = 0;
+        } else {
+            _rssi = int16_t(roundf((1.0f - (_rssi - 50.0f) / 70.0f) * 254.0f));
+        }
+        if (_remrssi < 50) {
+            _remrssi = 254;
+        } else if (_remrssi > 120) {
+            _remrssi = 0;
+        } else {
+            _remrssi = int16_t(roundf((1.0f - (_remrssi - 50.0f) / 70.0f) * 254.0f));
+        }
+    }
+
+    // we fake it for logging
+    ow_mavlink_radio_packet.rssi = _rssi;
+    ow_mavlink_radio_packet.remrssi = _remrssi;
+    ow_mavlink_radio_packet.noise = _noise;
+    ow_mavlink_radio_packet.remnoise = _remnoise;
+
+    // now what it would do for RADIO_STATUS
+    const uint32_t now = AP_HAL::millis();
+
+    last_radio_status.received_ms = now;
+    last_radio_status.rssi = _rssi;
+
+    // record if the GCS has been receiving radio messages from
+    // the aircraft
+    if (_remrssi != 0) {
+        last_radio_status.remrssi_ms = now;
+    }
+
+    //log rssi, noise, etc if logging Performance monitoring data
+    if (log_radio) {
+        AP::logger().Write_Radio(ow_mavlink_radio_packet);
+    }
+}
+
+void GCS_MAVLINK::handle_radio_link_flow_control(const mavlink_message_t &msg, bool log_radio)
+{
+    mavlink_radio_link_flow_control_t packet;
+    mavlink_msg_radio_link_flow_control_decode(&msg, &packet);
+
+    if (packet.txbuf == UINT8_MAX) return;
+
+    // convert it to what we would get from RADIO_STATUS
+    uint8_t _txbuf = packet.txbuf;
+
+    // we fake it for logging
+    ow_mavlink_radio_packet.txbuf = _txbuf;
+
+    // now what it would do for RADIO_STATUS
+    last_txbuf = _txbuf;
+
+    // use the state of the transmit buffer in the radio to
+    // control the stream rate, giving us adaptive software
+    // flow control
+    if (_txbuf < 20 && stream_slowdown_ms < 2000) {
+        // we are very low on space - slow down a lot
+        stream_slowdown_ms += 60;
+    } else if (_txbuf < 50 && stream_slowdown_ms < 2000) {
+        // we are a bit low on space, slow down slightly
+        stream_slowdown_ms += 20;
+    } else if (_txbuf > 95 && stream_slowdown_ms > 200) {
+        // the buffer has plenty of space, speed up a lot
+        stream_slowdown_ms -= 40;
+    } else if (_txbuf > 90 && stream_slowdown_ms != 0) {
+        // the buffer has enough space, speed up a bit
+        stream_slowdown_ms -= 20;
+    }
+
+#if GCS_DEBUG_SEND_MESSAGE_TIMINGS
+    if (stream_slowdown_ms > max_slowdown_ms) {
+        max_slowdown_ms = stream_slowdown_ms;
+    }
+#endif
+
+    //log rssi, noise, etc if logging Performance monitoring data
+    if (log_radio) {
+        AP::logger().Write_Radio(ow_mavlink_radio_packet);
+    }
+}
+//OWEND
+
 /*
   handle an incoming mission item
   return true if this is the last mission item, otherwise false
@@ -909,6 +1019,9 @@ ap_message GCS_MAVLINK::mavlink_id_to_ap_message_id(const uint32_t mavlink_id) c
         { MAVLINK_MSG_ID_NAV_CONTROLLER_OUTPUT, MSG_NAV_CONTROLLER_OUTPUT},
         { MAVLINK_MSG_ID_MISSION_CURRENT,       MSG_CURRENT_WAYPOINT},
         { MAVLINK_MSG_ID_VFR_HUD,               MSG_VFR_HUD},
+//OW
+        { MAVLINK_MSG_ID_FRSKY_PASSTHROUGH_ARRAY, MSG_FRSKY_PASSTHROUGH_ARRAY},
+//OWEND
         { MAVLINK_MSG_ID_SERVO_OUTPUT_RAW,      MSG_SERVO_OUTPUT_RAW},
         { MAVLINK_MSG_ID_RC_CHANNELS,           MSG_RC_CHANNELS},
         { MAVLINK_MSG_ID_RC_CHANNELS_RAW,       MSG_RC_CHANNELS_RAW},
@@ -2898,6 +3011,41 @@ void GCS_MAVLINK::send_vfr_hud()
         vfr_hud_climbrate());
 }
 
+//OW
+// this is tentative, just demo
+// we probably want some timing, some packets do not need to be send so often
+// maybe we also want to make which packets are send dependent on which streams are enabled
+// or vice versa, modify the streams depending on whether frsky passthorugh is send
+// one also could make it dependent on which rate is higher
+
+void GCS_MAVLINK::send_frsky_passthrough_array()
+{
+    uint8_t count = 0;
+    uint8_t packet_buf[MAVLINK_MSG_FRSKY_PASSTHROUGH_ARRAY_FIELD_PACKET_BUF_LEN] = {0}; // max 40 packets!
+    //uint8_t packet_buf[MAVLINK_MSG_TUNNEL_FIELD_PAYLOAD_LEN] = {0}; // max 21 packets!
+
+    AP_Frsky_SPort_Protocol* pt = AP::frsky_sport_protocol();
+    if (pt == nullptr) return;
+
+    pt->assemble_array(packet_buf, &count, 21, AP_HAL::millis());
+
+    if (count == 0) return;
+
+    mavlink_msg_frsky_passthrough_array_send(
+        chan,
+        AP_HAL::millis(), // time since system boot
+        count,
+        packet_buf);
+/*
+    mavlink_msg_tunnel_send(
+        chan,
+        0, 0, // target_system, target_component
+        34567, // payload_type
+        count*6, // payload_length
+        packet_buf); */
+}
+//OWEND
+
 /*
   handle a MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN command 
 
@@ -3896,9 +4044,37 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
         AP_CheckFirmware::handle_msg(chan, msg);
         break;
 #endif
-    }
+//OW
+    case MAVLINK_MSG_ID_RADIO_RC_CHANNELS:
+        handle_radio_rc_channels(msg);
+        break;
 
+// MAVLINK_MSG_ID_RADIO_LINK_STATS, MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL are handled in vehicle library
+
+    case MAVLINK_MSG_ID_RADIO_LINK_STATS: // we play a dirty trick in the vehicle lib, so it is called here too
+        handle_radio_link_stats_common(msg);
+        break;
+//OWEND
+    }
 }
+
+//OW
+void GCS_MAVLINK::handle_radio_rc_channels(const mavlink_message_t &msg)
+{
+    mavlink_radio_rc_channels_t packet;
+    mavlink_msg_radio_rc_channels_decode(&msg, &packet);
+
+    AP::RC().handle_radio_rc_channels(&packet);
+}
+
+void GCS_MAVLINK::handle_radio_link_stats_common(const mavlink_message_t &msg)
+{
+    mavlink_radio_link_stats_t packet;
+    mavlink_msg_radio_link_stats_decode(&msg, &packet);
+
+    AP::RC().handle_radio_link_stats(&packet);
+}
+//OWEND
 
 void GCS_MAVLINK::handle_common_mission_message(const mavlink_message_t &msg)
 {
@@ -5646,6 +5822,14 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
         send_vfr_hud();
         break;
 
+//OW
+    case MSG_FRSKY_PASSTHROUGH_ARRAY:
+        CHECK_PAYLOAD_SIZE(FRSKY_PASSTHROUGH_ARRAY);
+        //CHECK_PAYLOAD_SIZE(TUNNEL);
+        send_frsky_passthrough_array();
+        break;
+//OWEND
+
     case MSG_VIBRATION:
         CHECK_PAYLOAD_SIZE(VIBRATION);
         send_vibration();
@@ -6044,6 +6228,16 @@ bool GCS_MAVLINK::accept_packet(const mavlink_status_t &status,
         msg.msgid == MAVLINK_MSG_ID_RADIO_STATUS) {
         return true;
     }
+
+//OW
+    // we want to handle messages from a radio
+    // we currently narrow it down to "ours" to play it safe
+    if ((msg.compid == MAV_COMP_ID_TELEMETRY_RADIO) &&
+        (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS ||
+         msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL || msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_STATS)) {
+        return true;
+    }
+//OWEND
 
     if (!sysid_enforce()) {
         return true;

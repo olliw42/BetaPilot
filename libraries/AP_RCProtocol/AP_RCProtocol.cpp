@@ -30,6 +30,9 @@
 #include "AP_RCProtocol_ST24.h"
 #include "AP_RCProtocol_FPort.h"
 #include "AP_RCProtocol_FPort2.h"
+//OW
+#include "AP_RCProtocol_MavlinkRadio.h"
+//OWEND
 #include <AP_Math/AP_Math.h>
 #include <RC_Channel/RC_Channel.h>
 
@@ -54,6 +57,9 @@ void AP_RCProtocol::init()
 #endif
     backend[AP_RCProtocol::ST24] = new AP_RCProtocol_ST24(*this);
     backend[AP_RCProtocol::FPORT] = new AP_RCProtocol_FPort(*this, true);
+//OW
+    backend[AP_RCProtocol::MAVLINK_RADIO] = new AP_RCProtocol_MavlinkRadio(*this);
+//OWEND
 }
 
 AP_RCProtocol::~AP_RCProtocol()
@@ -319,6 +325,48 @@ void AP_RCProtocol::check_added_uart(void)
     }
 }
 
+//OW
+void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_t* packet)
+{
+    if (_detected_protocol == AP_RCProtocol::NONE) { // we are still searching
+//#ifndef IOMCU_FW
+//? we need this, but originally it is enclosed by an #ifndef IOMCU_FW
+// how does this work?
+        rc_protocols_mask = rc().enabled_protocols();
+//#endif
+        if (!protocol_enabled(MAVLINK_RADIO)) return; // not our turn
+        _detected_protocol = AP_RCProtocol::MAVLINK_RADIO;
+    }
+
+    // update the field, so that the backend can see it
+    memcpy(&(mavlink_radio.rc_channels), packet, sizeof(mavlink_radio_rc_channels_t));
+    mavlink_radio.rc_channels_updated = true;
+
+    // now let the backend update
+    backend[_detected_protocol]->update();
+
+    // now we can ask the backend if it got a new input
+    if (backend[_detected_protocol]->new_input()) {
+        _new_input = true;
+        _last_input_ms = AP_HAL::millis();
+    }
+};
+
+void AP_RCProtocol::handle_radio_link_stats(mavlink_radio_link_stats_t* packet)
+{
+    if (_detected_protocol != AP_RCProtocol::MAVLINK_RADIO) {
+        return;
+    }
+
+    // we need to decide if we want to handle this like CRSF or like RADIO_STATUS
+    // no, we don't, since user does via RssiType::RECEIVER / RssiType::TELEMETRY_RADIO_RSSI setting
+    memcpy(&(mavlink_radio.link_stats), packet, sizeof(mavlink_radio_link_stats_t));
+    mavlink_radio.link_stats_updated = true;
+
+    backend[_detected_protocol]->update();
+}
+//OWEND
+
 void AP_RCProtocol::update()
 {
     check_added_uart();
@@ -425,6 +473,10 @@ const char *AP_RCProtocol::protocol_name_from_protocol(rcprotocol_t protocol)
         return "FPORT2";
     case NONE:
         break;
+//OW
+    case MAVLINK_RADIO:
+        return "MavRadio";
+//OWEND
     }
     return nullptr;
 }
