@@ -30,4 +30,8 @@ public:
 
     AP_Float    roll_stb_lead;      // roll lead control gain (only used by servo backend)
     AP_Float    pitch_stb_lead;     // pitch lead control gain (only used by servo backend)
+
+//OW
+    AP_Int8     zflags;
+//OWEND
 };

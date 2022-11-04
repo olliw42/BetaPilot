@@ -90,7 +90,10 @@ void gcs_out_of_space_to_send(mavlink_channel_t chan);
     }
 #define MAV_STREAM_TERMINATOR { (streams)0, nullptr, 0 }
 
-#define GCS_MAVLINK_NUM_STREAM_RATES 10
+//OW
+//#define GCS_MAVLINK_NUM_STREAM_RATES 10
+#define GCS_MAVLINK_NUM_STREAM_RATES 11
+//OWEND
 class GCS_MAVLINK_Parameters
 {
 public:
@@ -232,6 +235,9 @@ public:
         STREAM_EXTRA3,
         STREAM_PARAMS,
         STREAM_ADSB,
+//OW
+        STREAM_FRSKYPASSTHROUGH,
+//OWEND
         NUM_STREAMS
     };
 
@@ -305,6 +311,9 @@ public:
     void send_extended_sys_state() const;
     void send_local_position() const;
     void send_vfr_hud();
+//OW
+    void send_frsky_passthrough_array();
+//OWEND
     void send_vibration() const;
     void send_gimbal_device_attitude_status() const;
     void send_named_float(const char *name, float value) const;
@@ -499,6 +508,12 @@ protected:
     void handle_radio_status(const mavlink_message_t &msg, bool log_radio);
     void handle_serial_control(const mavlink_message_t &msg);
     void handle_vision_position_delta(const mavlink_message_t &msg);
+//OW
+    void handle_radio_rc_channels(const mavlink_message_t &msg);
+    void handle_radio_link_stats(const mavlink_message_t &msg, bool log_radio);
+    void handle_radio_link_flow_control(const mavlink_message_t &msg, bool log_radio);
+    void handle_radio_link_stats_common(const mavlink_message_t &msg);
+//OWEND
 
     void handle_common_message(const mavlink_message_t &msg);
     void handle_set_gps_global_origin(const mavlink_message_t &msg);
@@ -1140,6 +1155,10 @@ public:
 #if HAL_HIGH_LATENCY2_ENABLED
     void enable_high_latency_connections(bool enabled);
 #endif // HAL_HIGH_LATENCY2_ENABLED
+
+//OW
+    uint8_t get_landed_state(void) const { return num_gcs() > 0 ? chan(0)->landed_state() : MAV_LANDED_STATE_UNDEFINED; }
+//OWEND
 
 protected:
 

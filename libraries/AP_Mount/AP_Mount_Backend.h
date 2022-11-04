@@ -92,13 +92,31 @@ public:
     virtual void handle_param_value(const mavlink_message_t &msg) {}
 
     // handle a GLOBAL_POSITION_INT message
-    bool handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet);
+//OW
+//    bool handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet);
+    virtual bool handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet);
+//OWEND
 
     // handle GIMBAL_DEVICE_INFORMATION message
     virtual void handle_gimbal_device_information(const mavlink_message_t &msg) {}
 
     // handle GIMBAL_DEVICE_ATTITUDE_STATUS message
     virtual void handle_gimbal_device_attitude_status(const mavlink_message_t &msg) {}
+
+//OW
+    // handle msg - allows to process a msg from a gimbal
+    virtual void handle_msg(const mavlink_message_t &msg) {}
+
+    // pre arm checks
+    virtual bool pre_arm_checks(void) { return true; }
+
+    // send banner
+    virtual void send_banner(void) {}
+
+    // frontend access
+    uint8_t num_instances(void) { return _frontend._num_instances; }
+    bool is_primary(void) { return (_instance == _frontend._primary); }
+//OWEND
 
 protected:
 
