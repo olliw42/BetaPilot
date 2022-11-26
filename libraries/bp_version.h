@@ -1,12 +1,12 @@
 #pragma once
 
-#define BETAPILOTVERSION "v055.7"
+#define BETAPILOTVERSION "v055.8"
 
 /*
 search for //OW to find all changes
 
- upgraded to Copter4.3.0-beta3
- upgraded to Copter4.3.0-beta2
+ no mavftp per serial port option, (1U<<13) = 8192
+ upgraded to Copter4.3.0
  frsky_passthrough_array support, new param SRx_FRPT added to set stream rate
  radio_rc_channels, radio_link_flow_control, radio_link_stats support added
  upgraded to Copter4.3.0-beta1
@@ -86,6 +86,7 @@ RC_CHANNELS_OVERRIDE
 RC_CHANNELS
 RC_CHANNELS_RAW
 RADIO_STATUS
+MANUAL_CONTROL
 
 SYSTEM_TIME
 
@@ -110,4 +111,10 @@ GCS_MAVLINK_Copter::handle_command_long_packet()-> MAV_CMD_DO_FOLLOW -> copter.g
 
 GLOBAL_POSITION_INT
 FOLLOW_TARGET
+
+DIGICAM_CONTROL
+MOUNT_CONFIGURE
+MOUNT_CONTROL
+
+MAV_TYPE_  "GUID"
 */

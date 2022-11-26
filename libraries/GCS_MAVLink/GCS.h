@@ -90,7 +90,7 @@ void gcs_out_of_space_to_send(mavlink_channel_t chan);
     }
 #define MAV_STREAM_TERMINATOR { (streams)0, nullptr, 0 }
 
-//OW
+//OW FRPT
 //#define GCS_MAVLINK_NUM_STREAM_RATES 10
 #define GCS_MAVLINK_NUM_STREAM_RATES 11
 //OWEND
@@ -235,7 +235,7 @@ public:
         STREAM_EXTRA3,
         STREAM_PARAMS,
         STREAM_ADSB,
-//OW
+//OW FRPT
         STREAM_FRSKYPASSTHROUGH,
 //OWEND
         NUM_STREAMS
@@ -311,9 +311,6 @@ public:
     void send_extended_sys_state() const;
     void send_local_position() const;
     void send_vfr_hud();
-//OW
-    void send_frsky_passthrough_array();
-//OWEND
     void send_vibration() const;
     void send_gimbal_device_attitude_status() const;
     void send_named_float(const char *name, float value) const;
@@ -421,7 +418,23 @@ public:
 
     MAV_RESULT set_message_interval(uint32_t msg_id, int32_t interval_us);
 
+//OW FRPT
+    void send_frsky_passthrough_array();
+//OWEND
+//OW
+    static bool mavtype_is_on_channel(uint8_t mav_type, mavlink_channel_t channel) { return routing.mavtype_is_on_channel(mav_type, channel); }
+//OWEND
+
 protected:
+
+//OW RADIOLINK
+    // called from vehicle class handler
+    void handle_radio_link_stats_rssi(const mavlink_message_t &msg, bool log_radio);
+    void handle_radio_link_flow_control(const mavlink_message_t &msg, bool log_radio);
+    // called from common handler
+    void handle_radio_rc_channels(const mavlink_message_t &msg);
+    void handle_radio_link_stats(const mavlink_message_t &msg);
+//OWEND
 
     bool mavlink_coordinate_frame_to_location_alt_frame(MAV_FRAME coordinate_frame,
                                                         Location::AltFrame &frame);
@@ -508,12 +521,6 @@ protected:
     void handle_radio_status(const mavlink_message_t &msg, bool log_radio);
     void handle_serial_control(const mavlink_message_t &msg);
     void handle_vision_position_delta(const mavlink_message_t &msg);
-//OW
-    void handle_radio_rc_channels(const mavlink_message_t &msg);
-    void handle_radio_link_stats(const mavlink_message_t &msg, bool log_radio);
-    void handle_radio_link_flow_control(const mavlink_message_t &msg, bool log_radio);
-    void handle_radio_link_stats_common(const mavlink_message_t &msg);
-//OWEND
 
     void handle_common_message(const mavlink_message_t &msg);
     void handle_set_gps_global_origin(const mavlink_message_t &msg);

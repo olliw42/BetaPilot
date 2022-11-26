@@ -475,7 +475,7 @@ const AP_Param::GroupInfo GCS_MAVLINK_Parameters::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("ADSB",   9, GCS_MAVLINK_Parameters, streamRates[9],  0),
 
-//OW
+//OW FRPT
     AP_GROUPINFO("FRPT",    10, GCS_MAVLINK_Parameters, streamRates[10],  0),
 //OWEND
 
@@ -554,7 +554,7 @@ static const ap_message STREAM_ADSB_msgs[] = {
     MSG_ADSB_VEHICLE,
     MSG_AIS_VESSEL,
 };
-//OW
+//OW FRPT
 static const ap_message STREAM_FRSKYPASSTHROUGH_msgs[] = {
     MSG_FRSKY_PASSTHROUGH_ARRAY
 };
@@ -570,7 +570,7 @@ const struct GCS_MAVLINK::stream_entries GCS_MAVLINK::all_stream_entries[] = {
     MAV_STREAM_ENTRY(STREAM_EXTRA3),
     MAV_STREAM_ENTRY(STREAM_ADSB),
     MAV_STREAM_ENTRY(STREAM_PARAMS),
-//OW
+//OW FRPT
     MAV_STREAM_ENTRY(STREAM_FRSKYPASSTHROUGH),
 //OWEND
     MAV_STREAM_TERMINATOR // must have this at end of stream_entries
@@ -1408,14 +1408,11 @@ void GCS_MAVLINK_Copter::handleMessage(const mavlink_message_t &msg)
         handle_radio_status(msg, copter.should_log(MASK_LOG_PM));
         break;
     }
-//OW
+//OW RADIOLINK
     case MAVLINK_MSG_ID_RADIO_LINK_STATS:
     {
-        handle_radio_link_stats(msg, copter.should_log(MASK_LOG_PM));
-        // let's see if we can try to skip out early if possible
-        AP_RSSI* rssi = AP::rssi();
-        if ((rssi != nullptr) && !rssi->enabled(AP_RSSI::RssiType::RECEIVER)) break;
-        handle_common_message(msg); // dirty! this makes it also go through handle_common_message(msg)!!
+        handle_radio_link_stats_rssi(msg, copter.should_log(MASK_LOG_PM));
+        handle_radio_link_stats(msg); // needs to be called since handle_common_message(msg) is bypassed
         break;
     }
 

@@ -17,7 +17,7 @@
 #pragma once
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Common/AP_Common.h>
-//OW
+//OW RADIOLINK
 #include <GCS_MAVLink/GCS_MAVLink.h>
 //OWEND
 
@@ -56,7 +56,7 @@ public:
 #if AP_RCPROTOCOL_FASTSBUS_ENABLED
         FASTSBUS   = 12,
 #endif
-//OW
+//OW RADIOLINK
         MAVLINK_RADIO = 13,
 //OWEND
         NONE    //last enum always is None
@@ -104,7 +104,7 @@ public:
         case CRSF:
         case ST24:
         case NONE:
-//OW
+//OW RADIOLINK
         case MAVLINK_RADIO:
 //OWEND
             return false;
@@ -156,7 +156,7 @@ public:
         return _detected_with_bytes;
     }
 
-//OW
+//OW RADIOLINK
     void handle_radio_rc_channels(const mavlink_radio_rc_channels_t* packet);
     void handle_radio_link_stats(mavlink_radio_link_stats_t* packet);
 

@@ -176,7 +176,7 @@ public:
 //OW
     // this is somewhat different to handle_message() in that it catches all messages
     // with significant work it potentially could be combined, but let's play it safe and not introduce side effects
-    void handle_msg(const mavlink_message_t &msg);
+    void handle_msg(mavlink_channel_t chan, const mavlink_message_t &msg);
 
     // send banner
     void send_banner(void);

@@ -410,7 +410,12 @@ bool AP_Mount::pre_arm_checks(char *failure_msg, uint8_t failure_msg_len)
     // check healthy
     for (uint8_t i=0; i<AP_MOUNT_MAX_INSTANCES; i++) {
         if ((_backends[i] != nullptr) && !_backends[i]->healthy()) {
-            strncpy(failure_msg, "not healthy", failure_msg_len);
+//OW
+//            strncpy(failure_msg, "not healthy", failure_msg_len);
+            strncpy(failure_msg, "prearm checks failed", failure_msg_len);
+            char *s;
+            if (asprintf(&s, "%s (%d)", failure_msg, i) == -1) strncpy(failure_msg, s, failure_msg_len);
+//OWEND
             return false;
         }
     }
@@ -606,7 +611,7 @@ void AP_Mount::convert_params()
 }
 
 //OW
-void AP_Mount::handle_msg(const mavlink_message_t &msg)
+void AP_Mount::handle_msg(mavlink_channel_t chan, const mavlink_message_t &msg)
 {
     for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
         if (_backends[instance] != nullptr) {

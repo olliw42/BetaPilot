@@ -57,7 +57,10 @@ public:
 
     // set yaw_lock.  If true, the gimbal's yaw target is maintained in earth-frame meaning it will lock onto an earth-frame heading (e.g. North)
     // If false (aka "follow") the gimbal's yaw is maintained in body-frame meaning it will rotate with the vehicle
-    void set_yaw_lock(bool yaw_lock) { _yaw_lock = yaw_lock; }
+//OW
+//    void set_yaw_lock(bool yaw_lock) { _yaw_lock = yaw_lock; }
+    virtual void set_yaw_lock(bool yaw_lock) { _yaw_lock = yaw_lock; }
+//OWEND
 
     // set angle target in degrees
     // yaw_is_earth_frame (aka yaw_lock) should be true if yaw angle is earth-frame, false if body-frame
@@ -83,7 +86,10 @@ public:
     void handle_mount_control(const mavlink_mount_control_t &packet);
 
     // send a GIMBAL_DEVICE_ATTITUDE_STATUS message to GCS
-    void send_gimbal_device_attitude_status(mavlink_channel_t chan);
+//OW
+//    void send_gimbal_device_attitude_status(mavlink_channel_t chan);
+    virtual void send_gimbal_device_attitude_status(mavlink_channel_t chan);
+//OWEND
 
     // handle a GIMBAL_REPORT message
     virtual void handle_gimbal_report(mavlink_channel_t chan, const mavlink_message_t &msg) {}
@@ -106,9 +112,6 @@ public:
 //OW
     // handle msg - allows to process a msg from a gimbal
     virtual void handle_msg(const mavlink_message_t &msg) {}
-
-    // pre arm checks
-    virtual bool pre_arm_checks(void) { return true; }
 
     // send banner
     virtual void send_banner(void) {}

@@ -46,7 +46,7 @@ public:
 
     // return true if rssi reading is enabled
     bool enabled() const { return RssiType(rssi_type.get()) != RssiType::TYPE_DISABLED; }
-//OW
+//OW RADIOLINK
     bool enabled(RssiType type) const { return RssiType(rssi_type.get()) == type; }
 //OWEND
 
