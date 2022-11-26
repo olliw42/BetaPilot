@@ -8,6 +8,12 @@
 
 #define THISFIRMWARE "ArduCopter V4.3.1-rc1"
 
+//OW
+#undef THISFIRMWARE
+#include "../libraries/bp_version.h"
+#define THISFIRMWARE "BetaCopter V4.3.0 " BETAPILOTVERSION " 20221104"
+//OWEND
+
 // the following line is parsed by the autotest scripts
 #define FIRMWARE_VERSION 4,3,1,FIRMWARE_VERSION_TYPE_RC
 
