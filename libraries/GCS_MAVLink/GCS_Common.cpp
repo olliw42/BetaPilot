@@ -6286,12 +6286,6 @@ uint64_t GCS_MAVLINK::capabilities() const
         ret |= MAV_PROTOCOL_CAPABILITY_FTP;
     }
 
-//OW MAVFTP
-    if (uartstate->option_enabled(AP_HAL::UARTDriver::OPTION_NOMAVFTPCAPABILITY)) { // disable ftp for this serial
-        ret &=~ MAV_PROTOCOL_CAPABILITY_FTP;
-    }
-//OWEND
-
     return ret;
 }
 
