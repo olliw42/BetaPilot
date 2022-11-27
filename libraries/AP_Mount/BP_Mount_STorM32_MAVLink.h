@@ -1,14 +1,13 @@
-/*
-  Gremsy mount backend class. modified for STorM32
- */
+//*****************************************************
+//OW
+// (c) olliw, www.olliw.eu, GPL3
+// STorM32 mount backend class
+// 100% MAVLink + storm32.xml
+//*****************************************************
 #pragma once
 
 #include "AP_Mount.h"
 #include "AP_Mount_Backend.h"
-
-
-#define USE_FIND_GIMBAL_MAX_SEARCH_TIME_MS  0 // set to 0 to disable
-#define FIND_GIMBAL_MAX_SEARCH_TIME_MS    300000 // search for gimbal after startup
 
 
 // STorM32 states
@@ -68,6 +67,7 @@ public:
     // handle GIMBAL_DEVICE_ATTITUDE_STATUS message
     void handle_gimbal_device_attitude_status(const mavlink_message_t &msg) override;
 
+    // send a GIMBAL_DEVICE_ATTITUDE_STATUS message to GCS
     // STorM32: this needs to be empty, because the gimbal device is sending it itself
     // we don't do any of ArduPilot's private mavlink channel nonsense
     void send_gimbal_device_attitude_status(mavlink_channel_t chan) override {}
@@ -127,6 +127,7 @@ private:
     // flags
 
     bool _sendonly;
+    bool _should_log;
 
     // internal task variables
 
@@ -144,6 +145,9 @@ private:
     bool _prearmcheck_last; // to detect changes
     bool prearmchecks_do(void); // workaround needed since healthy() is const
 
+    uint16_t _device_flags_for_gimbal;
+    void update_gimbal_device_flags_for_gimbal(void);
+
     uint16_t _received_device_flags;
     uint32_t _received_device_failure_flags;
     uint32_t _received_attitude_status_tlast_ms; // time last attitude status was received (used for health reporting)
@@ -155,6 +159,9 @@ private:
     void send_system_time(void);
 
     void send_rc_channels(void);
+
+    uint32_t _send_gimbal_manager_status_tlast_ms;
+    void send_gimbal_manager_status_to_all(void);
 
     // mount_status forwarding
 

@@ -12,6 +12,7 @@
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_RTC/AP_RTC.h>
 #include <AP_Notify/AP_Notify.h>
+#include <AP_Logger/AP_Logger.h>
 #include <RC_Channel/RC_Channel.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
 #include "BP_Mount_STorM32_MAVLink.h"
@@ -27,7 +28,16 @@ Limitations of the Gremsy driver are:
 - yaw lock and vehicle/earth frame are strictly tight together
 - capabilities (i.e. limited capabilities) are not respected
 
-STorM32 gimbal manager not yet implemented
+two modes/protocols of operation are supported
+1. ArduPilot like, largely mimics Gremsy gimbal driver = PROTOCOL_ARDUPILOT_LIKE
+   we could mimics a super primitive v2 gimbal manager, primary is always autopilot, secondary always our GCS
+   only sends GIMBAL_MANAGER_STATUS
+   no need to handle MAV_CMD_DO_GIMBAL_MANAGER_CONFIGURE
+   handling of request is missing
+   GIMBAL_MANAGER_SET_PITCHYAW ?
+   MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW ? ArduPilot's handling needs to be corrected, also doesn't respect pan
+2. STorM32 is gimbal manger, using STorM32 gimbal manager messages = PROTOCOL_STORM32_GIMBAL_MANAGER
+   not yet implemented !!
 */
 //*****************************************************
 
@@ -84,6 +94,17 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
 // BP_Mount_STorM32_MAVLink, that's the main class
 //******************************************************
 
+// for reasons I really don't understand, calling them as log methods didn't work
+// the MTC got mixed up with MTH, i.e., no MTC0 was there but a MTH0 with the MTC params...
+// so done as macro in-place, which works fine
+
+#define BP_LOG(m,h,...) if(_should_log){char logn[5] = m; logn[3] += _instance; AP::logger().Write(logn, h, AP_HAL::micros64(), __VA_ARGS__);}
+
+
+//******************************************************
+// BP_Mount_STorM32_MAVLink, that's the main class
+//******************************************************
+
 BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_Params &params, uint8_t instance) :
     AP_Mount_Backend(frontend, params, instance)
 {
@@ -106,6 +127,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
     _mode = MAV_MOUNT_MODE_RC_TARGETING;
 
     _sendonly = false;
+    _should_log = true;
 }
 
 
@@ -143,7 +165,6 @@ void BP_Mount_STorM32_MAVLink::update()
     _task_counter++;
     if (_task_counter > TASK_SLOT3) _task_counter = TASK_SLOT0;
 
-
     if (!_initialised) {
         find_gimbal();
         return;
@@ -155,6 +176,11 @@ void BP_Mount_STorM32_MAVLink::update()
         _send_system_time_tlast_ms = tnow_ms;
         send_system_time();
     }
+
+/*    if ((tnow_ms - _send_gimbal_manager_status_tlast_ms) > 1234) {
+        _send_gimbal_manager_status_tlast_ms = tnow_ms;
+        send_gimbal_manager_status_to_all();
+    } */
 }
 
 
@@ -240,6 +266,29 @@ void BP_Mount_STorM32_MAVLink::set_and_send_target_angles(void)
 }
 
 
+void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags_for_gimbal(void)
+{
+    _device_flags_for_gimbal = 0;
+
+    switch (get_mode()) {
+        case MAV_MOUNT_MODE_RETRACT:
+            _device_flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RETRACT;
+            break;
+        case MAV_MOUNT_MODE_NEUTRAL:
+            _device_flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_NEUTRAL;
+            break;
+        default:
+            break;
+    }
+
+    _device_flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
+    // TODO: yaw lock??
+
+    // set either YAW_IN_VEHICLE_FRAME or YAW_IN_EARTH_FRAME, to indicate new message format, STorM32 will reject otherwise
+    _device_flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_IN_VEHICLE_FRAME;
+}
+
+
 // return true if healthy
 bool BP_Mount_STorM32_MAVLink::healthy() const
 {
@@ -251,12 +300,7 @@ void BP_Mount_STorM32_MAVLink::find_gimbal(void)
 {
     uint32_t tnow_ms = AP_HAL::millis();
 
-    // search for gimbal for given time or until armed
-#if USE_FIND_GIMBAL_MAX_SEARCH_TIME_MS
-    if (tnow_ms > FIND_GIMBAL_MAX_SEARCH_TIME_MS) {
-        return;
-    }
-#endif
+    // search for gimbal until armed
     if (hal.util->get_soft_armed()) {
         return;
     }
@@ -302,12 +346,20 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_information(const mavlink_me
 
     // set parameter defaults from gimbal information
     // Q: why default ?? why not actual value ?? I don't understand this
+/*
     if (!isnan(_device_info.roll_min)) _params.roll_angle_min.set_default(degrees(_device_info.roll_min));
     if (!isnan(_device_info.roll_max)) _params.roll_angle_max.set_default(degrees(_device_info.roll_max));
     if (!isnan(_device_info.pitch_min)) _params.pitch_angle_min.set_default(degrees(_device_info.pitch_min));
     if (!isnan(_device_info.pitch_max)) _params.pitch_angle_max.set_default(degrees(_device_info.pitch_max));
     if (!isnan(_device_info.yaw_min)) _params.yaw_angle_min.set_default(degrees(_device_info.yaw_min));
-    if (!isnan(_device_info.yaw_max)) _params.yaw_angle_max.set_default(degrees(_device_info.yaw_max));
+    if (!isnan(_device_info.yaw_max)) _params.yaw_angle_max.set_default(degrees(_device_info.yaw_max)); */
+
+    if (!isnan(_device_info.roll_min)) _params.roll_angle_min.set(degrees(_device_info.roll_min));
+    if (!isnan(_device_info.roll_max)) _params.roll_angle_max.set(degrees(_device_info.roll_max));
+    if (!isnan(_device_info.pitch_min)) _params.pitch_angle_min.set(degrees(_device_info.pitch_min));
+    if (!isnan(_device_info.pitch_max)) _params.pitch_angle_max.set(degrees(_device_info.pitch_max));
+    if (!isnan(_device_info.yaw_min)) _params.yaw_angle_min.set(degrees(_device_info.yaw_min));
+    if (!isnan(_device_info.yaw_max)) _params.yaw_angle_max.set(degrees(_device_info.yaw_max));
 
     // mark it as having been found
     _got_device_info = true;
@@ -329,10 +381,30 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
     mavlink_msg_gimbal_device_attitude_status_decode(&msg, &payload);
 
     _received_device_flags = payload.flags;
+    // TODO: handle case when received device_flags are not equal to those we send, set with update_gimbal_device_flags_for_gimbal()
+
     _received_device_failure_flags = payload.failure_flags;
 
     // used for health check
     _received_attitude_status_tlast_ms = AP_HAL::millis();
+
+    // logging
+    float roll_rad, pitch_rad, yaw_rad;
+    GimbalQuaternion quat(payload.q[0], payload.q[1], payload.q[2], payload.q[3]);
+    quat.to_gimbal_euler(roll_rad, pitch_rad, yaw_rad);
+
+    #define BP_LOG_MTS_HEADER \
+        "TimeUS,Yaw,dYaw,YawAhrs,Flags,FailFlags", \
+        "s-----", \
+        "F-----", \
+        "QfffHH"
+
+    BP_LOG("MTS0", BP_LOG_MTS_HEADER,
+        degrees(yaw_rad),
+        degrees(payload.delta_yaw),
+        degrees(AP::ahrs().yaw),
+        payload.flags,
+        payload.failure_flags);
 
     // forward to ground as MOUNT_STATUS message
     if (payload.target_system) { // trigger sending of MOUNT_STATUS to ground only if target_sysid = 0
@@ -342,15 +414,10 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
         return;
     }
 
-    tMountStatus status;
-    float roll_rad, pitch_rad, yaw_rad; //, delta_yaw_deg;
-
-    GimbalQuaternion quat(payload.q[0], payload.q[1], payload.q[2], payload.q[3]);
-    quat.to_gimbal_euler(roll_rad, pitch_rad, yaw_rad);
-    status.roll_deg = degrees(roll_rad);
-    status.pitch_deg = degrees(pitch_rad);
-    status.yaw_deg = degrees(yaw_rad);
-    //delta_yaw_deg = degrees(payload.delta_yaw);
+    tMountStatus status = {
+        .roll_deg = degrees(roll_rad),
+        .pitch_deg = degrees(pitch_rad),
+        .yaw_deg = degrees(yaw_rad) };
 
     send_mount_status_to_ground(status);
 }
@@ -401,15 +468,18 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_retract(void)
         return;
     }
 
-    // send command_long command containing a do_mount_control command
+    // prepare flags
+    update_gimbal_device_flags_for_gimbal();
+
+    // prepare quaternion
     const float quat_array[4] = {NAN, NAN, NAN, NAN};
 
     mavlink_msg_gimbal_device_set_attitude_send(
         _chan,
         _sysid, _compid,
-        GIMBAL_DEVICE_FLAGS_RETRACT,    // gimbal device flags
-        quat_array,                     // attitude as a quaternion
-        NAN, NAN, NAN);                 // angular velocities
+        _device_flags_for_gimbal,  // gimbal device flags
+        quat_array,     // attitude as a quaternion
+        NAN, NAN, NAN); // angular velocities
 }
 
 
@@ -421,7 +491,7 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(float roll_rad, f
     }
 
     // prepare flags
-    const uint16_t flags = GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
+    update_gimbal_device_flags_for_gimbal();
 
     // convert euler angles to quaternion
     Quaternion q;
@@ -432,7 +502,7 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(float roll_rad, f
     mavlink_msg_gimbal_device_set_attitude_send(
         _chan,
         _sysid, _compid,
-        flags,          // gimbal device flags
+        _device_flags_for_gimbal,  // gimbal device flags
         quat_array,     // attitude as a quaternion
         NAN, NAN, NAN); // angular velocities
 }
@@ -607,6 +677,22 @@ ugly as we will have vehicle dependency here
         yawrate,
         estimator_status, landed_state,
         angular_velocity_z);
+
+    // log outgoing AUTOPILOT_STATE_FOR_GIMBAL_DEVICE
+    #define BP_LOG_MTL_HEADER \
+            "TimeUS,q1,q2,q3,q4,vx,vy,vz,wz,YawRate,Est,Land,NavEst", \
+            "s----nnn-----", \
+            "F------------", \
+            "QfffffffffHBH"
+
+    BP_LOG("MTL0", BP_LOG_MTL_HEADER,
+        q[0],q[1],q[2],q[3],
+        vel.x, vel.y, vel.z,
+        angular_velocity_z,
+        degrees(yawrate),
+        estimator_status & 0x000F,
+        landed_state,
+        nav_estimator_status);
 }
 
 
@@ -684,6 +770,24 @@ void BP_Mount_STorM32_MAVLink::send_banner(void)
 }
 
 
+void BP_Mount_STorM32_MAVLink::send_gimbal_manager_status_to_all(void)
+{
+    uint32_t flags = _received_device_flags; // _device_flags_for_gimbal; ??
+
+    mavlink_gimbal_manager_status_t msg = {
+        .time_boot_ms = AP_HAL::millis(),
+        .flags = flags,
+        .gimbal_device_id = _compid,
+        .primary_control_sysid = mavlink_system.sysid,
+        .primary_control_compid = mavlink_system.compid, // MAV_COMP_ID_AUTOPILOT1 ??
+        .secondary_control_sysid = gcs().sysid_my_gcs(),
+        .secondary_control_compid = MAV_COMP_ID_MISSIONPLANNER,
+    };
+
+    GCS_MAVLINK::send_to_all(MAVLINK_MSG_ID_GIMBAL_MANAGER_STATUS, (const char*)&msg);
+}
+
+
 //------------------------------------------------------
 // helper
 //------------------------------------------------------
@@ -721,7 +825,7 @@ bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
 
     if (!_prearmcheck_last) {
         _prearmcheck_last = true;
-        gcs().send_text(MAV_SEVERITY_INFO, "PreArm: MNT%u: prearm checks passed", _instance+1);
+        gcs().send_text(MAV_SEVERITY_INFO, "PreArm: Mount: prearm checks passed (MNT%u)", _instance+1);
     }
 
     return true;
@@ -765,8 +869,6 @@ void BP_Mount_STorM32_MAVLink::send_to_ground(uint32_t msgid, const char *pkt)
         GCS_MAVLINK &c = *gcs().chan(i);
 
         if (c.get_chan() == _chan) continue; // the gimbal is on this channel
-//        if (GCS_MAVLINK::mavtype_is_on_channel(MAV_TYPE_GIMBAL, c.get_chan())) continue;
-//        if (!GCS_MAVLINK::mavtype_is_on_channel(MAV_TYPE_GCS, c.get_chan())) continue;
 
         if (!c.is_active()) continue;
         if (entry->max_msg_len + GCS_MAVLINK::packet_overhead_chan(c.get_chan()) > c.get_uart()->txspace()) {

@@ -139,7 +139,6 @@ public:
     virtual void send_banner(void) {}
 
     // frontend access
-    uint8_t num_instances(void) { return _frontend._num_instances; }
     bool is_primary(void) { return (_instance == _frontend._primary); }
 //OWEND
 

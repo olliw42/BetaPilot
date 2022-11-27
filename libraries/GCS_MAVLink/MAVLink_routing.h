@@ -50,7 +50,7 @@ public:
     bool find_by_mavtype_and_compid(uint8_t mavtype, uint8_t compid, uint8_t &sysid, mavlink_channel_t &channel) const;
 
 //OW
-    bool mavtype_is_on_channel(uint8_t mavtype, mavlink_channel_t channel) const;
+    void send_to_all(uint32_t msgid, const char *pkt);
 //OWEND
 
 private:
