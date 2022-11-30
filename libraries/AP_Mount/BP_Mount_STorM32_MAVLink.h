@@ -144,6 +144,11 @@ private:
 
     bool _prearmcheck_last; // to detect changes
     bool prearmchecks_do(void); // workaround needed since healthy() is const
+    bool _prearmcheck_status_updated;
+    uint32_t _prearmcheck_enabled_flags;
+    uint32_t _prearmcheck_fail_flags;
+    uint32_t _prearmcheck_fail_flags_last;
+    uint32_t _prearmcheck_sendtext_tlast_ms;
 
     uint16_t _device_flags_for_gimbal;
     void update_gimbal_device_flags_for_gimbal(void);

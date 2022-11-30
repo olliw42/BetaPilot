@@ -5,6 +5,9 @@
 /*
 search for //OW to find all changes
 
+ undo mavtype_is_on_channel()
+ undo mavftp per serial port option
+ upgraded to Copter4.3.1-rc1
  no mavftp per serial port option, (1U<<13) = 8192
  upgraded to Copter4.3.0
  frsky_passthrough_array support, new param SRx_FRPT added to set stream rate

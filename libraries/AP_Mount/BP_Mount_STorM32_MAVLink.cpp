@@ -30,12 +30,11 @@ Limitations of the Gremsy driver are:
 
 two modes/protocols of operation are supported
 1. ArduPilot like, largely mimics Gremsy gimbal driver = PROTOCOL_ARDUPILOT_LIKE
-   we could mimics a super primitive v2 gimbal manager, primary is always autopilot, secondary always our GCS
-   only sends GIMBAL_MANAGER_STATUS
-   no need to handle MAV_CMD_DO_GIMBAL_MANAGER_CONFIGURE
-   handling of request is missing
-   GIMBAL_MANAGER_SET_PITCHYAW ?
-   MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW ? ArduPilot's handling needs to be corrected, also doesn't respect pan
+   we could mimic a super primitive v2 gimbal manager, primary is always autopilot, secondary always our GCS
+   - only sends GIMBAL_MANAGER_STATUS
+   - don' handle MAV_CMD_DO_GIMBAL_MANAGER_CONFIGURE
+   - handling of request is needed
+   - GIMBAL_MANAGER_SET_PITCHYAW, MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW ? ArduPilot's handling needs to be corrected, also doesn't respect pan
 2. STorM32 is gimbal manger, using STorM32 gimbal manager messages = PROTOCOL_STORM32_GIMBAL_MANAGER
    not yet implemented !!
 */
@@ -118,6 +117,10 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
     _chan = MAVLINK_COMM_0; // this is a dummy, will be set correctly by find_gimbal()
 
     _prearmcheck_last = false;
+    _prearmcheck_status_updated = false;
+    _prearmcheck_enabled_flags = 0;
+    _prearmcheck_fail_flags = 0;
+    _prearmcheck_fail_flags_last = UINT32_MAX;
 
     _received_device_flags = 0;
     _received_device_failure_flags = 0;
@@ -438,6 +441,18 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             _armed = ((storm32_state == STORM32STATE_NORMAL) || (storm32_state == STORM32STATE_STARTUP_FASTLEVEL));
             if (!(payload.custom_mode & 0x80000000)) { // we don't follow all changes, but just toggle it to true once
                 _prearmchecks_ok = true;
+            }
+            }break;
+
+        case MAVLINK_MSG_ID_COMPONENT_PREARM_STATUS: {
+            mavlink_component_prearm_status_t payload;
+            mavlink_msg_component_prearm_status_decode(&msg, &payload);
+            _prearmcheck_enabled_flags = payload.enabled_flags;
+            _prearmcheck_fail_flags = (payload.fail_flags & payload.enabled_flags);
+            _prearmcheck_status_updated = true;
+            if (_prearmcheck_fail_flags != _prearmcheck_fail_flags_last) {
+                _prearmcheck_fail_flags_last = _prearmcheck_fail_flags;
+                _prearmcheck_sendtext_tlast_ms = 0; // if a change occured, send immediately
             }
             }break;
     }
@@ -794,6 +809,33 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_manager_status_to_all(void)
 
 bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
 {
+    if ((!_prearmchecks_ok || !_armed) &&
+        _prearmcheck_status_updated && (_prearmcheck_enabled_flags > 0) && (_prearmcheck_fail_flags > 0) &&  // we did got such a message
+        ((AP_HAL::millis() - _prearmcheck_sendtext_tlast_ms) > 15000)) { // if a change occured, send immediately
+
+        _prearmcheck_status_updated = false;
+        _prearmcheck_sendtext_tlast_ms = AP_HAL::millis();
+
+        char txt[255];
+        strcpy(txt, "");
+        if (_prearmcheck_fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_IS_NORMAL) strcat(txt, "arm,");
+        if (_prearmcheck_fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_IMUS_WORKING) strcat(txt, "imu,");
+        if (_prearmcheck_fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_MOTORS_WORKING) strcat(txt, "mot,");;
+        if (_prearmcheck_fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_ENCODERS_WORKING) strcat(txt, "enc,");;
+        if (_prearmcheck_fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_VOLTAGE_OK) strcat(txt, "v,");;
+        if (_prearmcheck_fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_VIRTUALCHANNELS_RECEIVING) strcat(txt, "chan,");;
+        if (_prearmcheck_fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_MAVLINK_RECEIVING) strcat(txt, "mav,");;
+        if (_prearmcheck_fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_STORM32LINK_QFIX) strcat(txt, "qfix,");;
+        if (_prearmcheck_fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_STORM32LINK_WORKING) strcat(txt, "stl,");;
+        if (_prearmcheck_fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_CAMERA_CONNECTED) strcat(txt, "cam,");;
+        if (_prearmcheck_fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_AUX0_LOW) strcat(txt, "aux0,");;
+        if (_prearmcheck_fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_AUX1_LOW) strcat(txt, "aux1,");
+        if (txt[0] != '\0') {
+            txt[strlen(txt)-1] = '\0';
+            gcs().send_text(MAV_SEVERITY_INFO, "PreArm: Mount: FAIL: %s (MNT%u)", txt, _instance+1);
+        }
+    }
+
     // unhealthy until gimbal has fully passed the startup sequence
     if (!_initialised || !_prearmchecks_ok || !_armed) {
         _prearmcheck_last = false;
@@ -801,7 +843,7 @@ bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
     }
 
     // unhealthy if attitude status is NOT received within the last second
-    if (AP_HAL::millis() - _received_attitude_status_tlast_ms > 1000) {
+    if ((AP_HAL::millis() - _received_attitude_status_tlast_ms) > 1000) {
         _prearmcheck_last = false;
         return false;
     }
@@ -825,7 +867,7 @@ bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
 
     if (!_prearmcheck_last) {
         _prearmcheck_last = true;
-        gcs().send_text(MAV_SEVERITY_INFO, "PreArm: Mount: prearm checks passed (MNT%u)", _instance+1);
+        gcs().send_text(MAV_SEVERITY_INFO, "PreArm: Mount: prearm checks PASSED (MNT%u)", _instance+1);
     }
 
     return true;
