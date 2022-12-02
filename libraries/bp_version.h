@@ -1,10 +1,11 @@
 #pragma once
 
-#define BETAPILOTVERSION "v055.8"
+#define BETAPILOTVERSION "v055.9"
 
 /*
 search for //OW to find all changes
 
+ migrate to gimbal device v2
  undo mavtype_is_on_channel()
  undo mavftp per serial port option
  upgraded to Copter4.3.1-rc1
