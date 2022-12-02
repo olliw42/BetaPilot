@@ -10,6 +10,9 @@
 #include "AP_Mount_Backend.h"
 
 
+#define PROTOCOL_AUTO_TIMEOUT_CNT  10
+
+
 // STorM32 states
 enum STORM32STATEENUM {
     STORM32STATE_STARTUP_MOTORS = 0,
@@ -87,13 +90,6 @@ private:
     // request GIMBAL_DEVICE_INFORMATION from gimbal (holds vendor and model name, min/max angles)
     void send_request_gimbal_device_information(void);
 
-    // send GIMBAL_DEVICE_SET_ATTITUDE to gimbal to command gimbal to retract (aka relax)
-    void send_gimbal_device_retract(void);
-
-    // send GIMBAL_DEVICE_SET_ATTITUDE to gimbal to control attitude
-    // earth_frame should be true if yaw_rad target is an earth frame angle, false if body_frame
-    void send_gimbal_device_set_attitude(float roll_rad, float pitch_rad, float yaw_rad, bool earth_frame);
-
 // -- this so far is the interface provided by AP_Mount_Backend and as seen in the Gremsy driver
 // -- here now come our methods
 public:
@@ -129,6 +125,15 @@ private:
     bool _sendonly;
     bool _should_log;
 
+    enum PROTOCOLENUM {
+        PROTOCOL_UNDEFINED = 0,          // we do not yet know
+        PROTOCOL_ARDUPILOT_LIKE,         // gimbal uses V2 gimbal device messages
+        PROTOCOL_STORM32_GIMBAL_MANAGER, // gimbal is a STorM32 gimbal manager
+    };
+    uint8_t _protocol;
+    uint8_t _protocol_auto_cntdown;
+    void determine_protocol(const mavlink_message_t &msg);
+
     // internal task variables
 
     enum TASKENUM {
@@ -142,41 +147,81 @@ private:
 
     // blabla
 
-    bool _prearmcheck_last; // to detect changes
+    bool _prearmchecks_last; // to detect changes
     bool prearmchecks_do(void); // workaround needed since healthy() is const
-    bool _prearmcheck_status_updated;
-    uint32_t _prearmcheck_enabled_flags;
-    uint32_t _prearmcheck_fail_flags;
-    uint32_t _prearmcheck_fail_flags_last;
-    uint32_t _prearmcheck_sendtext_tlast_ms;
 
-    uint16_t _device_flags_for_gimbal;
-    void update_gimbal_device_flags_for_gimbal(void);
-
-    uint16_t _received_device_flags;
-    uint32_t _received_device_failure_flags;
-    uint32_t _received_attitude_status_tlast_ms; // time last attitude status was received (used for health reporting)
+    struct {
+        bool status_updated;
+        uint32_t enabled_flags;
+        uint32_t fail_flags;
+        uint32_t fail_flags_last;
+        uint32_t sendtext_tlast_ms;
+        bool available(void) { return status_updated && (enabled_flags > 0) && (fail_flags > 0); }
+    } _prearmcheck; // for component prearm status handling
 
     void set_and_send_target_angles(void);
     void send_autopilot_state_for_gimbal_device(void);
+
+    enum GIMBALTARGETMODEENUM {
+        TARGET_MODE_RETRACT = 0,
+        TARGET_MODE_NEUTRAL,
+        TARGET_MODE_ANGLE,
+    };
+
+    struct GimbalTarget {
+        float roll;
+        float pitch;
+        float yaw;
+        bool yaw_is_ef;
+        uint8_t mode;
+
+        void set(MountTarget &t, uint8_t m) { roll = t.roll; pitch = t.pitch; yaw = t.yaw; yaw_is_ef = t.yaw_is_ef; mode = m; }
+        void set(uint8_t m) { roll = pitch = yaw = 0.0f; yaw_is_ef = false; mode = m; }
+        void set_angle(MountTarget &t) { set(t, TARGET_MODE_ANGLE); }
+        void set_from_vec_deg(const Vector3f &v_deg, uint8_t m) { roll = ToRad(v_deg.x); pitch = ToRad(v_deg.y); yaw = ToRad(v_deg.z); yaw_is_ef = false; mode = m; }
+        void get_q_array(float* q_array);
+    };
+
+    struct {
+        uint16_t received_flags; // obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
+        uint32_t received_failure_flags; // obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
+        uint32_t received_tlast_ms; // time last GIMBAL_DEVICE_ATTITUDE_STATUS was received (used for health reporting)
+        uint16_t flags_for_gimbal;
+    } _device;
+
+    struct {
+        bool ap_client_is_active; // true when autopilot client is active
+        uint16_t flags_for_gimbal;
+    } _manager;
+
+    struct {
+        uint8_t mode;
+        uint8_t mode_last;
+    } _qshot;
+
+    bool get_target_angles_mount(GimbalTarget &gtarget, enum MAV_MOUNT_MODE mmode);
+    bool get_target_angles_qshot(GimbalTarget &gtarget);
+    void update_gimbal_device_flags_mount(enum MAV_MOUNT_MODE mmode);
+    void update_gimbal_device_flags_qshot(void);
+    void update_gimbal_manager_flags(void);
+
+    void send_gimbal_device_set_attitude(GimbalTarget &gtarget);
+    void send_storm32_gimbal_manager_control_to_gimbal(GimbalTarget &gtarget);
 
     uint32_t _send_system_time_tlast_ms;
     void send_system_time(void);
 
     void send_rc_channels(void);
 
-    uint32_t _send_gimbal_manager_status_tlast_ms;
-    void send_gimbal_manager_status_to_all(void);
-
     // mount_status forwarding
 
-    struct tMountStatus {
+    struct MountStatus {
         float roll_deg;
         float pitch_deg;
         float yaw_deg;
     };
 
-    void send_mount_status_to_ground(tMountStatus &status);
+    void send_mount_status_to_ground(MountStatus &status);
     void send_to_ground(uint32_t msgid, const char *pkt);
 };
 
