@@ -644,7 +644,7 @@ def _build_dynamic_sources(bld):
             features='mavgen',
             # //OW
             #source='modules/mavlink/message_definitions/v1.0/all.xml',
-            source='bp_mavlink/all.xml',
+            source='bp_mavlink/betapilot.xml',
             # //OWEND
             output_dir='libraries/GCS_MAVLink/include/mavlink/v2.0/',
             name='mavlink',
