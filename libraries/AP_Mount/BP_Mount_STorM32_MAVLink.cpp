@@ -113,6 +113,28 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
 #define BP_LOG(m,h,...) if(_should_log){char logn[5] = m; logn[3] += _instance; AP::logger().Write(logn, h, AP_HAL::micros64(), __VA_ARGS__);}
 
 
+// log incoming GIMBAL_DEVICE_ATTITUDE_STATUS
+#define BP_LOG_MTS_ATTITUDESTATUS_HEADER \
+        "TimeUS,Roll,Pitch,Yaw,dYaw,YawAhrs,Flags,FailFlags", \
+        "s-------", \
+        "F-------", \
+        "QfffffHH"
+
+// log outgoing GIMBAL_DEVICE_SET_ATTITUDE, STORM32_GIMBAL_MANAGER_CONTROL
+#define BP_LOG_MTC_GIMBALCONTROL_HEADER \
+        "TimeUS,Type,Roll,Pitch,Yaw,GDFlags,GMFlags,TMode,QMode", \
+        "s--------", \
+        "F--------", \
+        "QBfffHHBB"
+
+// log outgoing AUTOPILOT_STATE_FOR_GIMBAL_DEVICE
+#define BP_LOG_MTL_AUTOPILOTSTATE_HEADER \
+        "TimeUS,q1,q2,q3,q4,vx,vy,vz,wz,YawRate,Est,Land,NavEst", \
+        "s----nnn-----", \
+        "F------------", \
+        "QfffffffffHBH"
+
+
 //******************************************************
 // BP_Mount_STorM32_MAVLink, that's the main class
 //******************************************************
@@ -552,13 +574,9 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
     GimbalQuaternion quat(payload.q[0], payload.q[1], payload.q[2], payload.q[3]);
     quat.to_gimbal_euler(roll_rad, pitch_rad, yaw_rad);
 
-    #define BP_LOG_MTS_HEADER \
-        "TimeUS,Yaw,dYaw,YawAhrs,Flags,FailFlags", \
-        "s-----", \
-        "F-----", \
-        "QfffHH"
-
-    BP_LOG("MTS0", BP_LOG_MTS_HEADER,
+    BP_LOG("MTS0", BP_LOG_MTS_ATTITUDESTATUS_HEADER,
+        degrees(roll_rad),
+        degrees(pitch_rad),
         degrees(yaw_rad),
         degrees(payload.delta_yaw),
         degrees(AP::ahrs().yaw),
@@ -712,6 +730,13 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(GimbalTarget &gta
         _device.flags_for_gimbal,  // gimbal device flags
         q_array,        // attitude as a quaternion
         NAN, NAN, NAN); // angular velocities
+
+    BP_LOG("MTC0", BP_LOG_MTC_GIMBALCONTROL_HEADER,
+        (uint8_t)1, // GIMBAL_DEVICE_SET_ATTITUDE
+        degrees(gtarget.roll), degrees(gtarget.pitch), degrees(gtarget.yaw),
+        _device.flags_for_gimbal, (uint16_t)0,
+        gtarget.mode,
+        (uint8_t)0);
 }
 
 
@@ -732,6 +757,13 @@ void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control_to_gimbal(Gim
         _device.flags_for_gimbal, _manager.flags_for_gimbal,
         q_array,
         NAN, NAN, NAN); // float angular_velocity_x, float angular_velocity_y, float angular_velocity_z
+
+    BP_LOG("MTC0", BP_LOG_MTC_GIMBALCONTROL_HEADER,
+        (uint8_t)2, // STORM32_GIMBAL_MANAGER_CONTROL
+        degrees(gtarget.roll), degrees(gtarget.pitch), degrees(gtarget.yaw),
+        _device.flags_for_gimbal, _manager.flags_for_gimbal,
+        gtarget.mode,
+        _qshot.mode);
 }
 
 
@@ -905,14 +937,7 @@ ugly as we will have vehicle dependency here
         estimator_status, landed_state,
         angular_velocity_z);
 
-    // log outgoing AUTOPILOT_STATE_FOR_GIMBAL_DEVICE
-    #define BP_LOG_MTL_HEADER \
-            "TimeUS,q1,q2,q3,q4,vx,vy,vz,wz,YawRate,Est,Land,NavEst", \
-            "s----nnn-----", \
-            "F------------", \
-            "QfffffffffHBH"
-
-    BP_LOG("MTL0", BP_LOG_MTL_HEADER,
+    BP_LOG("MTL0", BP_LOG_MTL_AUTOPILOTSTATE_HEADER,
         q[0],q[1],q[2],q[3],
         vel.x, vel.y, vel.z,
         angular_velocity_z,
