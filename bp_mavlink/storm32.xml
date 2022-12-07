@@ -49,9 +49,10 @@ Documentation:
     </enum>
     <!-- ***************************
     STORM32 gimbal prearm check flags
+	COMPONENT_PREARM_STATUS deprecated 7.Dez.2022, the PREARM_FLAGS enums are kept however for convenience
     *************************** -->
     <enum name="MAV_STORM32_GIMBAL_PREARM_FLAGS" bitmask="true">
-      <!-- Quite stable -->
+      <!-- Stable -->
       <description>STorM32 gimbal prearm check flags. For reporting in COMPONENT_PREARM_STATUS.</description>
       <entry value="1" name="MAV_STORM32_GIMBAL_PREARM_FLAGS_IS_NORMAL">
         <description>STorM32 gimbal is in normal state.</description>
@@ -116,7 +117,7 @@ Documentation:
       </entry>
     </enum>
     <enum name="MAV_STORM32_GIMBAL_MANAGER_FLAGS" bitmask="true">
-      <!-- Quite stable -->
+      <!-- Stable, may grow however -->
       <description>Flags for gimbal manager operation. Used for setting and reporting, unless specified otherwise. If a setting is accepted by the gimbal manger is reported in the STORM32_GIMBAL_MANAGER_STATUS message.</description>
       <entry value="0" name="MAV_STORM32_GIMBAL_MANAGER_FLAGS_NONE">
         <description>0 = ignore.</description>
@@ -156,7 +157,7 @@ Documentation:
       </entry>
     </enum>
     <enum name="MAV_STORM32_GIMBAL_MANAGER_CLIENT">
-      <!-- Quite stable -->
+      <!-- Stable, may grow however -->
       <description>Gimbal manager client ID. In a prioritizing profile, the priorities are determined by the implementation; they could e.g. be custom1 &gt; onboard &gt; GCS &gt; autopilot/camera &gt; GCS2 &gt; custom2.</description>
       <entry value="0" name="MAV_STORM32_GIMBAL_MANAGER_CLIENT_NONE">
         <description>For convenience.</description>
@@ -212,7 +213,7 @@ Documentation:
     QSHOT manager mode enums
     *************************** -->
     <enum name="MAV_QSHOT_MODE">
-      <!-- Quite stable, will grow however -->
+      <!-- Quite stable, may grow however -->
       <description>Enumeration of possible shot modes.</description>
       <entry value="0" name="MAV_QSHOT_MODE_UNDEFINED">
         <description>Undefined shot mode. Can be used to determine if qshots should be used or not.</description>
@@ -251,7 +252,7 @@ Documentation:
     <enum name="MAV_CMD">
       <!-- leave room for 60001 gimbal manager configure -->
       <entry value="60002" name="MAV_CMD_STORM32_DO_GIMBAL_MANAGER_CONTROL_PITCHYAW" hasLocation="false" isDestination="false">
-        <!-- Quite stable -->
+        <!-- Stable -->
         <description>Command to a gimbal manager to control the gimbal tilt and pan angles. It is possible to set combinations of the values below. E.g. an angle as well as a desired angular rate can be used to get to this angle at a certain angular rate, or an angular rate only will result in continuous turning. NaN is to be used to signal unset. A gimbal device is never to react to this command.</description>
         <param index="1" label="Pitch angle" units="deg" minValue="-180" maxValue="180">Pitch/tilt angle (positive: tilt up, NaN to be ignored).</param>
         <param index="2" label="Yaw angle" units="deg" minValue="-180" maxValue="180">Yaw/pan angle (positive: pan to the right, NaN to be ignored). The frame is determined by the GIMBAL_DEVICE_FLAGS_YAW_IN_xxx_FRAME flags.</param>
@@ -292,7 +293,7 @@ Documentation:
 	STORM32_GIMBAL_MANAGER_PROFILE is not compatible with before 27.Nov.2022 (fields removed)
    *************************** -->
     <message id="60010" name="STORM32_GIMBAL_MANAGER_INFORMATION">
-      <!-- Quite stable, may grow however -->
+      <!-- Stable, may grow however -->
       <description>Information about a gimbal manager. This message should be requested by a ground station using MAV_CMD_REQUEST_MESSAGE. It mirrors some fields of the GIMBAL_DEVICE_INFORMATION message, but not all. If the additional information is desired, also GIMBAL_DEVICE_INFORMATION should be requested.</description>
       <field type="uint8_t" name="gimbal_id" instance="true">Gimbal ID (component ID or 1-6 for non-MAVLink gimbal) that this gimbal manager is responsible for.</field>
       <field type="uint32_t" name="device_cap_flags" enum="GIMBAL_DEVICE_CAP_FLAGS" display="bitmask">Gimbal device capability flags. Same flags as reported by GIMBAL_DEVICE_INFORMATION. The flag is only 16 bit wide, but stored in 32 bit, for backwards compatibility (high word is zero).</field>
@@ -305,7 +306,7 @@ Documentation:
       <field type="float" name="yaw_max" units="rad" invalid="NaN">Hardware maximum yaw/pan angle (positive: pan to the right, relative to the vehicle/gimbal base, NaN if unknown).</field>
     </message>
     <message id="60011" name="STORM32_GIMBAL_MANAGER_STATUS">
-      <!-- Quite stable, may grow however -->
+      <!-- Stable, may grow however -->
       <description>Message reporting the current status of a gimbal manager. This message should be broadcast at a low regular rate (e.g. 1 Hz, may be increase momentarily to e.g. 5 Hz for a period of 1 sec after a change).</description>
       <field type="uint8_t" name="gimbal_id" instance="true">Gimbal ID (component ID or 1-6 for non-MAVLink gimbal) that this gimbal manager is responsible for.</field>
       <field type="uint8_t" name="supervisor" enum="MAV_STORM32_GIMBAL_MANAGER_CLIENT">Client who is currently supervisor (0 = none).</field>
@@ -314,7 +315,7 @@ Documentation:
       <field type="uint8_t" name="profile" enum="MAV_STORM32_GIMBAL_MANAGER_PROFILE">Profile currently applied (0 = default).</field>
     </message>
     <message id="60012" name="STORM32_GIMBAL_MANAGER_CONTROL">
-      <!-- Quite stable -->
+      <!-- Stable -->
       <description>Message to a gimbal manager to control the gimbal attitude. Angles and rates can be set to NaN according to use case. A gimbal device is never to react to this message.</description>
       <field type="uint8_t" name="target_system">System ID</field>
       <field type="uint8_t" name="target_component">Component ID</field>
@@ -328,7 +329,7 @@ Documentation:
       <field type="float" name="angular_velocity_z" units="rad/s" invalid="NaN">Z component of angular velocity (positive: pan to the right, NaN to be ignored). The frame is determined by the GIMBAL_DEVICE_FLAGS_YAW_IN_xxx_FRAME flags.</field>
     </message>
     <message id="60013" name="STORM32_GIMBAL_MANAGER_CONTROL_PITCHYAW">
-      <!-- Quite stable -->
+      <!-- Stable -->
       <description>Message to a gimbal manager to control the gimbal tilt and pan angles. Angles and rates can be set to NaN according to use case. A gimbal device is never to react to this message.</description>
       <field type="uint8_t" name="target_system">System ID</field>
       <field type="uint8_t" name="target_component">Component ID</field>
@@ -371,14 +372,8 @@ Documentation:
     </message>
     <!-- ***************************
     General messages
+    COMPONENT_PREARM_STATUS deprecated 7.Dez.2022, replaced by events micro service
+    removed to force migration
     *************************** -->
-    <message id="60025" name="COMPONENT_PREARM_STATUS">
-      <!-- Quite stable -->
-      <description>Message reporting the status of the prearm checks. The flags are component specific.</description>
-      <field type="uint8_t" name="target_system">System ID</field>
-      <field type="uint8_t" name="target_component">Component ID</field>
-      <field type="uint32_t" name="enabled_flags">Currently enabled prearm checks. 0 means no checks are being performed (i.e., this message can be ignored).</field>
-      <field type="uint32_t" name="fail_flags">Currently not passed prearm checks. 0 means all checks have been passed.</field>
-    </message>
   </messages>
 </mavlink>

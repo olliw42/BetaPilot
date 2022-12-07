@@ -596,7 +596,7 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
         .pitch_deg = degrees(pitch_rad),
         .yaw_deg = degrees(yaw_rad) };
 
-    send_mount_status_to_ground(status);
+    send_mount_status_to_ground(status); // MissionPlaner now "understands" gimbal device attitude status, but doesn't use it for campoint, so we still need to send
 }
 
 
@@ -661,21 +661,30 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             mavlink_msg_heartbeat_decode(&msg, &payload);
             uint8_t storm32_state = (payload.custom_mode & 0xFF);
             _armed = ((storm32_state == STORM32STATE_NORMAL) || (storm32_state == STORM32STATE_STARTUP_FASTLEVEL));
-            if (!(payload.custom_mode & 0x80000000)) { // we don't follow all changes, but just toggle it to true once
+            if ((payload.custom_mode & 0x80000000) == 0) { // we don't follow all changes, but just toggle it to true once
                 _prearmchecks_ok = true;
             }
             }break;
 
-        case MAVLINK_MSG_ID_COMPONENT_PREARM_STATUS: {
-            mavlink_component_prearm_status_t payload;
-            mavlink_msg_component_prearm_status_decode(&msg, &payload);
-            _prearmcheck.enabled_flags = payload.enabled_flags;
-            _prearmcheck.fail_flags = (payload.fail_flags & payload.enabled_flags);
+        #define MAVGIMBAL_EVENT_ID(x)  ((uint32_t)154 << 24) + (uint32_t)(x)
+
+        case MAVLINK_MSG_ID_EVENT: {
+            mavlink_event_t payload;
+            mavlink_msg_event_decode(&msg, &payload);
+            if (payload.id != MAVGIMBAL_EVENT_ID(0)) break; // not our event id
+            struct PACKED tPrearmCheckEventArgument {
+                uint32_t enabled_flags;
+                uint32_t fail_flags;
+            };
+            tPrearmCheckEventArgument* p = (tPrearmCheckEventArgument*)payload.arguments;
+            _prearmcheck.enabled_flags = p->enabled_flags;
+            _prearmcheck.fail_flags = p->fail_flags & p->enabled_flags; // only keep enabled flags
             _prearmcheck.status_updated = true;
             if (_prearmcheck.fail_flags != _prearmcheck.fail_flags_last) {
                 _prearmcheck.fail_flags_last = _prearmcheck.fail_flags;
                 _prearmcheck.sendtext_tlast_ms = 0; // if a change occurred, send immediately
             }
+            //gcs().send_text(MAV_SEVERITY_INFO, "Event: %d %d", (int)_prearmcheck.enabled_flags, (int)_prearmcheck.fail_flags);
             }break;
     }
 }
@@ -1084,6 +1093,7 @@ bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
             // GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER;
 
     if ((_device.received_failure_flags & FAILURE_FLAGS) > 0) {
+        //gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAILURE FLAGS", _instance+1);
         return false;
     }
 

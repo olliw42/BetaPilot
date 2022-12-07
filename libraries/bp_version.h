@@ -5,6 +5,7 @@
 /*
 search for //OW to find all changes
 
+ replace COMPONENT_PREARM_STATUS by EVENT msg
  upgraded to Copter4.3.1
  migrate to gimbal device v2
  undo mavtype_is_on_channel()
