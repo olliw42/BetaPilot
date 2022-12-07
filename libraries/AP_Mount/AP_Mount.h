@@ -22,7 +22,10 @@
 #include <AP_HAL/AP_HAL_Boards.h>
 
 #ifndef HAL_MOUNT_ENABLED
-#define HAL_MOUNT_ENABLED !HAL_MINIMIZE_FEATURES
+//OW
+//#define HAL_MOUNT_ENABLED !HAL_MINIMIZE_FEATURES
+#define HAL_MOUNT_ENABLED 1
+//OWEND
 #endif
 
 #ifndef HAL_SOLO_GIMBAL_ENABLED
@@ -49,6 +52,9 @@ class AP_Mount_SToRM32;
 class AP_Mount_SToRM32_serial;
 class AP_Mount_Gremsy;
 class AP_Mount_Siyi;
+//OW
+class BP_Mount_STorM32_MAVLink;
+//OWEND
 
 /*
   This is a workaround to allow the MAVLink backend access to the
@@ -66,6 +72,9 @@ class AP_Mount
     friend class AP_Mount_SToRM32_serial;
     friend class AP_Mount_Gremsy;
     friend class AP_Mount_Siyi;
+//OW
+    friend class BP_Mount_STorM32_MAVLink;
+//OWEND
 
 public:
     AP_Mount();
@@ -90,6 +99,9 @@ public:
         Mount_Type_Gremsy = 6,          /// Gremsy gimbal using MAVLink v2 Gimbal protocol
         Mount_Type_BrushlessPWM = 7,    /// Brushless (stabilized) gimbal using PWM protocol
         Mount_Type_Siyi = 8,            /// Siyi gimbal using custom serial protocol
+//OW
+        Mount_Type_STorM32_MAVLink = 83
+//OWEND
     };
 
     // init - detect and initialise all mounts
@@ -185,6 +197,15 @@ public:
 
     // parameter var table
     static const struct AP_Param::GroupInfo        var_info[];
+
+//OW
+    // this is somewhat different to handle_message() in that it catches all messages
+    // with significant work it potentially could be combined, but let's play it safe and not introduce side effects
+    void handle_msg(mavlink_channel_t chan, const mavlink_message_t &msg);
+
+    // send banner
+    void send_banner(void);
+//OWEND
 
 protected:
 
