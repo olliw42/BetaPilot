@@ -86,7 +86,7 @@ for FrSky SPort Passthrough
 extern const AP_HAL::HAL& hal;
 
 
-AP_Frsky_SPort_Protocol *AP_Frsky_SPort_Protocol::singleton;
+AP_Frsky_SPort_Protocol *AP_Frsky_SPort_Protocol::singleton = nullptr;
 
 
 bool AP_Frsky_SPort_Protocol::is_available_batt(uint8_t instance)

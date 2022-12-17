@@ -13,12 +13,15 @@ public:
 
     AP_Frsky_SPort_Protocol()
     {
+        if (singleton != nullptr) {
+            AP_HAL::panic("Can only be one AP_Frsky_SPort_Protocol instance");
+        }
         singleton = this;
     }
 
     static AP_Frsky_SPort_Protocol *get_singleton(void)
     {
-        if (!singleton) { // && !hal.util->get_soft_armed()) {
+        if (singleton == nullptr) {
             new AP_Frsky_SPort_Protocol();
         }
         return singleton;

@@ -11,7 +11,7 @@
 //OW
 #undef THISFIRMWARE
 #include "../libraries/bp_version.h"
-#define THISFIRMWARE "BetaCopter V4.3.1" BETAPILOTVERSION " 20221207"
+#define THISFIRMWARE "BetaCopter V4.3.2-rc1" BETAPILOTVERSION " 20221210"
 //OWEND
 
 // the following line is parsed by the autotest scripts

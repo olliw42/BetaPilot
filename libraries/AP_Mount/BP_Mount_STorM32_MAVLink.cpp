@@ -109,6 +109,18 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
 // for reasons I really don't understand, calling them as log methods didn't work
 // the MTC got mixed up with MTH, i.e., no MTC0 was there but a MTH0 with the MTC params...
 // so done as macro in-place, which works fine
+// units:
+// { '-', "" }, // no units e.g. Pi, or a string
+// { 'n', "m/s" }, // metres per second
+// { 's', "s" }, // seconds
+// scales:
+// { '-', 0 },
+// { 'F', 1e-6 },
+// data types:
+// B   : uint8_t
+// H   : uint16_t
+// I   : uint32_t
+// f   : float
 
 #define BP_LOG(m,h,...) if(_should_log){char logn[5] = m; logn[3] += _instance; AP::logger().Write(logn, h, AP_HAL::micros64(), __VA_ARGS__);}
 
@@ -129,10 +141,10 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
 
 // log outgoing AUTOPILOT_STATE_FOR_GIMBAL_DEVICE
 #define BP_LOG_MTL_AUTOPILOTSTATE_HEADER \
-        "TimeUS,q1,q2,q3,q4,vx,vy,vz,wz,YawRate,Est,Land,NavEst", \
-        "s----nnn-----", \
-        "F------------", \
-        "QfffffffffHBH"
+        "TimeUS,q1,q2,q3,q4,vx,vy,vz,wz,YawRate,Est,Land,NavEst,NEst2,dtUS", \
+        "s----nnn------s", \
+        "F-------------F", \
+        "QfffffffffHBHHI"
 
 
 //******************************************************
@@ -684,14 +696,14 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
                 _prearmcheck.fail_flags_last = _prearmcheck.fail_flags;
                 _prearmcheck.sendtext_tlast_ms = 0; // if a change occurred, send immediately
             }
-            //gcs().send_text(MAV_SEVERITY_INFO, "Event: %d %d", (int)_prearmcheck.enabled_flags, (int)_prearmcheck.fail_flags);
+//          gcs().send_text(MAV_SEVERITY_INFO, "Event: %d %d", (int)_prearmcheck.enabled_flags, (int)_prearmcheck.fail_flags);
             }break;
     }
 }
 
 
 //------------------------------------------------------
-// MAVLink send functions I
+// MAVLink send functions
 //------------------------------------------------------
 
 void BP_Mount_STorM32_MAVLink::send_request_gimbal_device_information(void)
@@ -736,9 +748,9 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(GimbalTarget &gta
     mavlink_msg_gimbal_device_set_attitude_send(
         _chan,
         _sysid, _compid,
-        _device.flags_for_gimbal,  // gimbal device flags
-        q_array,        // attitude as a quaternion
-        NAN, NAN, NAN); // angular velocities
+        _device.flags_for_gimbal, // gimbal device flags
+        q_array,                  // attitude as a quaternion
+        NAN, NAN, NAN);           // angular velocities
 
     BP_LOG("MTC0", BP_LOG_MTC_GIMBALCONTROL_HEADER,
         (uint8_t)1, // GIMBAL_DEVICE_SET_ATTITUDE
@@ -775,10 +787,6 @@ void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control_to_gimbal(Gim
         _qshot.mode);
 }
 
-
-//------------------------------------------------------
-// MAVLink send functions Auxiliary
-//------------------------------------------------------
 
 //landed state:
 // this is not nice, but kind of the best we can currently do
@@ -849,11 +857,8 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device(void)
         yawrate = rate_bf_targets.z;
     }
 
-/* estimator status
-no support by ArduPilot whatsoever
-TODO: how do notify.flags.armed and hal.util->get_soft_armed() compare against each other, also across vehicles?
-*/
-/*
+// TODO: how do notify.flags.armed and hal.util->get_soft_armed() compare against each other, also across vehicles?
+/* old:
     bool ahrs_nav_status_horiz_vel = false;
     nav_filter_status nav_status;
     if (ahrs.get_filter_status(nav_status) && nav_status.flags.horiz_vel) {
@@ -870,12 +875,8 @@ TODO: how do notify.flags.armed and hal.util->get_soft_armed() compare against e
     // for copter this is !ap.land_complete, for plane this is new_is_flying
     if (notify.flags.flying) { status |= STORM32LINK_FCSTATUS_AP_ISFLYING; }
 */
-
-    uint16_t estimator_status = 0;
-    if (ahrs.healthy()) estimator_status |= ESTIMATOR_ATTITUDE;
-    if (ahrs.initialised()) estimator_status |= ESTIMATOR_VELOCITY_VERT;
-
 /*
+mavlink flags                   nav_filter_status
 ESTIMATOR_ATTITUDE              attitude           : 1; // 0 - true if attitude estimate is valid
 ESTIMATOR_VELOCITY_HORIZ        horiz_vel          : 1; // 1 - true if horizontal velocity estimate is valid
 ESTIMATOR_VELOCITY_VERT         vert_vel           : 1; // 2 - true if the vertical velocity estimate is valid
@@ -898,6 +899,7 @@ ESTIMATOR_ACCEL_ERROR           takeoff            : 1; // 11 - true if filter i
                                 dead_reckoning     : 1; // 18 - true if we are dead reckoning (e.g. no position or velocity source)
 */
     uint16_t nav_estimator_status = 0;
+    uint16_t nav_estimator_status2 = 0;
 
     const uint32_t ESTIMATOR_MASK = (
             ESTIMATOR_ATTITUDE |
@@ -910,10 +912,19 @@ ESTIMATOR_ACCEL_ERROR           takeoff            : 1; // 11 - true if filter i
     nav_filter_status nav_status;
     if (ahrs.get_filter_status(nav_status)) {
         nav_estimator_status = (uint16_t)(nav_status.value & ESTIMATOR_MASK);
+        nav_estimator_status2 = (uint16_t)(nav_status.value >> 10);
     }
 
-    // we fake this for the moment to be able to log and investigate
-    estimator_status |= (nav_estimator_status << 4);
+    // ahrs.healthy() becomes true during flip of quaternion => no-go
+    // ahrs.initialised() is simply set after AP_AHRS_NAVEKF_SETTLE_TIME_MS 20000 !!
+    //                    it becomes true some secs after ESTIMATOR_ATTITUDE|VELOCITY_HORIZ|VELOCITY_VERT are set
+    // ESTIMATOR_ATTITUDE|VELOCITY_HORIZ|VELOCITY_VERT are set briefly after the quaternion flip
+    // => we fake it so:
+    uint16_t estimator_status = 0;
+    if (ahrs.healthy() && (nav_estimator_status & ESTIMATOR_ATTITUDE)) {
+        estimator_status |= ESTIMATOR_ATTITUDE; // -> QFix
+        if (ahrs.initialised() && (nav_estimator_status & ESTIMATOR_VELOCITY_VERT)) estimator_status |= ESTIMATOR_VELOCITY_VERT;
+    }
 
 /* landed state
 GCS_Common.cpp: virtual MAV_LANDED_STATE landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
@@ -934,6 +945,11 @@ ugly as we will have vehicle dependency here
     if (landed_state == MAV_LANDED_STATE_ON_GROUND && notify.flags.armed) landed_state = MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF;
 #endif
 
+    static uint32_t tlast_us = 0;
+    uint32_t t_us = AP_HAL::micros();
+    uint32_t dt_us = t_us - tlast_us;
+    tlast_us = t_us;
+
     mavlink_msg_autopilot_state_for_gimbal_device_send(
         _chan,
         _sysid, _compid,
@@ -951,9 +967,11 @@ ugly as we will have vehicle dependency here
         vel.x, vel.y, vel.z,
         angular_velocity_z,
         degrees(yawrate),
-        estimator_status & 0x000F,
+        estimator_status,
         landed_state,
-        nav_estimator_status);
+        nav_estimator_status,
+        nav_estimator_status2,
+        dt_us);
 }
 
 
@@ -1002,33 +1020,31 @@ void BP_Mount_STorM32_MAVLink::send_banner(void)
 {
     if (_got_device_info) {
         // we have lots of info
+        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: gimbal at %u%s", _instance+1, _compid, (is_primary()) ? ", is primary" : "");
 
-        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: gimbal at %u%s",
-                _instance + 1,
-                _compid,
-                (is_primary()) ? ", is primary" : ""); // %u vs %d ???
+        // we can convert the firmware version to STorM32 convention
+        char c = (_device_info.firmware_version & 0x00FF0000) >> 16;
+        if (c == '\0') c = ' '; else c += 'a' - 1;
 
-        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: %s %s fw:%u.%u.%u.%u",
+        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: %s %s v%u.%u%c",
                 _instance + 1,
                 _device_info.vendor_name,
                 _device_info.model_name,
                 (unsigned)(_device_info.firmware_version & 0x000000FF),
                 (unsigned)((_device_info.firmware_version & 0x0000FF00) >> 8),
-                (unsigned)((_device_info.firmware_version & 0x00FF0000) >> 16),
-                (unsigned)((_device_info.firmware_version & 0xFF000000) >> 24));
+                c
+                );
 
         gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_ok) ? "passed" : "failed");
 
     } else
     if (_compid) {
         // we have some info
-
-        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: gimbal at %u%s", _instance+1, _compid, (is_primary())?", is primary":""); // %u vs %d ???
+        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: gimbal at %u%s", _instance+1, _compid, (is_primary()) ? ", is primary" : "");
         gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_ok) ? "passed" : "failed");
 
     } else {
         // we don't know yet anything
-
         gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: no gimbal yet", _instance+1);
     }
 }
@@ -1040,9 +1056,9 @@ void BP_Mount_STorM32_MAVLink::send_banner(void)
 
 bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
 {
-    if ((!_prearmchecks_ok || !_armed) &&
+    if (!_prearmchecks_ok &&
         _prearmcheck.available() &&  // we did got such a message
-        ((AP_HAL::millis() - _prearmcheck.sendtext_tlast_ms) > 15000)) { // if a change occured, send immediately
+        ((AP_HAL::millis() - _prearmcheck.sendtext_tlast_ms) > 30000)) { // if a change occurred, send immediately
 
         _prearmcheck.status_updated = false;
         _prearmcheck.sendtext_tlast_ms = AP_HAL::millis();
@@ -1051,15 +1067,15 @@ bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
         strcpy(txt, "");
         if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_IS_NORMAL) strcat(txt, "arm,");
         if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_IMUS_WORKING) strcat(txt, "imu,");
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_MOTORS_WORKING) strcat(txt, "mot,");;
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_ENCODERS_WORKING) strcat(txt, "enc,");;
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_VOLTAGE_OK) strcat(txt, "volt,");;
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_VIRTUALCHANNELS_RECEIVING) strcat(txt, "chan,");;
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_MAVLINK_RECEIVING) strcat(txt, "mav,");;
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_STORM32LINK_QFIX) strcat(txt, "qfix,");;
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_STORM32LINK_WORKING) strcat(txt, "stl,");;
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_CAMERA_CONNECTED) strcat(txt, "cam,");;
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_AUX0_LOW) strcat(txt, "aux0,");;
+        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_MOTORS_WORKING) strcat(txt, "mot,");
+        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_ENCODERS_WORKING) strcat(txt, "enc,");
+        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_VOLTAGE_OK) strcat(txt, "volt,");
+        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_VIRTUALCHANNELS_RECEIVING) strcat(txt, "chan,");
+        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_MAVLINK_RECEIVING) strcat(txt, "mav,");
+        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_STORM32LINK_QFIX) strcat(txt, "qfix,");
+        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_STORM32LINK_WORKING) strcat(txt, "stl,");
+        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_CAMERA_CONNECTED) strcat(txt, "cam,");
+        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_AUX0_LOW) strcat(txt, "aux0,");
         if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_AUX1_LOW) strcat(txt, "aux1,");
         if (txt[0] != '\0') {
             txt[strlen(txt)-1] = '\0';
@@ -1093,7 +1109,7 @@ bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
             // GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER;
 
     if ((_device.received_failure_flags & FAILURE_FLAGS) > 0) {
-        //gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAILURE FLAGS", _instance+1);
+//        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAILURE FLAGS", _instance+1);
         return false;
     }
 
@@ -1149,3 +1165,69 @@ void BP_Mount_STorM32_MAVLink::send_to_ground(uint32_t msgid, const char *pkt)
 }
 
 
+
+
+/*
+STorM32-Link tests
+
+tests V4.3.2-rc1
+logging starts only ca 8-12 secs after power up
+ahrs.healthy() becomes true during "flip" of quaternion !!
+ahrs.initialised() is simply set after AP_AHRS_NAVEKF_SETTLE_TIME_MS 20000 !!
+
+                            231 167 831 895
+1:   ATTITUDE               1   1   1   1
+2:   VELOCITY_HORIZ         1   1   1   1
+4:   VELOCITY_VERT          1   1   1   1
+8:   POS_HORIZ_REL          0   0   1   1
+16:  POS_HORIZ_ABS          0   0   1   1
+32:  POS_VERT_ABS           1   1   1   1
+64:  POS_VERT_AGL           1   0   0   1
+128: CONST_POS_MODE         1   1   0   0
+256: PRED_POS_HORIZ_REL     -   -   1   1
+512: PRED_POS_HORIZ_ABS     -   -   1   1
+
+test #1 (2022-12-17 10-28-00.bin):
+t           Est NavEst
+            0   0
+26.0s       1   0       happens during "flip" of quaternion !!
+26.8s       1   231     ATTITUDE|VELOCITY_HORIZ|VELOCITY_VERT|POS_VERT_ABS + more
+31.3s       5   231
+47.4s       5   167
+62.6s       5   831     ATTITUDE|VELOCITY_HORIZ|VELOCITY_VERT|POS_VERT_ABS + POS_HORIZ_REL|POS_HORIZ_ABS
+90.4s       5   895     happens briefly after landed went from 5 to 3
+
+test #2 (2022-12-17 11-24-40.bin):
+t           Est NavEst
+            0   0
+23.2s       1   0
+24.0s       1   167
+28.6s       5   167
+60.0s       5   831
+78.4s       5   895     happens briefly after landed went from 5 to 3
+
+test #3 (2022-12-17 11-28-07.bin):
+t           Est NavEst
+            0   0
+24.2s       1   0
+25.0s       1   167
+29.5s       5   167
+61.4s       5   831
+75.8s       5   895     happens briefly after landed went from 5 to 3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*/

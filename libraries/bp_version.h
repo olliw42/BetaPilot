@@ -1,10 +1,11 @@
 #pragma once
 
-#define BETAPILOTVERSION "v055.10"
+#define BETAPILOTVERSION "v055.11"
 
 /*
 search for //OW to find all changes
 
+ upgraded to Copter4.3.2-rc1
  replace COMPONENT_PREARM_STATUS by EVENT msg
  upgraded to Copter4.3.1
  migrate to gimbal device v2
