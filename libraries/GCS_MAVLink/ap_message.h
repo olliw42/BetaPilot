@@ -83,8 +83,5 @@ enum ap_message : uint8_t {
     MSG_ATTITUDE_TARGET,
     MSG_HYGROMETER,
     MSG_AUTOPILOT_STATE_FOR_GIMBAL_DEVICE,
-//OW FRPT
-    MSG_FRSKY_PASSTHROUGH_ARRAY,
-//OWEND
     MSG_LAST // MSG_LAST must be the last entry in this enum
 };
