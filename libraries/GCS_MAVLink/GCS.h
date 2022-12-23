@@ -91,7 +91,10 @@ void gcs_out_of_space_to_send(mavlink_channel_t chan);
     }
 #define MAV_STREAM_TERMINATOR { (streams)0, nullptr, 0 }
 
-#define GCS_MAVLINK_NUM_STREAM_RATES 10
+//OW FRPT
+//#define GCS_MAVLINK_NUM_STREAM_RATES 10
+#define GCS_MAVLINK_NUM_STREAM_RATES 11
+//OWEND
 class GCS_MAVLINK_Parameters
 {
 public:
@@ -233,6 +236,9 @@ public:
         STREAM_EXTRA3,
         STREAM_PARAMS,
         STREAM_ADSB,
+//OW FRPT
+        STREAM_FRSKYPASSTHROUGH,
+//OWEND
         NUM_STREAMS
     };
 
@@ -415,6 +421,9 @@ public:
 
 //OW
     static void send_to_all(uint32_t msgid, const char *pkt) { routing.send_to_all(msgid, pkt); }
+//OWEND
+//OW FRPT
+    void send_frsky_passthrough_array();
 //OWEND
 
 protected:

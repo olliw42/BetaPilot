@@ -55,6 +55,9 @@
 #include <AP_Frsky_Telem/AP_Frsky_Telem.h>
 #include <RC_Channel/RC_Channel.h>
 #include <AP_VisualOdom/AP_VisualOdom.h>
+//OW FRPT
+#include <AP_Frsky_Telem/AP_Frsky_SPort_Protocol.h>
+//OWEND
 
 #include "MissionItemProtocol_Waypoints.h"
 #include "MissionItemProtocol_Rally.h"
@@ -909,6 +912,9 @@ ap_message GCS_MAVLINK::mavlink_id_to_ap_message_id(const uint32_t mavlink_id) c
         { MAVLINK_MSG_ID_NAV_CONTROLLER_OUTPUT, MSG_NAV_CONTROLLER_OUTPUT},
         { MAVLINK_MSG_ID_MISSION_CURRENT,       MSG_CURRENT_WAYPOINT},
         { MAVLINK_MSG_ID_VFR_HUD,               MSG_VFR_HUD},
+//OW FRPT
+        { MAVLINK_MSG_ID_FRSKY_PASSTHROUGH_ARRAY, MSG_FRSKY_PASSTHROUGH_ARRAY},
+//OWEND
         { MAVLINK_MSG_ID_SERVO_OUTPUT_RAW,      MSG_SERVO_OUTPUT_RAW},
         { MAVLINK_MSG_ID_RC_CHANNELS,           MSG_RC_CHANNELS},
         { MAVLINK_MSG_ID_RC_CHANNELS_RAW,       MSG_RC_CHANNELS_RAW},
@@ -5736,6 +5742,13 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
 #endif
         break;
 
+//OW FRPT
+    case MSG_FRSKY_PASSTHROUGH_ARRAY:
+        CHECK_PAYLOAD_SIZE(FRSKY_PASSTHROUGH_ARRAY);
+        send_frsky_passthrough_array();
+        break;
+//OWEND
+
     default:
         // try_send_message must always at some stage return true for
         // a message, or we will attempt to infinitely retry the
@@ -6418,3 +6431,30 @@ MAV_RESULT GCS_MAVLINK::handle_control_high_latency(const mavlink_command_long_t
     return MAV_RESULT_ACCEPTED;
 }
 #endif // HAL_HIGH_LATENCY2_ENABLED
+
+//OW FRPT
+// this is tentative, just demo
+// we probably want some timing, some packets do not need to be send so often
+// maybe we also want to make which packets are send dependent on which streams are enabled
+// or vice versa, modify the streams depending on whether frsky passthorugh is send
+// one also could make it dependent on which rate is higher
+
+void GCS_MAVLINK::send_frsky_passthrough_array()
+{
+    AP_Frsky_SPort_Protocol* pt = AP::frsky_sport_protocol();
+    if (pt == nullptr) return;
+
+    uint8_t count = 0;
+    uint8_t packet_buf[MAVLINK_MSG_FRSKY_PASSTHROUGH_ARRAY_FIELD_PACKET_BUF_LEN] = {0}; // max 40 packets!
+
+    pt->assemble_array(packet_buf, &count, 21, AP_HAL::millis());
+
+    if (count == 0) return; // nothing to send
+
+    mavlink_msg_frsky_passthrough_array_send(
+        chan,
+        AP_HAL::millis(), // time since system boot
+        count,
+        packet_buf);
+}
+//OWEND
