@@ -1035,13 +1035,13 @@ void BP_Mount_STorM32_MAVLink::send_banner(void)
                 c
                 );
 
-        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_ok) ? "passed" : "failed");
+        if (_prearmchecks_last) gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks passed", _instance+1);
 
     } else
     if (_compid) {
         // we have some info
         gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: gimbal at %u%s", _instance+1, _compid, (is_primary()) ? ", is primary" : "");
-        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_ok) ? "passed" : "failed");
+        if (_prearmchecks_last) gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks passed", _instance+1);
 
     } else {
         // we don't know yet anything
@@ -1056,34 +1056,58 @@ void BP_Mount_STorM32_MAVLink::send_banner(void)
 
 bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
 {
-    if (!_prearmchecks_ok &&
-        _prearmcheck.available() &&  // we did got such a message
-        ((AP_HAL::millis() - _prearmcheck.sendtext_tlast_ms) > 30000)) { // if a change occurred, send immediately
+    const uint32_t FAILURE_FLAGS =
+            GIMBAL_DEVICE_ERROR_FLAGS_ENCODER_ERROR |
+            GIMBAL_DEVICE_ERROR_FLAGS_POWER_ERROR |
+            GIMBAL_DEVICE_ERROR_FLAGS_MOTOR_ERROR |
+            GIMBAL_DEVICE_ERROR_FLAGS_SOFTWARE_ERROR |
+            GIMBAL_DEVICE_ERROR_FLAGS_COMMS_ERROR;
+            // GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER;
 
-        _prearmcheck.status_updated = false;
+    if ((AP_HAL::millis() - _prearmcheck.sendtext_tlast_ms) > 30000) { // if a change occurred, send immediately
         _prearmcheck.sendtext_tlast_ms = AP_HAL::millis();
 
-        char txt[255];
-        strcpy(txt, "");
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_IS_NORMAL) strcat(txt, "arm,");
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_IMUS_WORKING) strcat(txt, "imu,");
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_MOTORS_WORKING) strcat(txt, "mot,");
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_ENCODERS_WORKING) strcat(txt, "enc,");
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_VOLTAGE_OK) strcat(txt, "volt,");
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_VIRTUALCHANNELS_RECEIVING) strcat(txt, "chan,");
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_MAVLINK_RECEIVING) strcat(txt, "mav,");
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_STORM32LINK_QFIX) strcat(txt, "qfix,");
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_STORM32LINK_WORKING) strcat(txt, "stl,");
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_CAMERA_CONNECTED) strcat(txt, "cam,");
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_AUX0_LOW) strcat(txt, "aux0,");
-        if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_AUX1_LOW) strcat(txt, "aux1,");
-        if (txt[0] != '\0') {
-            txt[strlen(txt)-1] = '\0';
-            gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: %s", _instance+1, txt);
-        }
+        if (!_prearmchecks_ok && _prearmcheck.available()) { // we did got such a message
+            _prearmcheck.status_updated = false;
+
+            char txt[255];
+            strcpy(txt, "");
+            if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_IS_NORMAL) strcat(txt, "arm,");
+            if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_IMUS_WORKING) strcat(txt, "imu,");
+            if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_MOTORS_WORKING) strcat(txt, "mot,");
+            if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_ENCODERS_WORKING) strcat(txt, "enc,");
+            if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_VOLTAGE_OK) strcat(txt, "volt,");
+            if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_VIRTUALCHANNELS_RECEIVING) strcat(txt, "chan,");
+            if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_MAVLINK_RECEIVING) strcat(txt, "mav,");
+            if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_STORM32LINK_QFIX) strcat(txt, "qfix,");
+            if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_STORM32LINK_WORKING) strcat(txt, "stl,");
+            if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_CAMERA_CONNECTED) strcat(txt, "cam,");
+            if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_AUX0_LOW) strcat(txt, "aux0,");
+            if (_prearmcheck.fail_flags & MAV_STORM32_GIMBAL_PREARM_FLAGS_AUX1_LOW) strcat(txt, "aux1,");
+            if (txt[0] != '\0') {
+                txt[strlen(txt)-1] = '\0';
+                gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: %s", _instance+1, txt);
+            }
+        } else
+        if (!_initialised || !_prearmchecks_ok || !_armed) {
+            gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: arm", _instance+1);
+        } else
+        if (_prearmchecks_ok && (_device.received_failure_flags & FAILURE_FLAGS)) {
+            char txt[255];
+            strcpy(txt, "");
+            if (_device.received_failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_MOTOR_ERROR) strcat(txt, "mot,");
+            if (_device.received_failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_ENCODER_ERROR) strcat(txt, "enc,");
+            if (_device.received_failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_POWER_ERROR) strcat(txt, "volt,");
+            if (txt[0] != '\0') {
+                txt[strlen(txt)-1] = '\0';
+                gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: %s", _instance+1, txt);
+            } else {
+                gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAILURE FLAGS", _instance+1);
+            }
+      }
     }
 
-    if (_prearmchecks_ok && !_prearmchecks_last) { // has just changed
+    if (_prearmchecks_ok && _armed && ((_device.received_failure_flags & FAILURE_FLAGS) == 0) && !_prearmchecks_last) { // has just changed
         _prearmchecks_last = true;
         gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks passed", _instance+1);
     }
@@ -1100,16 +1124,7 @@ bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
 
     // check failure flags
     // we also check for GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER, it essentially only means that STorM32 got GIMBAL_DEVICE_SET_ATTITUDE messages
-    const uint32_t FAILURE_FLAGS =
-            GIMBAL_DEVICE_ERROR_FLAGS_ENCODER_ERROR |
-            GIMBAL_DEVICE_ERROR_FLAGS_POWER_ERROR |
-            GIMBAL_DEVICE_ERROR_FLAGS_MOTOR_ERROR |
-            GIMBAL_DEVICE_ERROR_FLAGS_SOFTWARE_ERROR |
-            GIMBAL_DEVICE_ERROR_FLAGS_COMMS_ERROR;
-            // GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER;
-
     if ((_device.received_failure_flags & FAILURE_FLAGS) > 0) {
-//        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAILURE FLAGS", _instance+1);
         return false;
     }
 

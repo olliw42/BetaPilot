@@ -419,12 +419,7 @@ bool AP_Mount::pre_arm_checks(char *failure_msg, uint8_t failure_msg_len)
     // check healthy
     for (uint8_t i=0; i<AP_MOUNT_MAX_INSTANCES; i++) {
         if ((_backends[i] != nullptr) && !_backends[i]->healthy()) {
-//OW
-//            strncpy(failure_msg, "not healthy", failure_msg_len);
-            strncpy(failure_msg, "prearm checks failed", failure_msg_len);
-            char *s;
-            if (asprintf(&s, "%s (MNT%u)", failure_msg, i+1) >= 0) strncpy(failure_msg, s, failure_msg_len);
-//OWEND
+            strncpy(failure_msg, "not healthy", failure_msg_len);
             return false;
         }
     }
