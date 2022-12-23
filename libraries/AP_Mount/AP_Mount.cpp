@@ -15,6 +15,10 @@
 #include <stdio.h>
 #include <AP_Math/location.h>
 #include <SRV_Channel/SRV_Channel.h>
+//OW
+#include <AP_Logger/AP_Logger.h>
+#include "BP_Mount_STorM32_MAVLink.h"
+//OWEND
 
 const AP_Param::GroupInfo AP_Mount::var_info[] = {
 
@@ -117,6 +121,13 @@ void AP_Mount::init()
             _backends[instance] = new AP_Mount_Siyi(*this, _params[instance], instance);
             _num_instances++;
 #endif // HAL_MOUNT_SIYI_ENABLED
+
+//OW
+        // check for STorM32_MAVLink mounts using MAVLink protocol
+        } else if (mount_type == Mount_Type_STorM32_MAVLink) {
+            _backends[instance] = new BP_Mount_STorM32_MAVLink(*this, _params[instance], instance);
+            _num_instances++;
+//OWEND
 
         }
 
@@ -660,6 +671,26 @@ void AP_Mount::convert_params()
         }
     }
 }
+
+//OW
+void AP_Mount::handle_msg(mavlink_channel_t chan, const mavlink_message_t &msg)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            _backends[instance]->handle_msg(msg);
+        }
+    }
+}
+
+void AP_Mount::send_banner(void)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            _backends[instance]->send_banner();
+        }
+    }
+}
+//OWEND
 
 // singleton instance
 AP_Mount *AP_Mount::_singleton;

@@ -91,7 +91,10 @@ void gcs_out_of_space_to_send(mavlink_channel_t chan);
     }
 #define MAV_STREAM_TERMINATOR { (streams)0, nullptr, 0 }
 
-#define GCS_MAVLINK_NUM_STREAM_RATES 10
+//OW FRPT
+//#define GCS_MAVLINK_NUM_STREAM_RATES 10
+#define GCS_MAVLINK_NUM_STREAM_RATES 11
+//OWEND
 class GCS_MAVLINK_Parameters
 {
 public:
@@ -233,6 +236,9 @@ public:
         STREAM_EXTRA3,
         STREAM_PARAMS,
         STREAM_ADSB,
+//OW FRPT
+        STREAM_FRSKYPASSTHROUGH,
+//OWEND
         NUM_STREAMS
     };
 
@@ -412,6 +418,13 @@ public:
     uint8_t get_last_txbuf() const { return last_txbuf; }
 
     MAV_RESULT set_message_interval(uint32_t msg_id, int32_t interval_us);
+
+//OW
+    static void send_to_all(uint32_t msgid, const char *pkt) { routing.send_to_all(msgid, pkt); }
+//OWEND
+//OW FRPT
+    void send_frsky_passthrough_array();
+//OWEND
 
 protected:
 
@@ -1141,6 +1154,11 @@ public:
 #if HAL_HIGH_LATENCY2_ENABLED
     void enable_high_latency_connections(bool enabled);
 #endif // HAL_HIGH_LATENCY2_ENABLED
+
+//OW
+    uint8_t get_landed_state(void) const { return num_gcs() > 0 ? chan(0)->landed_state() : MAV_LANDED_STATE_UNDEFINED; }
+    uint8_t sysid_my_gcs() { return num_gcs() > 0 ? chan(0)->sysid_my_gcs() : 0; }
+//OWEND
 
 protected:
 
