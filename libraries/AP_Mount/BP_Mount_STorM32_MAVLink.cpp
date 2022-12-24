@@ -111,8 +111,11 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
 // so done as macro in-place, which works fine
 // units:
 // { '-', "" }, // no units e.g. Pi, or a string
+// { 'd', "deg" },           // of the angular variety, -180 to 180
 // { 'n', "m/s" }, // metres per second
 // { 's', "s" }, // seconds
+// { 'E', "rad/s" },         // radians per second
+// { 'k', "deg/s" },         // degrees per second. Degrees are NOT SI, but is some situations more user-friendly than radians
 // scales:
 // { '-', 0 },
 // { 'F', 1e-6 },
@@ -128,21 +131,21 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
 // log incoming GIMBAL_DEVICE_ATTITUDE_STATUS
 #define BP_LOG_MTS_ATTITUDESTATUS_HEADER \
         "TimeUS,Roll,Pitch,Yaw,dYaw,YawAhrs,Flags,FailFlags", \
-        "s-------", \
+        "sddddd--", \
         "F-------", \
         "QfffffHH"
 
 // log outgoing GIMBAL_DEVICE_SET_ATTITUDE, STORM32_GIMBAL_MANAGER_CONTROL
 #define BP_LOG_MTC_GIMBALCONTROL_HEADER \
         "TimeUS,Type,Roll,Pitch,Yaw,GDFlags,GMFlags,TMode,QMode", \
-        "s--------", \
+        "s-ddd----", \
         "F--------", \
         "QBfffHHBB"
 
 // log outgoing AUTOPILOT_STATE_FOR_GIMBAL_DEVICE
 #define BP_LOG_MTL_AUTOPILOTSTATE_HEADER \
         "TimeUS,q1,q2,q3,q4,vx,vy,vz,wz,YawRate,Est,Land,NavEst,NEst2,dtUS", \
-        "s----nnn------s", \
+        "s----nnnkk----s", \
         "F-------------F", \
         "QfffffffffHBHHI"
 
@@ -849,7 +852,7 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device(void)
         vel.x = vel.y = vel.z = 0.0f; // or NAN ???
     }
 
-    float angular_velocity_z = NAN;
+    float angular_velocity_z = ahrs.get_yaw_rate_earth(); // NAN;
 
     float yawrate = NAN;
     Vector3f rate_bf_targets;
@@ -965,7 +968,7 @@ ugly as we will have vehicle dependency here
     BP_LOG("MTL0", BP_LOG_MTL_AUTOPILOTSTATE_HEADER,
         q[0],q[1],q[2],q[3],
         vel.x, vel.y, vel.z,
-        angular_velocity_z,
+        degrees(angular_velocity_z),
         degrees(yawrate),
         estimator_status,
         landed_state,
