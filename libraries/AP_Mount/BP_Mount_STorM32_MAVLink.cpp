@@ -1062,7 +1062,7 @@ const uint32_t FAILURE_FLAGS =
         // GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER;
 
 
-void BP_Mount_STorM32_MAVLink::prearmchecks_send_txt(void)
+void BP_Mount_STorM32_MAVLink::send_prearmchecks_txt(void)
 {
     if (!_prearmchecks_ok && _prearmcheck.available()) { // we did got such a message
         _prearmcheck.status_updated = false;
@@ -1112,7 +1112,7 @@ bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
 
     if ((AP_HAL::millis() - _prearmcheck.sendtext_tlast_ms) > 30000) { // if a change occurred, send immediately
         _prearmcheck.sendtext_tlast_ms = AP_HAL::millis();
-        prearmchecks_send_txt();
+        send_prearmchecks_txt();
     }
 
     if (_prearmchecks_ok && _armed && ((_device.received_failure_flags & FAILURE_FLAGS) == 0) && !_prearmchecks_last) { // has just changed

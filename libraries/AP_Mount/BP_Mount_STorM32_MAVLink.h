@@ -149,7 +149,7 @@ private:
 
     bool _prearmchecks_last; // to detect changes
     bool prearmchecks_do(void); // workaround needed since healthy() is const
-    void prearmchecks_send_txt(void);
+    void send_prearmchecks_txt(void);
 
     struct {
         bool status_updated;
