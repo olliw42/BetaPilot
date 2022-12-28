@@ -124,6 +124,7 @@ private:
 
     bool _sendonly;
     bool _should_log;
+    bool _got_radio_rc_channels;
 
     enum PROTOCOLENUM {
         PROTOCOL_UNDEFINED = 0,          // we do not yet know

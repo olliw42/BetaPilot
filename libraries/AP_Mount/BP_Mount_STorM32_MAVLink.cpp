@@ -181,6 +181,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
 
     _sendonly = false;
     _should_log = true;
+    _got_radio_rc_channels = false; // disable sending rc channels when RADIO_RC_CHANNELS messages are detected
 
     _protocol = PROTOCOL_UNDEFINED;
     _protocol_auto_cntdown = PROTOCOL_AUTO_TIMEOUT_CNT;
@@ -223,7 +224,7 @@ void BP_Mount_STorM32_MAVLink::update()
 
         case TASK_SLOT3:
             if (_compid) { // we send it as soon as we have found the gimbal
-                send_rc_channels();
+                if (!_got_radio_rc_channels) send_rc_channels();
             }
             break;
     }
@@ -629,7 +630,7 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             mavlink_command_long_t payload;
             mavlink_msg_command_long_decode(&msg, &payload);
             switch (payload.command) {
-                case MAV_CMD_QSHOT_DO_CONFIGURE: // 62020
+                case MAV_CMD_QSHOT_DO_CONFIGURE: // 60020
                     uint8_t new_mode = payload.param1;
                     if (new_mode == MAV_QSHOT_MODE_UNDEFINED) {
                         _qshot.mode = MAV_QSHOT_MODE_UNDEFINED;
@@ -645,6 +646,10 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             mavlink_qshot_status_t payload;
             mavlink_msg_qshot_status_decode(&msg, &payload);
             _qshot.mode = payload.mode; // also sets it if it was put on hold in the above
+            }break;
+
+        case MAVLINK_MSG_ID_RADIO_RC_CHANNELS: { // 60045
+            _got_radio_rc_channels = true;
             }break;
     }
 
@@ -1112,7 +1117,6 @@ void BP_Mount_STorM32_MAVLink::send_prearmchecks_txt(void)
 
 bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
 {
-
     if ((AP_HAL::millis() - _prearmcheck.sendtext_tlast_ms) > 30000) { // if a change occurred, send immediately
         _prearmcheck.sendtext_tlast_ms = AP_HAL::millis();
         send_prearmchecks_txt();
