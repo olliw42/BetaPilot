@@ -1,10 +1,13 @@
 #pragma once
 
-#define BETAPILOTVERSION "v055.15"
+#define BETAPILOTVERSION "v055.18"
 
 /*
 search for //OW to find all changes
 
+ revise handling of RADIO_LINL_STATS a bit, add some comments
+ do not send rc channels if RADIO_RC_CHANNELS is detected
+ put mLRS/RADLIO_LINK_xxx messages under the hood of storm32.xml
  upgraded to Copter4.3.2
  replace COMPONENT_PREARM_STATUS by EVENT msg
  upgraded to Copter4.3.1
