@@ -428,6 +428,14 @@ public:
 
 protected:
 
+//OW RADIOLINK
+    // called from vehicle class handler
+    void handle_radio_link_stats(const mavlink_message_t &msg, bool log_radio);
+    void handle_radio_link_flow_control(const mavlink_message_t &msg, bool log_radio);
+    // called from common handler
+    void handle_radio_rc_channels(const mavlink_message_t &msg);
+//OWEND
+
     bool mavlink_coordinate_frame_to_location_alt_frame(MAV_FRAME coordinate_frame,
                                                         Location::AltFrame &frame);
 
