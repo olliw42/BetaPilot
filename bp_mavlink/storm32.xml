@@ -21,9 +21,9 @@ Documentation:
   <version>1</version>
   <dialect>1</dialect>
   <enums>
-  <!-- #############################
-  STORM32 enums
-  ############################# -->
+<!-- #############################
+STORM32 enums
+############################# -->
     <!-- ***************************
     STORM32 tunnel enum, this is merely a redefinition for convennience
     *************************** -->
@@ -278,9 +278,9 @@ Documentation:
         <param index="2" label="Shot state or command">Set shot state or command. The allowed values are specific to the selected shot mode.</param>
       </entry>
     </enum>
-  <!-- #############################
-  mLRS enums
-  ############################# -->
+<!-- #############################
+mLRS enums
+############################# -->
     <enum name="RADIO_RC_CHANNELS_FLAGS" bitmask="true">
       <description>RADIO_RC_CHANNELS flags (bitmask).</description>
       <entry value="1" name="RADIO_RC_CHANNELS_FLAGS_FAILSAFE">
@@ -307,9 +307,9 @@ Documentation:
     </enum>
   </enums>
   <messages>
-  <!-- #############################
-  STORM32 messages
-  ############################# -->
+<!-- #############################
+STORM32 messages
+############################# -->
     <!-- ***************************
     STORM32 gimbal device messages
     deprecated 21.Nov.2022, replaced by gimbal protocol v2 gimbal device messages
@@ -400,12 +400,21 @@ Documentation:
     </message>
     <!-- ***************************
     General messages
-    COMPONENT_PREARM_STATUS deprecated 7.Dez.2022, replaced by events micro service
-    removed to force migration
+    COMPONENT_PREARM_STATUS deprecated 7.Dez.2022, replaced by events micro service, removed to force migration
     *************************** -->
-  <!-- #############################
-  mLRS messages
-  ############################# -->
+    <message id="60000" name="AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT">
+      <wip/>
+      <!-- WIP -->
+      <description>Addition to message AUTOPILOT_STATE_FOR_GIMBAL_DEVICE.</description>
+      <field type="uint8_t" name="target_system">System ID.</field>
+      <field type="uint8_t" name="target_component">Component ID.</field>	  
+	  <field type="uint64_t" name="time_boot_us" units="us">Timestamp (time since system boot).</field>
+      <field type="float" name="wind_vx" units="m/s">Wind X speed in NED (North,Est, Down). NAN if unknown.</field>
+      <field type="float" name="wind_vy" units="m/s">Wind Y speed in NED (North, East, Down). NAN if unknown.</field>
+    </message>
+<!-- #############################
+mLRS messages
+############################# -->
     <message id="60045" name="RADIO_RC_CHANNELS">
       <description>Radio channels. Supports up to 24 channels. Channel values are in centerd 13 bit format. Range is [-4096,4096], center is 0. Conversion to PWM is x * 5/32 + 1500. Should be emitted only by components with component id MAV_COMP_ID_TELEMETRY_RADIO.</description>
       <field type="uint8_t" name="count">Total number of RC channels being received. This can be larger than 24, indicating that more channels are available but not given in this message.</field>

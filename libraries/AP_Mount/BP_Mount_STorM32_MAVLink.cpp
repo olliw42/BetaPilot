@@ -149,6 +149,13 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
         "F-------------F", \
         "QfffffffffHBHHI"
 
+// log outgoing AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT
+#define BP_LOG_MTLE_AUTOPILOTSTATEEXT_HEADER \
+        "TimeUS,windx,windy", \
+        "snn", \
+        "F--", \
+        "Qff"
+
 
 //******************************************************
 // BP_Mount_STorM32_MAVLink, that's the main class
@@ -182,6 +189,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
     _sendonly = false;
     _should_log = true;
     _got_radio_rc_channels = false; // disable sending rc channels when RADIO_RC_CHANNELS messages are detected
+    _send_autopilotstateext = true;
 
     _protocol = PROTOCOL_UNDEFINED;
     _protocol_auto_cntdown = PROTOCOL_AUTO_TIMEOUT_CNT;
@@ -195,6 +203,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
         _protocol = PROTOCOL_STORM32_GIMBAL_MANAGER;
     }
     if (_params.zflags & 0x08) _sendonly = true;
+    if (_params.zflags & 0x10) _send_autopilotstateext = false;
 }
 
 
@@ -212,6 +221,7 @@ void BP_Mount_STorM32_MAVLink::update()
         case TASK_SLOT2:
             if (_compid) { // we send it as soon as we have found the gimbal
                 send_autopilot_state_for_gimbal_device();
+                if (_send_autopilotstateext) send_autopilot_state_for_gimbal_device_ext();
             }
             break;
 
@@ -793,6 +803,36 @@ void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control_to_gimbal(Gim
         _device.flags_for_gimbal, _manager.flags_for_gimbal,
         gtarget.mode,
         _qshot.mode);
+}
+
+
+void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_ext(void)
+{
+    if (!HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT)) {
+        return;
+    }
+
+    const AP_AHRS &ahrs = AP::ahrs();
+
+#if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
+    Vector3f airspeed_vec_bf;
+    if (!ahrs.airspeed_vector_true(airspeed_vec_bf)) {
+        // if we don't have an airspeed estimate then we don't have a valid wind estimate on copters
+        return;
+    }
+#endif
+
+    Vector3f wind;
+    wind = ahrs.wind_estimate();
+
+    mavlink_msg_autopilot_state_for_gimbal_device_ext_send(
+        _chan,
+        _sysid, _compid,
+        AP_HAL::micros64(),
+        wind.x, wind.y);
+
+    BP_LOG("MTLE", BP_LOG_MTLE_AUTOPILOTSTATEEXT_HEADER,
+        wind.x, wind.y);
 }
 
 

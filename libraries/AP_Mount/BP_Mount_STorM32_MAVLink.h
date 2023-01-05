@@ -123,6 +123,7 @@ private:
     // flags
 
     bool _sendonly;
+    bool _send_autopilotstateext;
     bool _should_log;
     bool _got_radio_rc_channels;
 
@@ -163,6 +164,7 @@ private:
 
     void set_and_send_target_angles(void);
     void send_autopilot_state_for_gimbal_device(void);
+    void send_autopilot_state_for_gimbal_device_ext(void);
 
     enum GIMBALTARGETMODEENUM {
         TARGET_MODE_RETRACT = 0,
