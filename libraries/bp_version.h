@@ -1,10 +1,11 @@
 #pragma once
 
-#define BETAPILOTVERSION "v055.18"
+#define BETAPILOTVERSION "v055.19"
 
 /*
 search for //OW to find all changes
 
+ AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT
  revise handling of RADIO_LINL_STATS a bit, add some comments
  do not send rc channels if RADIO_RC_CHANNELS is detected
  put mLRS/RADLIO_LINK_xxx messages under the hood of storm32.xml
@@ -125,6 +126,8 @@ FOLLOW_TARGET
 DIGICAM_CONTROL
 MOUNT_CONFIGURE
 MOUNT_CONTROL
+
+WIND_COV HIGH_LATENCY2 WIND, GPS_RAW_INT VFR_HUD GPS2_RAW OPEN_DRONE_ID_LOCATION
 
 MAV_TYPE_  "GUID"
 */
