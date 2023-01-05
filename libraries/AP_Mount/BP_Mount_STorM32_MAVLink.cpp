@@ -40,18 +40,18 @@ two modes/protocols of operation are supported
 //*****************************************************
 
 /*
-0:   protocol is auto determined
-1:   protocol forced to PROTOCOL_ARDUPILOT_LIKE
-2:   protocol forced to PROTOCOL_STORM32_GIMBAL_MANAGER
-8:   only streaming
-     only sends out RC_CHANNLES, AUTOPILOT_STATE_FOR_GIMBAL for STorM32-Link
-     this mode could in principle be replaced by asking for the streams, but since AP isn't streaming reliably we don't
+ ZFLAGS
+ 0:   protocol is auto determined
+ 1:   protocol forced to PROTOCOL_ARDUPILOT_LIKE
+ 2:   protocol forced to PROTOCOL_STORM32_GIMBAL_MANAGER
+ 8:   only streaming
+      only sends out RC_CHANNLES, AUTOPILOT_STATE_FOR_GIMBAL for STorM32-Link
+      this mode could in principle be replaced by asking for the streams, but since AP isn't streaming reliably we don't
+ 16:  do not send AUTOPILOT_STATE_FOR_GIMBAL_EXT
+ 128: do not log
 
  in all modes sends MOUNT_STATUS to ground, so that "old" things like MP etc can see the gimbal orientation
  listens to STORM32_GIMBAL_DEVICE_STATUS to send out MOUNT_STATUS in sync
-*/
-/*
- also sends SYSTEM_TIME to gimbal
 */
 
 //******************************************************
@@ -158,6 +158,21 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
 
 
 //******************************************************
+// STorM32 states
+//******************************************************
+enum STORM32STATEENUM {
+    STORM32STATE_STARTUP_MOTORS = 0,
+    STORM32STATE_STARTUP_SETTLE,
+    STORM32STATE_STARTUP_CALIBRATE,
+    STORM32STATE_STARTUP_LEVEL,
+    STORM32STATE_STARTUP_MOTORDIRDETECT,
+    STORM32STATE_STARTUP_RELEVEL,
+    STORM32STATE_NORMAL,
+    STORM32STATE_STARTUP_FASTLEVEL,
+};
+
+
+//******************************************************
 // BP_Mount_STorM32_MAVLink, that's the main class
 //******************************************************
 
@@ -204,6 +219,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
     }
     if (_params.zflags & 0x08) _sendonly = true;
     if (_params.zflags & 0x10) _send_autopilotstateext = false;
+    if (_params.zflags & 0x80) _should_log = false;
 }
 
 
@@ -1285,7 +1301,8 @@ t           Est NavEst
 61.4s       5   831
 75.8s       5   895     happens briefly after landed went from 5 to 3
 
-
+2.Jan.2023
+the quaternion flip can also be seen in MP in e.g. yaw, when one connects quickly, EKF dialog looks ok then
 
 
 
