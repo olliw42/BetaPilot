@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION "v055.19"
+#define BETAPILOTVERSION "v055.20"
 
 /*
 search for //OW to find all changes
