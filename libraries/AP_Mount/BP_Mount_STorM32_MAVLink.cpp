@@ -15,6 +15,7 @@
 #include <AP_Logger/AP_Logger.h>
 #include <RC_Channel/RC_Channel.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
+#include <AC_AttitudeControl/AC_AttitudeControl.h>
 #include "BP_Mount_STorM32_MAVLink.h"
 
 extern const AP_HAL::HAL& hal;
@@ -915,10 +916,19 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device(void)
 
     float angular_velocity_z = ahrs.get_yaw_rate_earth(); // NAN;
 
+    // tests show: NO, this does not give what is desired!! it more looks like the actual yaw rate than the commanded yaw rate
     float yawrate = NAN;
     Vector3f rate_bf_targets;
     if ((vehicle != nullptr) && vehicle->get_rate_bf_targets(rate_bf_targets)) {
         yawrate = rate_bf_targets.z;
+    }
+
+    //_euler_rate_target.z, suggestion by lthall
+    yawrate = NAN;
+    AC_AttitudeControl* attitude_control = AC_AttitudeControl::get_singleton();
+    if (attitude_control != nullptr) {
+        Vector3f euler_rate_target = attitude_control->get_euler_rate_target();
+        yawrate = euler_rate_target.z;
     }
 
 // TODO: how do notify.flags.armed and hal.util->get_soft_armed() compare against each other, also across vehicles?
