@@ -553,6 +553,6 @@ public:
     float control_monitor_rms_output_pitch(void) const;
     float control_monitor_rms_output_yaw(void) const;
 //OW
-    const Vector3f &get_euler_rate_target(void) { return _euler_rate_target; }
+    const Vector3f &get_euler_rate_targets(void) { return _euler_rate_target; }
 //OWEND
 };

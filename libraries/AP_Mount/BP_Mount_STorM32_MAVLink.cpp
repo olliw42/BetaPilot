@@ -899,7 +899,6 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device(void)
     }
 
     const AP_AHRS &ahrs = AP::ahrs();
-    const AP_Vehicle *vehicle = AP::vehicle();
     const AP_Notify &notify = AP::notify();
 
     Quaternion quat;
@@ -916,20 +915,24 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device(void)
 
     float angular_velocity_z = ahrs.get_yaw_rate_earth(); // NAN;
 
-    // tests show: NO, this does not give what is desired!! it more looks like the actual yaw rate than the commanded yaw rate
     float yawrate = NAN;
+    // use rate_bf_targets(), as in vanilla ArduPilot
+    // tests show: NO, this does not give what is desired!! it more looks like the actual yaw rate than the commanded yaw rate
+    /*const AP_Vehicle *vehicle = AP::vehicle();
     Vector3f rate_bf_targets;
     if ((vehicle != nullptr) && vehicle->get_rate_bf_targets(rate_bf_targets)) {
         yawrate = rate_bf_targets.z;
-    }
-
-    //_euler_rate_target.z, suggestion by lthall
-    yawrate = NAN;
+    } */
+    // use _euler_rate_target.z, suggestion by lthall, https://github.com/ArduPilot/ardupilot/issues/22564
+    // tests show: YES, this does give what is desired (tested only for stick inputs though)
+    // since not equal/available for all vehicles, should be done as in vanilla ArduPilot, but hey, kis
+#if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
     AC_AttitudeControl* attitude_control = AC_AttitudeControl::get_singleton();
     if (attitude_control != nullptr) {
-        Vector3f euler_rate_target = attitude_control->get_euler_rate_target();
-        yawrate = euler_rate_target.z;
+        Vector3f euler_rate_targets = attitude_control->get_euler_rate_targets();
+        yawrate = euler_rate_targets.z;
     }
+#endif
 
 // TODO: how do notify.flags.armed and hal.util->get_soft_armed() compare against each other, also across vehicles?
 /* old:
@@ -992,10 +995,13 @@ ESTIMATOR_ACCEL_ERROR           takeoff            : 1; // 11 - true if filter i
     // ahrs.healthy() becomes true during flip of quaternion => no-go
     // ahrs.initialised() is simply set after AP_AHRS_NAVEKF_SETTLE_TIME_MS 20000 !!
     //                    it becomes true some secs after ESTIMATOR_ATTITUDE|VELOCITY_HORIZ|VELOCITY_VERT are set
-    // ESTIMATOR_ATTITUDE|VELOCITY_HORIZ|VELOCITY_VERT are set briefly after the quaternion flip
+    // ESTIMATOR_ATTITUDE can be set during flip of quaternion => no-go
+    // VELOCITY_HORIZ|VELOCITY_VERT are set briefly after the quaternion flip ??Q: really, couldn't it also be raised in the flip?
     // => we fake it so:
     uint16_t estimator_status = 0;
-    if (ahrs.healthy() && (nav_estimator_status & ESTIMATOR_ATTITUDE)) {
+    static uint32_t tahrs_healthy_ms = 0;
+    if (!tahrs_healthy_ms && ahrs.healthy()) tahrs_healthy_ms = AP_HAL::millis();
+    if (ahrs.healthy() && (nav_estimator_status & ESTIMATOR_ATTITUDE) && ((AP_HAL::millis() - tahrs_healthy_ms) > 3000)) {
         estimator_status |= ESTIMATOR_ATTITUDE; // -> QFix
         if (ahrs.initialised() && (nav_estimator_status & ESTIMATOR_VELOCITY_VERT)) estimator_status |= ESTIMATOR_VELOCITY_VERT;
     }
