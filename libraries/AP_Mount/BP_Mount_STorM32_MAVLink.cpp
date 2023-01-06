@@ -944,7 +944,6 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device(void)
     }
 
     const AP_AHRS &ahrs = AP::ahrs();
-    const AP_Notify &notify = AP::notify();
 
     Quaternion quat;
 //    quat.from_rotation_matrix(ahrs.get_rotation_body_to_ned()); // this gives DCM???
@@ -1068,6 +1067,7 @@ ugly as we will have vehicle dependency here
 // the way it is done leads to a PREPARING_FOR_TAKEOFF before takeoff, but also after landing!
 // we somehow would have to catch that it was flying before to suppress it
 // but we don't care, the gimbal will do inits when ON_GROUND, and apply them when transitioned to PREPARING_FOR_TAKEOFF
+    const AP_Notify &notify = AP::notify();
     if (landed_state == MAV_LANDED_STATE_ON_GROUND && notify.flags.armed) landed_state = MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF;
 #endif
 
