@@ -219,7 +219,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
         _protocol = PROTOCOL_STORM32_GIMBAL_MANAGER;
     }
     if (_params.zflags & 0x08) _sendonly = true;
-    if (_params.zflags & 0x10) _send_autopilotstateext = false;
+    // we currently always do it if (_params.zflags & 0x10) _send_autopilotstateext = false;
     if (_params.zflags & 0x80) _should_log = false;
 }
 
@@ -839,21 +839,35 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_ext(void)
     }
 #endif
 
+    // https://github.com/ArduPilot/ardupilot/issues/6571
     // v_ground = v_air + v_wind // note direction of wind
     // there are soo many different accessors, estimates, etc
     // vfr_hud_airspeed(),
     // ahrs.groundspeed()
-    // ahrs.yaw_sensor
-    // ahrs.airspeed_estimate(aspeed)
-    // ahrs.airspeed_vector_true(airspeed_vec_bf)
+    // ahrs.groundspeed_vector()
+    // ahrs.yaw, ahrs.yaw_sensor
+    // ahrs.airspeed_estimate(airspeed)
+    // ahrs.airspeed_estimate_true(airspeed)
+    // ahrs.airspeed_vector_true(airspeed_vec_bf) // gives it in BF, not NED!
     // AP::gps().ground_speed()
     // AP_Airspeed::get_singleton()->get_airspeed()
     // ????
+    // this gives some good insight!?
+    // ahrs.groundspeed_vector() -> search for AP_AHRS_DCM::groundspeed_vector(void)
+    // if airspeed_estimate_true(airspeed) then calculates it as gndVelADS = airspeed_vector + wind2d
+    // else if gotGPS then gndVelGPS = Vector2f(cosf(cog), sinf(cog)) * AP::gps().ground_speed()
+    // => AP does indeed do vg = va + vw
+    // => shows how ground speed is estimated
+    // question: how does this relate to ahrs.get_velocity_NED(vground)?
+    // AP_AHRS::airspeed_estimate(float &airspeed_ret)
+    // does true_airspeed_vec = nav_vel - wind_vel
+    // this suggests that nav_vel is a good ground speed
+    // also suggests that airspeed, wind are in NED too
 
     Vector3f wind;
     wind = ahrs.wind_estimate();
 
-    float vehicle_heading = ahrs.yaw_sensor;
+    float vehicle_heading = ahrs.yaw;
     float wind_heading = atan2f(-wind.y, -wind.x);
     float ground_heading = NAN;
     float air_heading = NAN;
@@ -871,16 +885,16 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_ext(void)
         ground_heading = atan2f(vground.y, vground.x);
         air_heading = atan2f(vair.y, vair.x);
     }
-
+/* we currently don't send, just log, we need to work it out what we want to do
     mavlink_msg_autopilot_state_for_gimbal_device_ext_send(
         _chan,
         _sysid, _compid,
         AP_HAL::micros64(),
-        wind.x, wind.y, correction_angle);
+        wind.x, wind.y, correction_angle); */
 
     BP_LOG("MTLE", BP_LOG_MTLE_AUTOPILOTSTATEEXT_HEADER,
-        wind.x, wind.y,degrees(correction_angle),
-        degrees(vehicle_heading),degrees(wind_heading),degrees(ground_heading),degrees(air_heading));
+        wind.x, wind.y, degrees(correction_angle),
+        degrees(vehicle_heading), degrees(wind_heading), degrees(ground_heading), degrees(air_heading));
 }
 
 

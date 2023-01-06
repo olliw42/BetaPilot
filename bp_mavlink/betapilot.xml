@@ -2,5 +2,6 @@
 <mavlink>
   <include>all.xml</include>
   <include>betapilot_missing_common.xml</include>
+  <include>olliw_dev.xml</include>
   <messages/>
 </mavlink>
