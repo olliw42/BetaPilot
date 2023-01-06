@@ -152,10 +152,10 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
 
 // log outgoing AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT
 #define BP_LOG_MTLE_AUTOPILOTSTATEEXT_HEADER \
-        "TimeUS,windx,windy", \
-        "snn", \
-        "F--", \
-        "Qff"
+        "TimeUS,windx,windy,corrangle,vh,wh,gh,ah", \
+        "snnddddd", \
+        "F-------", \
+        "Qfffffff"
 
 
 //******************************************************
@@ -839,17 +839,48 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_ext(void)
     }
 #endif
 
+    // v_ground = v_air + v_wind // note direction of wind
+    // there are soo many different accessors, estimates, etc
+    // vfr_hud_airspeed(),
+    // ahrs.groundspeed()
+    // ahrs.yaw_sensor
+    // ahrs.airspeed_estimate(aspeed)
+    // ahrs.airspeed_vector_true(airspeed_vec_bf)
+    // AP::gps().ground_speed()
+    // AP_Airspeed::get_singleton()->get_airspeed()
+    // ????
+
     Vector3f wind;
     wind = ahrs.wind_estimate();
+
+    float vehicle_heading = ahrs.yaw_sensor;
+    float wind_heading = atan2f(-wind.y, -wind.x);
+    float ground_heading = NAN;
+    float air_heading = NAN;
+
+    float correction_angle = NAN;
+    Vector3f vground;
+    if (ahrs.get_velocity_NED(vground)) { // ??? is this correct, really ground speed ???
+        Vector3f vair = vground - wind;
+        float vg2 = vground.x * vground.x + vground.y * vground.y;
+        float va2 = vair.x * vair.x + vair.y * vair.y;
+        float vgva = vground.x * vair.x + vground.y * vair.y;
+        correction_angle = acosf(vgva / sqrtf(vg2 * va2));
+        if ((vground.x * vair.y - vground.y * vair.x) < 0.0f) correction_angle = -correction_angle;
+
+        ground_heading = atan2f(vground.y, vground.x);
+        air_heading = atan2f(vair.y, vair.x);
+    }
 
     mavlink_msg_autopilot_state_for_gimbal_device_ext_send(
         _chan,
         _sysid, _compid,
         AP_HAL::micros64(),
-        wind.x, wind.y);
+        wind.x, wind.y, correction_angle);
 
     BP_LOG("MTLE", BP_LOG_MTLE_AUTOPILOTSTATEEXT_HEADER,
-        wind.x, wind.y);
+        wind.x, wind.y,degrees(correction_angle),
+        degrees(vehicle_heading),degrees(wind_heading),degrees(ground_heading),degrees(air_heading));
 }
 
 
@@ -908,6 +939,7 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device(void)
     }
     float q[4] = { quat.q1, quat.q2, quat.q3, quat.q4 };
 
+    // comment in AP_AHRS.cpp says "Must only be called if have_inertial_nav() is true", but probably not worth checking
     Vector3f vel;
     if (!ahrs.get_velocity_NED(vel)) { // it returns a bool, so it's a good idea to consider it
         vel.x = vel.y = vel.z = 0.0f; // or NAN ???

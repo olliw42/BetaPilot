@@ -409,8 +409,9 @@ STORM32 messages
       <field type="uint8_t" name="target_system">System ID.</field>
       <field type="uint8_t" name="target_component">Component ID.</field>	  
 	  <field type="uint64_t" name="time_boot_us" units="us">Timestamp (time since system boot).</field>
-      <field type="float" name="wind_vx" units="m/s">Wind X speed in NED (North,Est, Down). NAN if unknown.</field>
-      <field type="float" name="wind_vy" units="m/s">Wind Y speed in NED (North, East, Down). NAN if unknown.</field>
+      <field type="float" name="wind_x" units="m/s" invalid="NaN">Wind X speed in NED (North,Est, Down). NAN if unknown.</field>
+      <field type="float" name="wind_y" units="m/s" invalid="NaN">Wind Y speed in NED (North, East, Down). NAN if unknown.</field>
+      <field type="float" name="wind_correction_angle" units="rad" invalid="NaN">Correction angle due to wind. NaN if unknown.</field>
     </message>
 <!-- #############################
 mLRS messages
@@ -446,15 +447,15 @@ mLRS messages
       <field type="uint16_t" name="rx_rate" units="bytes/s" invalid="UINT16_MAX">Recieved bytes per second, UINT16_MAX: invalid/unknown.</field>
       <field type="uint8_t" name="tx_used_bandwidth" units="c%" invalid="UINT8_MAX">Transmit bandwidth consumption. Values: 0..100, UINT8_MAX: invalid/unknown.</field>
       <field type="uint8_t" name="rx_used_bandwidth" units="c%" invalid="UINT8_MAX">Receive bandwidth consumption. Values: 0..100, UINT8_MAX: invalid/unknown.</field>
-      <field type="uint8_t" name="txbuf" units="c%" invalid="UINT8_MAX">For compatibility with legacy method.</field>
+      <field type="uint8_t" name="txbuf" units="c%" invalid="UINT8_MAX">For compatibility with legacy method. UINT8_MAX: unknown.</field>
     </message>
     <message id="60048" name="RADIO_LINK_INFORMATION">
       <description>Radio link information. Should be emitted only by components with component id MAV_COMP_ID_TELEMETRY_RADIO.</description>
       <field type="uint16_t" name="type" enum="RADIO_TYPE" invalid="0">Radio link type. 0: unknown type.</field>
       <field type="uint8_t" name="mode" invalid="UINT8_MAX">Operation mode. Radio link dependent.</field>
-      <field type="uint8_t" name="rate" units="Hz" invalid="0">Rate in Hz.</field>
-      <field type="int8_t" name="tx_power" units="dBm" invalid="INT8_MAX">Transmit power of transmitter in dBm.</field>
-      <field type="int8_t" name="rx_power" units="dBm" invalid="INT8_MAX">Transmit power of receiver in dBm.</field>
+      <field type="uint8_t" name="rate" units="Hz" invalid="0">Rate in Hz. 0: unknown.</field>
+      <field type="int8_t" name="tx_power" units="dBm" invalid="INT8_MAX">Transmit power of transmitter in dBm. INT8_MAX: unknown.</field>
+      <field type="int8_t" name="rx_power" units="dBm" invalid="INT8_MAX">Transmit power of receiver in dBm. INT8_MAX: unknown.</field>
     </message>
 <!-- ********** -->
     <message id="60040" name="FRSKY_PASSTHROUGH_ARRAY">
