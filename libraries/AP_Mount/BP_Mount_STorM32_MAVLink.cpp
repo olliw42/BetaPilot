@@ -2,7 +2,6 @@
 //OW
 // (c) olliw, www.olliw.eu, GPL3
 // STorM32 mount backend class
-// 100% MAVLink + storm32.xml
 //*****************************************************
 
 #include <AP_HAL/AP_HAL.h>
@@ -15,7 +14,6 @@
 #include <AP_Logger/AP_Logger.h>
 #include <RC_Channel/RC_Channel.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
-#include <AC_AttitudeControl/AC_AttitudeControl.h>
 #include "BP_Mount_STorM32_MAVLink.h"
 
 extern const AP_HAL::HAL& hal;
@@ -839,31 +837,32 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_ext(void)
     }
 #endif
 
-    // https://github.com/ArduPilot/ardupilot/issues/6571
-    // v_ground = v_air + v_wind // note direction of wind
-    // there are soo many different accessors, estimates, etc
-    // vfr_hud_airspeed(),
-    // ahrs.groundspeed()
-    // ahrs.groundspeed_vector()
-    // ahrs.yaw, ahrs.yaw_sensor
-    // ahrs.airspeed_estimate(airspeed)
-    // ahrs.airspeed_estimate_true(airspeed)
-    // ahrs.airspeed_vector_true(airspeed_vec_bf) // gives it in BF, not NED!
-    // AP::gps().ground_speed()
-    // AP_Airspeed::get_singleton()->get_airspeed()
-    // ????
-    // this gives some good insight!?
-    // ahrs.groundspeed_vector() -> search for AP_AHRS_DCM::groundspeed_vector(void)
-    // if airspeed_estimate_true(airspeed) then calculates it as gndVelADS = airspeed_vector + wind2d
-    // else if gotGPS then gndVelGPS = Vector2f(cosf(cog), sinf(cog)) * AP::gps().ground_speed()
-    // => AP does indeed do vg = va + vw
-    // => shows how ground speed is estimated
-    // question: how does this relate to ahrs.get_velocity_NED(vground)?
-    // AP_AHRS::airspeed_estimate(float &airspeed_ret)
-    // does true_airspeed_vec = nav_vel - wind_vel
-    // this suggests that nav_vel is a good ground speed
-    // also suggests that airspeed, wind are in NED too
-
+/*
+ https://github.com/ArduPilot/ardupilot/issues/6571
+ v_ground = v_air + v_wind // note direction of wind
+ there are soo many different accessors, estimates, etc
+ vfr_hud_airspeed(),
+ ahrs.groundspeed()
+ ahrs.groundspeed_vector()
+ ahrs.yaw, ahrs.yaw_sensor
+ ahrs.airspeed_estimate(airspeed)
+ ahrs.airspeed_estimate_true(airspeed)
+ ahrs.airspeed_vector_true(airspeed_vec_bf) // gives it in BF, not NED!
+ AP::gps().ground_speed()
+ AP_Airspeed::get_singleton()->get_airspeed()
+ ????
+ this gives some good insight!?
+ ahrs.groundspeed_vector() -> search for AP_AHRS_DCM::groundspeed_vector(void)
+ if airspeed_estimate_true(airspeed) then calculates it as gndVelADS = airspeed_vector + wind2d
+ else if gotGPS then gndVelGPS = Vector2f(cosf(cog), sinf(cog)) * AP::gps().ground_speed()
+ => AP does indeed do vg = va + vw
+ => shows how ground speed is estimated
+ question: how does this relate to ahrs.get_velocity_NED(vground)?
+ ahrs.airspeed_estimate(airspeed)
+ does true_airspeed_vec = nav_vel - wind_vel
+ this suggests that nav_vel is a good ground speed
+ also suggests that airspeed, wind are in NED too
+*/
     Vector3f wind;
     wind = ahrs.wind_estimate();
 
@@ -898,40 +897,6 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_ext(void)
 }
 
 
-//landed state:
-// this is not nice, but kind of the best we can currently do
-// plane does not support landed state at all, so we do have vehicle dependency here
-// copter does support it, but has it private, and in GCS_MAVLINK
-// so we end up redoing it in vehicle dependent way, which however gives us also the chance to do it better
-//
-// 26.05.2022:
-// Plane4.2 does now provide a basic landed_state(), returning IN_AIR when flying and ON_GROUND else
-// is this useful to us?
-//
-//copter's landed state
-// copter.ap.land_complete <-> MAV_LANDED_STATE_ON_GROUND
-// copter.flightmode->is_landing() <-> MAV_LANDED_STATE_LANDING
-// copter.flightmode->is_taking_off() <-> MAV_LANDED_STATE_TAKEOFF
-// else <-> MAV_LANDED_STATE_IN_AIR
-//
-//from tests 2021-08-28, in loiter with takeoff/land button, I conclude
-// get_landed_state():
-// 1 = MAV_LANDED_STATE_ON_GROUND  until motors ramp up
-// 3 = MAV_LANDED_STATE_TAKEOFF  for a moment of gaining height
-// 2 = MAV_LANDED_STATE_IN_AIR  during flight
-// 4 = MAV_LANDED_STATE_LANDING  while landing
-// 1 = MAV_LANDED_STATE_ON_GROUND  after landing
-// seems to exactly do what it is supposed to do, but doesn't reflect 2 sec pre-takeoff
-// SL status:
-// 143 = 0x8F until ca 4 sec before take off
-// 207 = 0xCF = ARMED for ca 4 sec until take off
-// 239 = 0xEF = 0x20 + ARMED at take off and in flight
-// 143 = 0x8F after landing
-// this thus allows to catch the 4 sec pre-takeoff period
-// ARMING_DELAY_SEC 2.0f, MOT_SAFE_TIME 1.0f per default
-//with taking-off & landing in loiter with sticks, we get the same behavior at takeoff,
-//but when landing the state 4 = MAV_LANDED_STATE_LANDING is not there, makes sense as we just drop to ground
-
 enum THISWOULDBEGREATTOHAVE {
     MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF = 5,
 };
@@ -946,7 +911,6 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device(void)
     const AP_AHRS &ahrs = AP::ahrs();
 
     Quaternion quat;
-//    quat.from_rotation_matrix(ahrs.get_rotation_body_to_ned()); // this gives DCM???
     if (!ahrs.get_quaternion(quat)) { // it returns a bool, so it's a good idea to consider it
         quat.q1 = quat.q2 = quat.q3 = quat.q4 = NAN;
     }
@@ -961,23 +925,12 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device(void)
     float angular_velocity_z = ahrs.get_yaw_rate_earth(); // NAN;
 
     float yawrate = NAN;
-    // use rate_bf_targets(), as in vanilla ArduPilot
-    // tests show: NO, this does not give what is desired!! it more looks like the actual yaw rate than the commanded yaw rate
-    /*const AP_Vehicle *vehicle = AP::vehicle();
-    Vector3f rate_bf_targets;
-    if ((vehicle != nullptr) && vehicle->get_rate_bf_targets(rate_bf_targets)) {
-        yawrate = rate_bf_targets.z;
-    } */
-    // use _euler_rate_target.z, suggestion by lthall, https://github.com/ArduPilot/ardupilot/issues/22564
-    // tests show: YES, this does give what is desired (tested only for stick inputs though)
-    // since not equal/available for all vehicles, should be done as in vanilla ArduPilot, but hey, kis
-#if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
-    AC_AttitudeControl* attitude_control = AC_AttitudeControl::get_singleton();
-    if (attitude_control != nullptr) {
-        Vector3f euler_rate_targets = attitude_control->get_euler_rate_targets();
-        yawrate = euler_rate_targets.z;
+    // see https://github.com/ArduPilot/ardupilot/issues/22564
+    const AP_Vehicle *vehicle = AP::vehicle();
+    Vector3f rate_ef_targets;
+    if ((vehicle != nullptr) && vehicle->get_rate_ef_targets(rate_ef_targets)) {
+        yawrate = rate_ef_targets.z;
     }
-#endif
 
 // TODO: how do notify.flags.armed and hal.util->get_soft_armed() compare against each other, also across vehicles?
 /* old:
@@ -1037,28 +990,38 @@ ESTIMATOR_ACCEL_ERROR           takeoff            : 1; // 11 - true if filter i
         nav_estimator_status2 = (uint16_t)(nav_status.value >> 10);
     }
 
-    // ahrs.healthy() becomes true during flip of quaternion => no-go
-    // ahrs.initialised() is simply set after AP_AHRS_NAVEKF_SETTLE_TIME_MS 20000 !!
-    //                    it becomes true some secs after ESTIMATOR_ATTITUDE|VELOCITY_HORIZ|VELOCITY_VERT are set
-    // ESTIMATOR_ATTITUDE can be set during flip of quaternion => no-go
-    // VELOCITY_HORIZ|VELOCITY_VERT are set briefly after the quaternion flip ??Q: really, couldn't it also be raised in the flip?
-    // => we fake it so:
+/* estimator status
+ btw STorM32 only listens to ESTIMATOR_ATTITUDE and ESTIMATOR_VELOCITY_VERT
+ ahrs.healthy() becomes true during flip of quaternion => no-go
+ ahrs.initialised() is simply set after AP_AHRS_NAVEKF_SETTLE_TIME_MS 20000 !!
+                    it becomes true some secs after ESTIMATOR_ATTITUDE|ESTIMATOR_VELOCITY_VERT are set
+ ESTIMATOR_ATTITUDE can be set during flip of quaternion => no-go
+ ESTIMATOR_VELOCITY_VERT are set briefly after the quaternion flip ??Q: really, couldn't it also be raised in the flip?
+ ESTIMATOR_VELOCITY_VERT are set however even if there is no gps or alike! I find it hard to trust the data
+ => we fake it so:
+ for ESTIMATOR_ATTITUDE we delay the flag being raised by few secs
+ for ESTIMATOR_VELOCITY_VERT we check for gps like in AP_AHRS_DCM::groundspeed_vector(void)
+ btw STorM32 does also check for non-zero velocities for AHRSFix
+*/
     uint16_t estimator_status = 0;
     static uint32_t tahrs_healthy_ms = 0;
-    if (!tahrs_healthy_ms && ahrs.healthy()) tahrs_healthy_ms = AP_HAL::millis();
-    if (ahrs.healthy() && (nav_estimator_status & ESTIMATOR_ATTITUDE) && ((AP_HAL::millis() - tahrs_healthy_ms) > 3000)) {
+    const bool ahrs_healthy = ahrs.healthy(); // it's a bit costly
+    if (!tahrs_healthy_ms && ahrs_healthy) tahrs_healthy_ms = AP_HAL::millis();
+    if (ahrs_healthy && (nav_estimator_status & ESTIMATOR_ATTITUDE) && ((AP_HAL::millis() - tahrs_healthy_ms) > 3000)) {
         estimator_status |= ESTIMATOR_ATTITUDE; // -> QFix
-        if (ahrs.initialised() && (nav_estimator_status & ESTIMATOR_VELOCITY_VERT)) estimator_status |= ESTIMATOR_VELOCITY_VERT;
+        if (ahrs.initialised() && (nav_estimator_status & ESTIMATOR_VELOCITY_VERT) && (AP::gps().status() >= AP_GPS::GPS_OK_FIX_2D)) {
+            estimator_status |= ESTIMATOR_VELOCITY_VERT; // -> AHRSFix
+        }
     }
 
 /* landed state
-GCS_Common.cpp: virtual MAV_LANDED_STATE landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
-Plane does NOT have it ????
-Copter has it: GCS_MAVLINK_Copter::landed_state()
-but is protected, so we needed to mock it up
-we can identify this be MAV_LANDED_STATE_UNDEFINED as value
-we probably want to also take into account the arming state to mock something up
-ugly as we will have vehicle dependency here
+ GCS_Common.cpp: virtual MAV_LANDED_STATE landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
+ Copter has it: GCS_MAVLINK_Copter::landed_state(), yields ON_GROUND, TAKEOFF, IN_AIR, LANDING
+ Plane has it: GCS_MAVLINK_Plane::landed_state(), only yields ON_GROUND or IN_AIR
+ Blimp also has it, blimp not relevant for us
+ but is protected, so we needed to mock it up
+ we probably want to also take into account the arming state to mock something up
+ ugly as we will have vehicle dependency here
 */
     uint8_t landed_state = gcs().get_landed_state();
 
@@ -1067,8 +1030,9 @@ ugly as we will have vehicle dependency here
 // the way it is done leads to a PREPARING_FOR_TAKEOFF before takeoff, but also after landing!
 // we somehow would have to catch that it was flying before to suppress it
 // but we don't care, the gimbal will do inits when ON_GROUND, and apply them when transitioned to PREPARING_FOR_TAKEOFF
+// it won't do it for other transitions, so e.g. also not for plane
     const AP_Notify &notify = AP::notify();
-    if (landed_state == MAV_LANDED_STATE_ON_GROUND && notify.flags.armed) landed_state = MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF;
+    if ((landed_state == MAV_LANDED_STATE_ON_GROUND) && notify.flags.armed) landed_state = MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF;
 #endif
 
     static uint32_t tlast_us = 0;
@@ -1314,7 +1278,6 @@ void BP_Mount_STorM32_MAVLink::send_to_ground(uint32_t msgid, const char *pkt)
 
 
 
-
 /*
 STorM32-Link tests
 
@@ -1365,18 +1328,35 @@ t           Est NavEst
 
 2.Jan.2023
 the quaternion flip can also be seen in MP in e.g. yaw, when one connects quickly, EKF dialog looks ok then
+*/
 
+/*
+landed state:
+ this is not nice, but kind of the best we can currently do
+ copter & plane do support it, but has it private, and in GCS_MAVLINK
+ so we end up redoing it in vehicle dependent way, which however gives us also the chance to do it better
 
+copter's landed state
+ copter.ap.land_complete <-> MAV_LANDED_STATE_ON_GROUND
+ copter.flightmode->is_landing() <-> MAV_LANDED_STATE_LANDING
+ copter.flightmode->is_taking_off() <-> MAV_LANDED_STATE_TAKEOFF
+ else <-> MAV_LANDED_STATE_IN_AIR
 
-
-
-
-
-
-
-
-
-
-
-
+from tests 2021-08-28, in loiter with takeoff/land button, I conclude
+ get_landed_state():
+ 1 = MAV_LANDED_STATE_ON_GROUND  until motors ramp up
+ 3 = MAV_LANDED_STATE_TAKEOFF  for a moment of gaining height
+ 2 = MAV_LANDED_STATE_IN_AIR  during flight
+ 4 = MAV_LANDED_STATE_LANDING  while landing
+ 1 = MAV_LANDED_STATE_ON_GROUND  after landing
+ seems to exactly do what it is supposed to do, but doesn't reflect 2 sec pre-takeoff
+ SL status:
+ 143 = 0x8F until ca 4 sec before take off
+ 207 = 0xCF = ARMED for ca 4 sec until take off
+ 239 = 0xEF = 0x20 + ARMED at take off and in flight
+ 143 = 0x8F after landing
+ this thus allows to catch the 4 sec pre-takeoff period
+ ARMING_DELAY_SEC 2.0f, MOT_SAFE_TIME 1.0f per default
+ with taking-off & landing in loiter with sticks, we get the same behavior at takeoff,
+ but when landing the state MAV_LANDED_STATE_LANDING is not there, makes sense as we just drop to ground
 */

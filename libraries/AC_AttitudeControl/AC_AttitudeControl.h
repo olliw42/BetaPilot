@@ -277,6 +277,9 @@ public:
     // Return body-frame feed forward setting
     bool get_bf_feedforward() { return _rate_bf_ff_enabled; }
 
+    // return the angular velocity of the target (setpoint) attitude rad/s
+    const Vector3f& get_rate_ef_targets() const { return _euler_rate_target; }
+
     // Enable or disable body-frame feed forward
     void accel_limiting(bool enable_or_disable);
 
@@ -552,7 +555,4 @@ public:
     float control_monitor_rms_output_pitch_D(void) const;
     float control_monitor_rms_output_pitch(void) const;
     float control_monitor_rms_output_yaw(void) const;
-//OW
-    const Vector3f &get_euler_rate_targets(void) { return _euler_rate_target; }
-//OWEND
 };

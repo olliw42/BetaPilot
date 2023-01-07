@@ -2,7 +2,6 @@
 //OW
 // (c) olliw, www.olliw.eu, GPL3
 // STorM32 mount backend class
-// 100% MAVLink + storm32.xml
 //*****************************************************
 #pragma once
 
