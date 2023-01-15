@@ -223,6 +223,9 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
     // we currently always do it if (_params.zflags & 0x10) _send_autopilotstateext = false;
     if (_params.zflags & 0x40) _use_3way_photo_video = !_use_3way_photo_video;
     if (_params.zflags & 0x80) _should_log = false;
+
+    _camera_compid = 0; // camera not yet discovered
+    _camera_mode = CAMERA_MODE_UNDEFINED;
 }
 
 
@@ -686,6 +689,17 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
     // this msg is not from our system
     if (msg.sysid != _sysid) {
         return;
+    }
+
+    // search for a MAVLink camera
+    // we are somewhat overly strict in that we require both the comp_id and the mav_type to be camera
+    if (!_camera_compid && (msg.msgid == MAVLINK_MSG_ID_HEARTBEAT) &&
+            (msg.compid >= MAV_COMP_ID_CAMERA) && (msg.compid <= MAV_COMP_ID_CAMERA6)) {
+        mavlink_heartbeat_t payload;
+        mavlink_msg_heartbeat_decode(&msg, &payload);
+        if ((payload.autopilot == MAV_AUTOPILOT_INVALID) && (payload.type == MAV_TYPE_CAMERA)) {
+            _camera_compid = msg.compid;
+        }
     }
 
     // listen to STORM32_GIMBAL_MANGER_STATUS to detect activity of the autopilot client
