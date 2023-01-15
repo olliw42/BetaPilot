@@ -1297,12 +1297,21 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
         if (mount == nullptr) {
             break;
         }
+//OW
+static enum MAV_MOUNT_MODE mode_last = MAV_MOUNT_MODE_RETRACT;
+//OWEND
         switch (ch_flag) {
             case AuxSwitchPos::HIGH:
+//OW
+                if (mount->get_mode(0) > MAV_MOUNT_MODE_NEUTRAL) mode_last = mount->get_mode(0);
+//OWEND
                 mount->set_mode(0,MAV_MOUNT_MODE_RETRACT);
                 break;
             case AuxSwitchPos::MIDDLE:
                 // nothing
+//OW
+                if (mode_last > MAV_MOUNT_MODE_NEUTRAL) mount->set_mode(0, mode_last);
+//OWEND
                 break;
             case AuxSwitchPos::LOW:
                 mount->set_mode_to_default(0);
