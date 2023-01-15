@@ -46,9 +46,11 @@ public:
     bool has_pan_control() const override { return false; }
 
     // set yaw_lock
-    // STorM32: this needs to not set _yaw_lock, as it doesn't (yet) support earth frame
-    // it does support yaw lock in vehicle frame
-    void set_yaw_lock(bool yaw_lock) override {};
+    // STorM32: this needs to not set _yaw_lock, as
+    // (1) STorM32 doesn't (yet) support earth frame, it does support yaw lock in vehicle frame
+    // (2) _yaw_lock and vehicle or earth frame are not fundamentally related to each other
+    // in the backend, _yaw_lock is used as yaw_is_ef
+    void set_yaw_lock(bool yaw_lock) override { _is_yaw_lock = yaw_lock; }
 
     // handle GIMBAL_DEVICE_INFORMATION message
     void handle_gimbal_device_information(const mavlink_message_t &msg) override;
@@ -60,6 +62,25 @@ public:
     // STorM32: this needs to be empty, because the gimbal device is sending it itself
     // we don't do any of ArduPilot's private mavlink channel nonsense
     void send_gimbal_device_attitude_status(mavlink_channel_t chan) override {}
+
+    // take a picture.  returns true on success
+    // we do not need to do anything since AP_Camera::take_picture() will send a a CMD_LONG:DO_DIGICAM_CONTROL to all components
+    // we have modified this such that it is not send if it is CamTrigType::mount (CAM_TRIGG_TYPE = 3)
+    bool take_picture() override;
+
+    // start or stop video recording.  returns true on success
+    // set start_recording = true to start record, false to stop recording
+    bool record_video(bool start_recording) override;
+
+    // set camera zoom step.  returns true on success
+    // zoom out = -1, hold = 0, zoom in = 1
+    bool set_zoom_step(int8_t zoom_step) override { return false; }
+
+    // set photo or video mode
+    bool set_cam_mode(bool video_mode) override;
+
+    // 3-way switch mode
+    bool set_cam_photo_video(int8_t sw_flag) override;
 
 protected:
 
@@ -94,10 +115,11 @@ private:
     bool _initialised;              // true once startup procedure has been fully completed
     bool _armed;                    // true once the gimbal has reached normal state
     bool _prearmchecks_ok;          // true when the gimbal stops reporting prearm fail
+    bool _got_radio_rc_channels;    // true when a RADIO_RC_CHANNELS message has been received
 
     // internal MAVLink variables
 
-    uint8_t _sysid;                 // system id of gimbal
+    uint8_t _sysid;                 // system id of gimbal, supposedly equal to our flight controller sysid
     uint8_t _compid;                // component id of gimbal, 0 indicates gimbal not yet found
     mavlink_channel_t _chan;        // mavlink channel used to communicate with gimbal
 
@@ -111,7 +133,7 @@ private:
     bool _sendonly;
     bool _send_autopilotstateext;
     bool _should_log;
-    bool _got_radio_rc_channels;
+    bool _use_3way_photo_video;
 
     enum PROTOCOLENUM {
         PROTOCOL_UNDEFINED = 0,          // we do not yet know
@@ -119,8 +141,6 @@ private:
         PROTOCOL_STORM32_GIMBAL_MANAGER, // gimbal is a STorM32 gimbal manager
     };
     uint8_t _protocol;
-    uint8_t _protocol_auto_cntdown;
-    void determine_protocol(const mavlink_message_t &msg);
 
     // internal task variables
 
@@ -135,6 +155,9 @@ private:
 
     // blabla
 
+    uint8_t _protocol_auto_cntdown;
+    void determine_protocol(const mavlink_message_t &msg);
+
     bool _prearmchecks_last; // to detect changes
     bool prearmchecks_do(void); // workaround needed since healthy() is const
     void send_prearmchecks_txt(void);
@@ -147,6 +170,8 @@ private:
         uint32_t sendtext_tlast_ms;
         bool available(void) { return status_updated && (enabled_flags > 0) && (fail_flags > 0); }
     } _prearmcheck; // for component prearm status handling
+
+    bool _is_yaw_lock;
 
     void set_and_send_target_angles(void);
     void send_autopilot_state_for_gimbal_device(void);
@@ -196,12 +221,26 @@ private:
     void update_gimbal_manager_flags(void);
 
     void send_gimbal_device_set_attitude(GimbalTarget &gtarget);
-    void send_storm32_gimbal_manager_control_to_gimbal(GimbalTarget &gtarget);
+    void send_storm32_gimbal_manager_control(GimbalTarget &gtarget);
 
     uint32_t _send_system_time_tlast_ms;
     void send_system_time(void);
 
     void send_rc_channels(void);
+
+    // camera
+
+    uint8_t _camera_compid;         // component id of a mavlink camera, 0 indicates camera not yet found
+
+    enum CAMERAMODEENUM {
+        CAMERA_MODE_UNDEFINED = 0,  // we do not yet know
+        CAMERA_MODE_PHOTO,
+        CAMERA_MODE_VIDEO,
+    };
+    uint8_t _camera_mode;           // current camera mode
+
+    void send_cmd_do_digicam_configure(bool video_mode);
+    void send_cmd_do_digicam_control(bool shoot);
 
     // mount_status forwarding
 

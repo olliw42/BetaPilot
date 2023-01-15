@@ -199,6 +199,12 @@ public:
     static const struct AP_Param::GroupInfo        var_info[];
 
 //OW
+    // set photo or video mode
+    bool set_cam_mode(uint8_t instance, bool video_mode);
+
+    // 3-way switch mode
+    bool set_cam_photo_video(uint8_t instance, int8_t sw_flag);
+
     // this is somewhat different to handle_message() in that it catches all messages
     // with significant work it potentially could be combined, but let's play it safe and not introduce side effects
     void handle_msg(mavlink_channel_t chan, const mavlink_message_t &msg);

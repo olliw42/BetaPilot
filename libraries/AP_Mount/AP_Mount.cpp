@@ -672,7 +672,35 @@ void AP_Mount::convert_params()
     }
 }
 
+// singleton instance
+AP_Mount *AP_Mount::_singleton;
+
+namespace AP {
+
+AP_Mount *mount()
+{
+    return AP_Mount::get_singleton();
+}
+
+};
+
 //OW
+bool AP_Mount::set_cam_mode(uint8_t instance, bool video_mode)
+{
+    if (!check_instance(instance)) {
+        return false;
+    }
+    return _backends[instance]->set_cam_mode(video_mode);
+}
+
+bool AP_Mount::set_cam_photo_video(uint8_t instance, int8_t sw_flag)
+{
+    if (!check_instance(instance)) {
+        return false;
+    }
+    return _backends[instance]->set_cam_photo_video(sw_flag);
+}
+
 void AP_Mount::handle_msg(mavlink_channel_t chan, const mavlink_message_t &msg)
 {
     for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
@@ -691,17 +719,5 @@ void AP_Mount::send_banner(void)
     }
 }
 //OWEND
-
-// singleton instance
-AP_Mount *AP_Mount::_singleton;
-
-namespace AP {
-
-AP_Mount *mount()
-{
-    return AP_Mount::get_singleton();
-}
-
-};
 
 #endif /* HAL_MOUNT_ENABLED */

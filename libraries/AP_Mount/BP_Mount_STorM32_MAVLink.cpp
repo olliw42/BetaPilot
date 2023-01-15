@@ -47,6 +47,7 @@ two modes/protocols of operation are supported
       only sends out RC_CHANNLES, AUTOPILOT_STATE_FOR_GIMBAL for STorM32-Link
       this mode could in principle be replaced by asking for the streams, but since AP isn't streaming reliably we don't
  16:  do not send AUTOPILOT_STATE_FOR_GIMBAL_EXT
+ 64:  do not use 3way photo-video switch mode for 'Camera Mode Toggle' aux function
  128: do not log
 
  in all modes sends MOUNT_STATUS to ground, so that "old" things like MP etc can see the gimbal orientation
@@ -197,6 +198,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
     _device.received_failure_flags = 0;
 
     _yaw_lock = false; // STorM32 doesn't currently support earth frame, so we need to ensure this is false
+    _is_yaw_lock = false;
 
     _mode = MAV_MOUNT_MODE_RC_TARGETING;
 
@@ -204,6 +206,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
     _should_log = true;
     _got_radio_rc_channels = false; // disable sending rc channels when RADIO_RC_CHANNELS messages are detected
     _send_autopilotstateext = true;
+    _use_3way_photo_video = true;
 
     _protocol = PROTOCOL_UNDEFINED;
     _protocol_auto_cntdown = PROTOCOL_AUTO_TIMEOUT_CNT;
@@ -218,7 +221,11 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
     }
     if (_params.zflags & 0x08) _sendonly = true;
     // we currently always do it if (_params.zflags & 0x10) _send_autopilotstateext = false;
+    if (_params.zflags & 0x40) _use_3way_photo_video = !_use_3way_photo_video;
     if (_params.zflags & 0x80) _should_log = false;
+
+    _camera_compid = 0; // camera not yet discovered
+    _camera_mode = CAMERA_MODE_UNDEFINED;
 }
 
 
@@ -276,9 +283,9 @@ void BP_Mount_STorM32_MAVLink::set_and_send_target_angles(void)
     GimbalTarget gtarget;
 
     if (_qshot.mode == MAV_QSHOT_MODE_UNDEFINED) {
-        enum MAV_MOUNT_MODE mmode = get_mode();
-        if (!get_target_angles_mount(gtarget, mmode)) return; // don't send
-        update_gimbal_device_flags_mount(mmode);
+        enum MAV_MOUNT_MODE mntmode = get_mode();
+        if (!get_target_angles_mount(gtarget, mntmode)) return; // don't send
+        update_gimbal_device_flags_mount(mntmode);
     } else {
         if (!get_target_angles_qshot(gtarget)) return; // don't send
         update_gimbal_device_flags_qshot();
@@ -294,7 +301,7 @@ void BP_Mount_STorM32_MAVLink::set_and_send_target_angles(void)
         // only send when autopilot client is active, this reduces traffic
         if (_manager.ap_client_is_active) {
             update_gimbal_manager_flags();
-            send_storm32_gimbal_manager_control_to_gimbal(gtarget);
+            send_storm32_gimbal_manager_control(gtarget);
         }
     }
 }
@@ -304,12 +311,12 @@ void BP_Mount_STorM32_MAVLink::set_and_send_target_angles(void)
 // V2 GIMBAL DEVICE, ArduPilot like
 //------------------------------------------------------
 
-bool BP_Mount_STorM32_MAVLink::get_target_angles_mount(GimbalTarget &gtarget, enum MAV_MOUNT_MODE mmode)
+bool BP_Mount_STorM32_MAVLink::get_target_angles_mount(GimbalTarget &gtarget, enum MAV_MOUNT_MODE mntmode)
 {
     MountTarget mtarget_rad = {};
 
     // update based on mount mode
-    switch (mmode) {
+    switch (mntmode) {
 
         // move mount to a "retracted" position.  We disable motors
         case MAV_MOUNT_MODE_RETRACT:
@@ -386,11 +393,11 @@ bool BP_Mount_STorM32_MAVLink::get_target_angles_mount(GimbalTarget &gtarget, en
 }
 
 
-void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags_mount(enum MAV_MOUNT_MODE mmode)
+void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags_mount(enum MAV_MOUNT_MODE mntmode)
 {
     _device.flags_for_gimbal = 0;
 
-    switch (mmode) {
+    switch (mntmode) {
         case MAV_MOUNT_MODE_RETRACT:
             _device.flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RETRACT;
             break;
@@ -402,7 +409,7 @@ void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags_mount(enum MAV_MOUNT_M
     }
 
     _device.flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
-    // TODO: yaw lock??
+    if (_is_yaw_lock) _device.flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_LOCK;
 
     // set either YAW_IN_VEHICLE_FRAME or YAW_IN_EARTH_FRAME, to indicate new message format, STorM32 will reject otherwise
     _device.flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_IN_VEHICLE_FRAME;
@@ -503,7 +510,7 @@ void BP_Mount_STorM32_MAVLink::find_gimbal(void)
     if (!_compid) {
         // we expect that instance 0 has compid = MAV_COMP_ID_GIMBAL, instance 1 has compid = MAV_COMP_ID_GIMBAL2, etc
         uint8_t compid = (_instance == 0) ? MAV_COMP_ID_GIMBAL : MAV_COMP_ID_GIMBAL2 + (_instance - 1);
-        if (GCS_MAVLINK::find_by_mavtype_and_compid(MAV_TYPE_GIMBAL, compid, _sysid, _chan)) {
+        if (GCS_MAVLINK::find_by_mavtype_and_compid(MAV_TYPE_GIMBAL, compid, _sysid, _chan) && (_sysid == mavlink_system.sysid)) {
             _compid = compid;
             _request_device_info_tlast_ms = (tnow_ms < 900) ? 0 : tnow_ms - 900; // start sending requests in 100 ms
         } else {
@@ -648,9 +655,9 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
         return;
     }
 
-    // listen to qshot commands and messages to track changes in qshot mode
-    // these may come from anywhere
     switch (msg.msgid) {
+        // listen to qshot commands and messages to track changes in qshot mode
+        // these may come from anywhere
         case MAVLINK_MSG_ID_COMMAND_LONG: { // 76
             mavlink_command_long_t payload;
             mavlink_msg_command_long_decode(&msg, &payload);
@@ -673,6 +680,7 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             _qshot.mode = payload.mode; // also sets it if it was put on hold in the above
             }break;
 
+        // listen to RADIO_RC_CHANNELS messages to stop sending RC_CHANNELS
         case MAVLINK_MSG_ID_RADIO_RC_CHANNELS: { // 60045
             _got_radio_rc_channels = true;
             }break;
@@ -681,6 +689,17 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
     // this msg is not from our system
     if (msg.sysid != _sysid) {
         return;
+    }
+
+    // search for a MAVLink camera
+    // we are somewhat overly strict in that we require both the comp_id and the mav_type to be camera
+    if (!_camera_compid && (msg.msgid == MAVLINK_MSG_ID_HEARTBEAT) &&
+            (msg.compid >= MAV_COMP_ID_CAMERA) && (msg.compid <= MAV_COMP_ID_CAMERA6)) {
+        mavlink_heartbeat_t payload;
+        mavlink_msg_heartbeat_decode(&msg, &payload);
+        if ((payload.autopilot == MAV_AUTOPILOT_INVALID) && (payload.type == MAV_TYPE_CAMERA)) {
+            _camera_compid = msg.compid;
+        }
     }
 
     // listen to STORM32_GIMBAL_MANGER_STATUS to detect activity of the autopilot client
@@ -748,8 +767,8 @@ void BP_Mount_STorM32_MAVLink::send_request_gimbal_device_information(void)
     mavlink_msg_command_long_send(
         _chan,
         _sysid, _compid,
-        MAV_CMD_REQUEST_MESSAGE,
-        0, MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION, 0, 0, 0, 0, 0, 0);
+        MAV_CMD_REQUEST_MESSAGE, 0,
+        MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION, 0, 0, 0, 0, 0, 0);
 }
 
 
@@ -794,7 +813,7 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(GimbalTarget &gta
 }
 
 
-void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control_to_gimbal(GimbalTarget &gtarget)
+void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control(GimbalTarget &gtarget)
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, STORM32_GIMBAL_MANAGER_CONTROL)) {
         return;
@@ -1227,6 +1246,124 @@ bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
 
     // if we get this far the mount is healthy
     return true;
+}
+
+
+//------------------------------------------------------
+// Camera
+//------------------------------------------------------
+
+bool BP_Mount_STorM32_MAVLink::take_picture()
+{
+    if (_use_3way_photo_video) return false;
+
+    if (_camera_mode == CAMERA_MODE_UNDEFINED) {
+        _camera_mode = CAMERA_MODE_PHOTO;
+        send_cmd_do_digicam_configure(false);
+    }
+
+    if (_camera_mode != CAMERA_MODE_PHOTO) return false;
+
+    send_cmd_do_digicam_control(true);
+
+//    gcs().send_text(MAV_SEVERITY_INFO, "cam take pic");
+
+    return true;
+}
+
+
+bool BP_Mount_STorM32_MAVLink::record_video(bool start_recording)
+{
+    if (_use_3way_photo_video) return false;
+
+    if (_camera_mode == CAMERA_MODE_UNDEFINED) {
+        _camera_mode = CAMERA_MODE_VIDEO;
+        send_cmd_do_digicam_configure(true);
+    }
+
+    if (_camera_mode != CAMERA_MODE_VIDEO) return false;
+
+    send_cmd_do_digicam_control(start_recording);
+
+//    gcs().send_text(MAV_SEVERITY_INFO, "cam rec video %u", start_recording);
+
+    return true;
+}
+
+
+bool BP_Mount_STorM32_MAVLink::set_cam_mode(bool video_mode)
+{
+    if (_use_3way_photo_video) return false;
+
+    _camera_mode = (video_mode) ? CAMERA_MODE_VIDEO : CAMERA_MODE_PHOTO;
+    send_cmd_do_digicam_configure(video_mode);
+
+//    gcs().send_text(MAV_SEVERITY_INFO, "cam set mode %u", video_mode);
+
+    return true;
+}
+
+
+bool BP_Mount_STorM32_MAVLink::set_cam_photo_video(int8_t sw_flag)
+{
+    if (!_use_3way_photo_video) return false;
+
+    if (sw_flag > 0) {
+        if (_camera_mode != CAMERA_MODE_VIDEO) {
+            _camera_mode = CAMERA_MODE_VIDEO;
+            send_cmd_do_digicam_configure(true);
+        }
+        send_cmd_do_digicam_control(true);
+    } else
+    if (sw_flag < 0) {
+        if (_camera_mode != CAMERA_MODE_PHOTO) {
+            _camera_mode = CAMERA_MODE_PHOTO;
+            send_cmd_do_digicam_configure(false);
+        }
+        send_cmd_do_digicam_control(true);
+    } else {
+        if (_camera_mode == CAMERA_MODE_VIDEO) {
+            send_cmd_do_digicam_control(false);
+        }
+    }
+
+    return true;
+}
+
+
+void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_configure(bool video_mode)
+{
+    if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
+        return;
+    }
+
+    float param1 = (video_mode) ? 1 : 0;
+
+    mavlink_msg_command_long_send(
+        _chan,
+        _sysid, _compid,
+        MAV_CMD_DO_DIGICAM_CONFIGURE, 0,
+        param1, 0, 0, 0, 0, 0, 0);
+
+//    gcs().send_text(MAV_SEVERITY_INFO, "cam digi config %u", video_mode);
+}
+
+
+void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_control(bool shoot)
+{
+    if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
+        return;
+    }
+
+    float param5 = (shoot) ? 1 : 0;
+
+    mavlink_msg_command_long_send(
+        _chan,
+        _sysid, _compid,
+        MAV_CMD_DO_DIGICAM_CONTROL, 0,
+        0, 0, 0, 0, param5, 0, 0);
+
+//    gcs().send_text(MAV_SEVERITY_INFO, "cam digi cntrl %u", shoot);
 }
 
 

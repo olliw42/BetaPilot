@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION "v055.21"
+#define BETAPILOTVERSION "v055.22"
 
 /*
 search for //OW to find all changes
@@ -126,8 +126,102 @@ FOLLOW_TARGET
 DIGICAM_CONTROL
 MOUNT_CONFIGURE
 MOUNT_CONTROL
+MAV_CMD_SET_CAMERA_MODE, MAV_CMD_SET_CAMERA_ZOOM, MAV_CMD_SET_CAMERA_FOCUS ??
+MAV_CMD_IMAGE_START_CAPTURE, MAV_CMD_IMAGE_STOP_CAPTURE, MAV_CMD_VIDEO_START_CAPTURE, MAV_CMD_VIDEO_STOP_CAPTURE
 
 WIND_COV HIGH_LATENCY2 WIND, GPS_RAW_INT VFR_HUD GPS2_RAW OPEN_DRONE_ID_LOCATION
 
 MAV_TYPE_  "GUID"
+*/
+
+/*
+MissionPlanner
+PayloadControl: sends MOUNT_CONTROL messages with target of the autopilot
+AuxFunction: sends CMD_LONG with cmd MAV_CMD_DO_AUX_FUNCTION = 218
+TriggerCameraHere: sends CMD_LONG with cmd DO_DIGICAM_CONTROL = 203, param5 = 1, with target of the autopilot
+
+*/
+
+/* aux handling
+input: RC, script, mavlink
+MAV_CMD_DO_AUX_FUNCTION = 218 for the Aux Buttons in MissionPlanner, MissionPlanner sends it with targets 1,1
+handle_command_do_aux_function(packet)
+MAV_CMD_DO_AUX_FUNCTION_SWITCH_LEVEL is defined in xml but not used
+
+        CAMERA_TRIGGER =       9, // trigger camera servo or relay
+        RETRACT_MOUNT1 =      27, // Retract Mount1
+        MOUNT_LOCK =         163, // Mount yaw lock vs follow
+        CAMERA_REC_VIDEO =   166, // start recording on high, stop recording on low
+        CAMERA_ZOOM =        167, // camera zoom high = zoom in, middle = hold, low = zoom out
+        CAMERA_MANUAL_FOCUS = 168,// camera manual focus.  high = long shot, middle = stop focus, low = close shot
+        CAMERA_AUTO_FOCUS =  169, // camera auto focus
+
+        // inputs from 200 will eventually used to replace RCMAP
+        //OW: have no effect currently in RC_Channel::do_aux_function()
+        MOUNT1_ROLL =        212, // mount1 roll input
+        MOUNT1_PITCH =       213, // mount1 pitch input
+        MOUNT1_YAW =         214, // mount1 yaw input
+        MOUNT2_ROLL =        215, // mount2 roll input
+        MOUNT2_PITCH =       216, // mount3 pitch input
+        MOUNT2_YAW =         217, // mount4 yaw input
+
+        // entries from 100-150  are expected to be developer options used for testing
+        CAM_MODE_TOGGLE =    102, // Momentary switch to cycle camera modes
+
+
+AUX_FUNC::CAMERA_TRIGGER:
+-> do_aux_function_camera_trigger(ch_flag);
+   -> if (ch_flag == AuxSwitchPos::HIGH) camera->take_picture();
+
+AUX_FUNC::CAMERA_REC_VIDEO:
+-> do_aux_function_record_video(ch_flag);
+   -> camera->record_video(ch_flag == AuxSwitchPos::HIGH);
+
+AUX_FUNC::CAMERA_ZOOM:
+-> do_aux_function_camera_zoom(ch_flag);
+   -> camera->set_zoom_step(zoom_step);
+
+AUX_FUNC::CAMERA_MANUAL_FOCUS:
+-> do_aux_function_camera_manual_focus(ch_flag);
+   -> camera->set_manual_focus_step(focus_step);
+
+AUX_FUNC::CAMERA_AUTO_FOCUS:
+-> do_aux_function_camera_auto_focus(ch_flag);
+   -> if (ch_flag == AuxSwitchPos::HIGH) camera->set_auto_focus();
+
+AUX_FUNC::CAM_MODE_TOGGLE:
+->  case AuxSwitchPos::HIGH: camera->cam_mode_toggle();
+
+
+AUX_FUNC::RETRACT_MOUNT1:
+-> case AuxSwitchPos::HIGH: mount->set_mode(0,MAV_MOUNT_MODE_RETRACT);
+-> case AuxSwitchPos::LOW:  mount->set_mode_to_default(0);
+
+AUX_FUNC::MOUNT_LOCK:
+-> mount->set_yaw_lock(ch_flag == AuxSwitchPos::HIGH);
+
+
+camera:
+
+AP_Camera::take_picture()
+-> trigger_pic()
+   -> case CamTrigType::mount: mount->take_picture(0);
+-> send to components: MAVLINK_MSG_ID_COMMAND_LONG:MAV_CMD_DO_DIGICAM_CONTROL: param5 = 1;
+
+AP_Camera::record_video(bool start_recording)
+-> if (get_trigger_type() == CamTrigType::mount) mount->record_video(0, start_recording);
+
+AP_Camera::set_zoom_step(int8_t zoom_step)
+-> if (get_trigger_type() == CamTrigType::mount) mount->set_zoom_step(0, zoom_step);
+
+AP_Camera::set_manual_focus_step(int8_t focus_step)
+-> if (get_trigger_type() == CamTrigType::mount) mount->set_manual_focus_step(0, focus_step);
+
+AP_Camera::set_auto_focus()
+-> if (get_trigger_type() == CamTrigType::mount) mount->set_auto_focus(0);
+
+AP_Camera::cam_mode_toggle()
+-> does NOTHING !!!
+
+
 */
