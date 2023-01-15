@@ -283,9 +283,9 @@ void BP_Mount_STorM32_MAVLink::set_and_send_target_angles(void)
     GimbalTarget gtarget;
 
     if (_qshot.mode == MAV_QSHOT_MODE_UNDEFINED) {
-        enum MAV_MOUNT_MODE mmode = get_mode();
-        if (!get_target_angles_mount(gtarget, mmode)) return; // don't send
-        update_gimbal_device_flags_mount(mmode);
+        enum MAV_MOUNT_MODE mntmode = get_mode();
+        if (!get_target_angles_mount(gtarget, mntmode)) return; // don't send
+        update_gimbal_device_flags_mount(mntmode);
     } else {
         if (!get_target_angles_qshot(gtarget)) return; // don't send
         update_gimbal_device_flags_qshot();
@@ -311,12 +311,12 @@ void BP_Mount_STorM32_MAVLink::set_and_send_target_angles(void)
 // V2 GIMBAL DEVICE, ArduPilot like
 //------------------------------------------------------
 
-bool BP_Mount_STorM32_MAVLink::get_target_angles_mount(GimbalTarget &gtarget, enum MAV_MOUNT_MODE mmode)
+bool BP_Mount_STorM32_MAVLink::get_target_angles_mount(GimbalTarget &gtarget, enum MAV_MOUNT_MODE mntmode)
 {
     MountTarget mtarget_rad = {};
 
     // update based on mount mode
-    switch (mmode) {
+    switch (mntmode) {
 
         // move mount to a "retracted" position.  We disable motors
         case MAV_MOUNT_MODE_RETRACT:
@@ -393,11 +393,11 @@ bool BP_Mount_STorM32_MAVLink::get_target_angles_mount(GimbalTarget &gtarget, en
 }
 
 
-void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags_mount(enum MAV_MOUNT_MODE mmode)
+void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags_mount(enum MAV_MOUNT_MODE mntmode)
 {
     _device.flags_for_gimbal = 0;
 
-    switch (mmode) {
+    switch (mntmode) {
         case MAV_MOUNT_MODE_RETRACT:
             _device.flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RETRACT;
             break;
