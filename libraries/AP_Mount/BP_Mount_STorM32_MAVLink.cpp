@@ -198,6 +198,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
     _device.received_failure_flags = 0;
 
     _yaw_lock = false; // STorM32 doesn't currently support earth frame, so we need to ensure this is false
+    _is_yaw_lock = false;
 
     _mode = MAV_MOUNT_MODE_RC_TARGETING;
 
@@ -405,7 +406,7 @@ void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags_mount(enum MAV_MOUNT_M
     }
 
     _device.flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
-    // TODO: yaw lock??
+    if (_is_yaw_lock) _device.flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_LOCK;
 
     // set either YAW_IN_VEHICLE_FRAME or YAW_IN_EARTH_FRAME, to indicate new message format, STorM32 will reject otherwise
     _device.flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_IN_VEHICLE_FRAME;

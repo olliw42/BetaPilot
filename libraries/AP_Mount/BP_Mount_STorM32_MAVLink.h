@@ -50,7 +50,7 @@ public:
     // (1) STorM32 doesn't (yet) support earth frame, it does support yaw lock in vehicle frame
     // (2) _yaw_lock and vehicle or earth frame are not fundamentally related to each other
     // in the backend, _yaw_lock is used as yaw_is_ef
-    void set_yaw_lock(bool yaw_lock) override {};
+    void set_yaw_lock(bool yaw_lock) override { _is_yaw_lock = yaw_lock; }
 
     // handle GIMBAL_DEVICE_INFORMATION message
     void handle_gimbal_device_information(const mavlink_message_t &msg) override;
@@ -170,6 +170,8 @@ private:
         uint32_t sendtext_tlast_ms;
         bool available(void) { return status_updated && (enabled_flags > 0) && (fail_flags > 0); }
     } _prearmcheck; // for component prearm status handling
+
+    bool _is_yaw_lock;
 
     void set_and_send_target_angles(void);
     void send_autopilot_state_for_gimbal_device(void);
