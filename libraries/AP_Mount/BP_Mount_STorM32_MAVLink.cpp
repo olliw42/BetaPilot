@@ -47,6 +47,7 @@ two modes/protocols of operation are supported
       only sends out RC_CHANNLES, AUTOPILOT_STATE_FOR_GIMBAL for STorM32-Link
       this mode could in principle be replaced by asking for the streams, but since AP isn't streaming reliably we don't
  16:  do not send AUTOPILOT_STATE_FOR_GIMBAL_EXT
+ 64:  do not use 3way photo-video switch mode for 'Camera Mode Toggle' aux function
  128: do not log
 
  in all modes sends MOUNT_STATUS to ground, so that "old" things like MP etc can see the gimbal orientation
@@ -204,6 +205,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
     _should_log = true;
     _got_radio_rc_channels = false; // disable sending rc channels when RADIO_RC_CHANNELS messages are detected
     _send_autopilotstateext = true;
+    _use_3way_photo_video = true;
 
     _protocol = PROTOCOL_UNDEFINED;
     _protocol_auto_cntdown = PROTOCOL_AUTO_TIMEOUT_CNT;
@@ -218,6 +220,7 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
     }
     if (_params.zflags & 0x08) _sendonly = true;
     // we currently always do it if (_params.zflags & 0x10) _send_autopilotstateext = false;
+    if (_params.zflags & 0x40) _use_3way_photo_video = !_use_3way_photo_video;
     if (_params.zflags & 0x80) _should_log = false;
 }
 
@@ -1228,6 +1231,124 @@ bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
 
     // if we get this far the mount is healthy
     return true;
+}
+
+
+//------------------------------------------------------
+// Camera
+//------------------------------------------------------
+
+bool BP_Mount_STorM32_MAVLink::take_picture()
+{
+    if (_use_3way_photo_video) return false;
+
+    if (_camera_mode == CAMERA_MODE_UNDEFINED) {
+        _camera_mode = CAMERA_MODE_PHOTO;
+        send_cmd_do_digicam_configure(false);
+    }
+
+    if (_camera_mode != CAMERA_MODE_PHOTO) return false;
+
+    send_cmd_do_digicam_control(true);
+
+//    gcs().send_text(MAV_SEVERITY_INFO, "cam take pic");
+
+    return true;
+}
+
+
+bool BP_Mount_STorM32_MAVLink::record_video(bool start_recording)
+{
+    if (_use_3way_photo_video) return false;
+
+    if (_camera_mode == CAMERA_MODE_UNDEFINED) {
+        _camera_mode = CAMERA_MODE_VIDEO;
+        send_cmd_do_digicam_configure(true);
+    }
+
+    if (_camera_mode != CAMERA_MODE_VIDEO) return false;
+
+    send_cmd_do_digicam_control(start_recording);
+
+//    gcs().send_text(MAV_SEVERITY_INFO, "cam rec video %u", start_recording);
+
+    return true;
+}
+
+
+bool BP_Mount_STorM32_MAVLink::set_cam_mode(bool video_mode)
+{
+    if (_use_3way_photo_video) return false;
+
+    _camera_mode = (video_mode) ? CAMERA_MODE_VIDEO : CAMERA_MODE_PHOTO;
+    send_cmd_do_digicam_configure(video_mode);
+
+//    gcs().send_text(MAV_SEVERITY_INFO, "cam set mode %u", video_mode);
+
+    return true;
+}
+
+
+bool BP_Mount_STorM32_MAVLink::set_cam_photo_video(int8_t sw_flag)
+{
+    if (!_use_3way_photo_video) return false;
+
+    if (sw_flag > 0) {
+        if (_camera_mode != CAMERA_MODE_VIDEO) {
+            _camera_mode = CAMERA_MODE_VIDEO;
+            send_cmd_do_digicam_configure(true);
+        }
+        send_cmd_do_digicam_control(true);
+    } else
+    if (sw_flag < 0) {
+        if (_camera_mode != CAMERA_MODE_PHOTO) {
+            _camera_mode = CAMERA_MODE_PHOTO;
+            send_cmd_do_digicam_configure(false);
+        }
+        send_cmd_do_digicam_control(true);
+    } else {
+        if (_camera_mode == CAMERA_MODE_VIDEO) {
+            send_cmd_do_digicam_control(false);
+        }
+    }
+
+    return true;
+}
+
+
+void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_configure(bool video_mode)
+{
+    if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
+        return;
+    }
+
+    float param1 = (video_mode) ? 1 : 0;
+
+    mavlink_msg_command_long_send(
+        _chan,
+        _sysid, _compid,
+        MAV_CMD_DO_DIGICAM_CONFIGURE, 0,
+        param1, 0, 0, 0, 0, 0, 0);
+
+//    gcs().send_text(MAV_SEVERITY_INFO, "cam digi config %u", video_mode);
+}
+
+
+void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_control(bool shoot)
+{
+    if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
+        return;
+    }
+
+    float param5 = (shoot) ? 1 : 0;
+
+    mavlink_msg_command_long_send(
+        _chan,
+        _sysid, _compid,
+        MAV_CMD_DO_DIGICAM_CONTROL, 0,
+        0, 0, 0, 0, param5, 0, 0);
+
+//    gcs().send_text(MAV_SEVERITY_INFO, "cam digi cntrl %u", shoot);
 }
 
 

@@ -63,6 +63,25 @@ public:
     // we don't do any of ArduPilot's private mavlink channel nonsense
     void send_gimbal_device_attitude_status(mavlink_channel_t chan) override {}
 
+    // take a picture.  returns true on success
+    // we do not need to do anything since AP_Camera::take_picture() will send a a CMD_LONG:DO_DIGICAM_CONTROL to all components
+    // we have modified this such that it is not send if it is CamTrigType::mount (CAM_TRIGG_TYPE = 3)
+    bool take_picture() override;
+
+    // start or stop video recording.  returns true on success
+    // set start_recording = true to start record, false to stop recording
+    bool record_video(bool start_recording) override;
+
+    // set camera zoom step.  returns true on success
+    // zoom out = -1, hold = 0, zoom in = 1
+    bool set_zoom_step(int8_t zoom_step) override { return false; }
+
+    // set photo or video mode
+    bool set_cam_mode(bool video_mode) override;
+
+    // 3-way switch mode
+    bool set_cam_photo_video(int8_t sw_flag) override;
+
 protected:
 
     // get attitude as a quaternion.  returns true on success
@@ -114,6 +133,7 @@ private:
     bool _sendonly;
     bool _send_autopilotstateext;
     bool _should_log;
+    bool _use_3way_photo_video;
 
     enum PROTOCOLENUM {
         PROTOCOL_UNDEFINED = 0,          // we do not yet know

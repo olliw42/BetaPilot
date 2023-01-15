@@ -1269,6 +1269,14 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
             camera->cam_mode_toggle();
             break;
         }
+//OW
+        switch (ch_flag) {
+        case AuxSwitchPos::HIGH: camera->set_cam_photo_video(1); break;
+        case AuxSwitchPos::MIDDLE: camera->set_cam_photo_video(0); break;
+        case AuxSwitchPos::LOW: camera->set_cam_photo_video(-1); break;
+        }
+        camera->set_cam_mode(ch_flag == AuxSwitchPos::HIGH);
+//OWEND
         break;
     }
     case AUX_FUNC::CAMERA_REC_VIDEO:
