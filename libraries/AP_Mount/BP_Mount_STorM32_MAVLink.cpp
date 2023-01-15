@@ -294,7 +294,7 @@ void BP_Mount_STorM32_MAVLink::set_and_send_target_angles(void)
         // only send when autopilot client is active, this reduces traffic
         if (_manager.ap_client_is_active) {
             update_gimbal_manager_flags();
-            send_storm32_gimbal_manager_control_to_gimbal(gtarget);
+            send_storm32_gimbal_manager_control(gtarget);
         }
     }
 }
@@ -648,9 +648,9 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
         return;
     }
 
-    // listen to qshot commands and messages to track changes in qshot mode
-    // these may come from anywhere
     switch (msg.msgid) {
+        // listen to qshot commands and messages to track changes in qshot mode
+        // these may come from anywhere
         case MAVLINK_MSG_ID_COMMAND_LONG: { // 76
             mavlink_command_long_t payload;
             mavlink_msg_command_long_decode(&msg, &payload);
@@ -673,6 +673,7 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             _qshot.mode = payload.mode; // also sets it if it was put on hold in the above
             }break;
 
+        // listen to RADIO_RC_CHANNELS messages to stop sending RC_CHANNELS
         case MAVLINK_MSG_ID_RADIO_RC_CHANNELS: { // 60045
             _got_radio_rc_channels = true;
             }break;
@@ -748,8 +749,8 @@ void BP_Mount_STorM32_MAVLink::send_request_gimbal_device_information(void)
     mavlink_msg_command_long_send(
         _chan,
         _sysid, _compid,
-        MAV_CMD_REQUEST_MESSAGE,
-        0, MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION, 0, 0, 0, 0, 0, 0);
+        MAV_CMD_REQUEST_MESSAGE, 0,
+        MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION, 0, 0, 0, 0, 0, 0);
 }
 
 
@@ -794,7 +795,7 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(GimbalTarget &gta
 }
 
 
-void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control_to_gimbal(GimbalTarget &gtarget)
+void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control(GimbalTarget &gtarget)
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, STORM32_GIMBAL_MANAGER_CONTROL)) {
         return;

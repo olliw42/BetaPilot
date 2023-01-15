@@ -672,6 +672,18 @@ void AP_Mount::convert_params()
     }
 }
 
+// singleton instance
+AP_Mount *AP_Mount::_singleton;
+
+namespace AP {
+
+AP_Mount *mount()
+{
+    return AP_Mount::get_singleton();
+}
+
+};
+
 //OW
 void AP_Mount::handle_msg(mavlink_channel_t chan, const mavlink_message_t &msg)
 {
@@ -691,17 +703,5 @@ void AP_Mount::send_banner(void)
     }
 }
 //OWEND
-
-// singleton instance
-AP_Mount *AP_Mount::_singleton;
-
-namespace AP {
-
-AP_Mount *mount()
-{
-    return AP_Mount::get_singleton();
-}
-
-};
 
 #endif /* HAL_MOUNT_ENABLED */
