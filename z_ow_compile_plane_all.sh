@@ -18,6 +18,6 @@ compile MatekH743
 compile CubeOrange
 compile MatekF765-Wing
 compile fmuv3
-compile omnibusf4
-compile omnibusf4pro
+compile omnibusf4 #too large
+compile omnibusf4pro #too large
 

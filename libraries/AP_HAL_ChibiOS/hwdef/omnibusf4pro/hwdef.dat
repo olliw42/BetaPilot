@@ -165,3 +165,17 @@ define AP_OPTICALFLOW_ENABLED 0
 define AP_ICENGINE_ENABLED 0
 define AP_GPS_SIRF_ENABLED 0
 define AP_GPS_SBP_ENABLED 0
+
+# //OW, for shuricus
+# see also Tools/scripts/build_options.py
+define HAL_QUADPLANE_ENABLED 0
+#for shuricus
+#define AC_FENCE 0
+#define HAL_PARACHUTE_ENABLED 0
+#define HAL_PROXIMITY_ENABLED 0
+#define HAL_VISUALODOM_ENABLED 0
+define HAL_ADSB_ENABLED 1
+define HAL_ADSB_SAGETECH_ENABLED 1
+define HAL_ADSB_UAVIONIX_MAVLINK_ENABLED 1
+# //OWEND
+
