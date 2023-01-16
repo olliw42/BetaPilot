@@ -1,10 +1,11 @@
 #pragma once
 
-#define BETAPILOTVERSION "v055.22"
+#define BETAPILOTVERSION "v055"
 
 /*
 search for //OW to find all changes
 
+ aux functions
  AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT
  revise handling of RADIO_LINL_STATS a bit, add some comments
  do not send rc channels if RADIO_RC_CHANNELS is detected
