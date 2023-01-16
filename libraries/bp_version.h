@@ -1,10 +1,11 @@
 #pragma once
 
-#define BETAPILOTVERSION "v055"
+#define BETAPILOTVERSION "v056.1"
 
 /*
 search for //OW to find all changes
 
+2023.01.16: v055
  aux functions
  AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT
  revise handling of RADIO_LINL_STATS a bit, add some comments
