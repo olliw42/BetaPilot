@@ -1,10 +1,12 @@
 #pragma once
 
-#define BETAPILOTVERSION "v056.1"
+#define BETAPILOTVERSION "v056"
 
 /*
 search for //OW to find all changes
 
+2023.01.20: v056
+ upgraded to Copter4.3.3 stable
 2023.01.16: v055
  aux functions
  AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT
