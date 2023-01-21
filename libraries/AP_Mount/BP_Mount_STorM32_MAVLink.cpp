@@ -188,8 +188,9 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
     _compid = 0; // gimbal not yet discovered
     _chan = MAVLINK_COMM_0; // this is a dummy, will be set correctly by find_gimbal()
 
-    _prearmchecks_last = false;
-    _prearmcheck.status_updated = false;
+    _armingchecks_enabled = false;
+    _prearmchecks_all_ok = false;
+    _prearmcheck.updated = false;
     _prearmcheck.enabled_flags = 0;
     _prearmcheck.fail_flags = 0;
     _prearmcheck.fail_flags_last = UINT32_MAX;
@@ -728,6 +729,10 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             if ((payload.custom_mode & 0x80000000) == 0) { // we don't follow all changes, but just toggle it to true once
                 _prearmchecks_ok = true;
             }
+            if (_armingchecks_enabled && !_prearmchecks_all_ok && prearmchecks_all_ok()) {
+                _prearmchecks_all_ok = true;
+                gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks passed", _instance+1);
+            }
             }break;
 
         #define MAVGIMBAL_EVENT_ID(x)  ((uint32_t)154 << 24) + (uint32_t)(x)
@@ -743,12 +748,12 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             tPrearmCheckEventArgument* p = (tPrearmCheckEventArgument*)payload.arguments;
             _prearmcheck.enabled_flags = p->enabled_flags;
             _prearmcheck.fail_flags = p->fail_flags & p->enabled_flags; // only keep enabled flags
-            _prearmcheck.status_updated = true;
+            _prearmcheck.updated = true;
+//          gcs().send_text(MAV_SEVERITY_INFO, "Event: %d %d", (int)_prearmcheck.enabled_flags, (int)_prearmcheck.fail_flags);
             if (_prearmcheck.fail_flags != _prearmcheck.fail_flags_last) {
                 _prearmcheck.fail_flags_last = _prearmcheck.fail_flags;
-                _prearmcheck.sendtext_tlast_ms = 0; // if a change occurred, send immediately
+                _prearmcheck.sendtext_tlast_ms = 0; // a change occurred, so force send immediately
             }
-//          gcs().send_text(MAV_SEVERITY_INFO, "Event: %d %d", (int)_prearmcheck.enabled_flags, (int)_prearmcheck.fail_flags);
             }break;
     }
 }
@@ -1144,13 +1149,13 @@ void BP_Mount_STorM32_MAVLink::send_banner(void)
                 c
                 );
 
-        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_last) ? "passed" : "fail");
+        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_all_ok) ? "passed" : "fail");
 
     } else
     if (_compid) {
         // we have some info
         gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: gimbal at %u%s", _instance+1, _compid, (is_primary()) ? ", is primary" : "");
-        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_last) ? "passed" : "fail");
+        gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_all_ok) ? "passed" : "fail");
 
     } else {
         // we don't know yet anything
@@ -1171,10 +1176,16 @@ const uint32_t FAILURE_FLAGS =
         // GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER;
 
 
+bool BP_Mount_STorM32_MAVLink::prearmchecks_all_ok(void)
+{
+    return (_prearmchecks_ok && _armed && ((_device.received_failure_flags & FAILURE_FLAGS) == 0));
+}
+
+
 void BP_Mount_STorM32_MAVLink::send_prearmchecks_txt(void)
 {
-    if (!_prearmchecks_ok && _prearmcheck.available()) { // we did got such a message
-        _prearmcheck.status_updated = false;
+    if (_prearmcheck.available() && !_prearmchecks_ok) { // we got a new message, and it is still not ok
+        _prearmcheck.updated = false;
 
         char txt[255];
         strcpy(txt, "");
@@ -1216,15 +1227,18 @@ void BP_Mount_STorM32_MAVLink::send_prearmchecks_txt(void)
 }
 
 
+// this is called when ARMING_CHECK_ALL or ARMING_CHECK_CAMERA is set
 bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
 {
-    if ((AP_HAL::millis() - _prearmcheck.sendtext_tlast_ms) > 30000) { // if a change occurred, send immediately
+    _armingchecks_enabled = true;
+
+    if ((AP_HAL::millis() - _prearmcheck.sendtext_tlast_ms) > 30000) { // we haven't send it for a long time
         _prearmcheck.sendtext_tlast_ms = AP_HAL::millis();
         send_prearmchecks_txt();
     }
 
-    if (_prearmchecks_ok && _armed && ((_device.received_failure_flags & FAILURE_FLAGS) == 0) && !_prearmchecks_last) { // has just changed
-        _prearmchecks_last = true;
+    if (!_prearmchecks_all_ok && prearmchecks_all_ok()) { // has just changed
+        _prearmchecks_all_ok = true;
         gcs().send_text(MAV_SEVERITY_INFO, "MNT%u: prearm checks passed", _instance+1);
     }
 

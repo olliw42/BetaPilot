@@ -114,7 +114,7 @@ private:
     bool _got_device_info;          // true once gimbal has provided device info
     bool _initialised;              // true once startup procedure has been fully completed
     bool _armed;                    // true once the gimbal has reached normal state
-    bool _prearmchecks_ok;          // true when the gimbal stops reporting prearm fail
+    bool _prearmchecks_ok;          // true when the gimbal stops reporting prearm fail in the HEARTBEAT message
     bool _got_radio_rc_channels;    // true when a RADIO_RC_CHANNELS message has been received
 
     // internal MAVLink variables
@@ -158,17 +158,19 @@ private:
     uint8_t _protocol_auto_cntdown;
     void determine_protocol(const mavlink_message_t &msg);
 
-    bool _prearmchecks_last; // to detect changes
+    bool _armingchecks_enabled; // true when ARMING_CHECK_ALL or ARMING_CHECK_CAMERA set
+    bool _prearmchecks_all_ok; // becomes true when a number of conditions are full filled, track changes
+    bool prearmchecks_all_ok(void);
     bool prearmchecks_do(void); // workaround needed since healthy() is const
     void send_prearmchecks_txt(void);
 
     struct {
-        bool status_updated;
+        bool updated; // set to true when a new EVENT message is received
         uint32_t enabled_flags;
         uint32_t fail_flags;
         uint32_t fail_flags_last;
         uint32_t sendtext_tlast_ms;
-        bool available(void) { return status_updated && (enabled_flags > 0) && (fail_flags > 0); }
+        bool available(void) { return updated && (enabled_flags > 0) && (fail_flags > 0); }
     } _prearmcheck; // for component prearm status handling
 
     bool _is_yaw_lock;
