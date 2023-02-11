@@ -61,7 +61,10 @@ public:
 
     // set yaw_lock.  If true, the gimbal's yaw target is maintained in earth-frame meaning it will lock onto an earth-frame heading (e.g. North)
     // If false (aka "follow") the gimbal's yaw is maintained in body-frame meaning it will rotate with the vehicle
-    void set_yaw_lock(bool yaw_lock) { _yaw_lock = yaw_lock; }
+//OW
+//    void set_yaw_lock(bool yaw_lock) { _yaw_lock = yaw_lock; }
+    virtual void set_yaw_lock(bool yaw_lock) { _yaw_lock = yaw_lock; }
+//OWEND
 
     // set angle target in degrees
     // yaw_is_earth_frame (aka yaw_lock) should be true if yaw angle is earth-frame, false if body-frame
@@ -87,7 +90,10 @@ public:
     void handle_mount_control(const mavlink_mount_control_t &packet);
 
     // send a GIMBAL_DEVICE_ATTITUDE_STATUS message to GCS
-    void send_gimbal_device_attitude_status(mavlink_channel_t chan);
+//OW
+//    void send_gimbal_device_attitude_status(mavlink_channel_t chan);
+    virtual void send_gimbal_device_attitude_status(mavlink_channel_t chan);
+//OWEND
 
     // handle a GIMBAL_REPORT message
     virtual void handle_gimbal_report(mavlink_channel_t chan, const mavlink_message_t &msg) {}
@@ -96,7 +102,10 @@ public:
     virtual void handle_param_value(const mavlink_message_t &msg) {}
 
     // handle a GLOBAL_POSITION_INT message
-    bool handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet);
+//OW
+//    bool handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet);
+    virtual bool handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet);
+//OWEND
 
     // handle GIMBAL_DEVICE_INFORMATION message
     virtual void handle_gimbal_device_information(const mavlink_message_t &msg) {}
@@ -131,6 +140,23 @@ public:
 
     // auto focus.  returns true on success
     virtual bool set_auto_focus() { return false; }
+
+//OW
+    // set photo or video mode
+    virtual bool set_cam_mode(bool video_mode) { return false; }
+
+    // 3-way switch mode
+    virtual bool set_cam_photo_video(int8_t sw_flag) { return false; }
+
+    // handle msg - allows to process a msg from a gimbal
+    virtual void handle_msg(const mavlink_message_t &msg) {}
+
+    // send banner
+    virtual void send_banner(void) {}
+
+    // frontend access
+    bool is_primary(void) { return (_instance == _frontend._primary); }
+//OWEND
 
 protected:
 

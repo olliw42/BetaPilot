@@ -100,6 +100,11 @@ public:
 
     AP_Camera::CamTrigType get_trigger_type(void);
 
+//OW
+    bool set_cam_mode(bool video_mode);
+    bool set_cam_photo_video(int8_t sw_flag);
+//OWEND
+
 private:
 
     static AP_Camera *_singleton;

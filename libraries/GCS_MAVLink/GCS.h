@@ -107,7 +107,10 @@ bool check_payload_size(mavlink_channel_t chan, uint16_t max_payload_len);
     }
 
 
-#define GCS_MAVLINK_NUM_STREAM_RATES 10
+//OW FRPT
+//#define GCS_MAVLINK_NUM_STREAM_RATES 10
+#define GCS_MAVLINK_NUM_STREAM_RATES 11
+//OWEND
 class GCS_MAVLINK_Parameters
 {
 public:
@@ -252,6 +255,9 @@ public:
         STREAM_EXTRA3,
         STREAM_PARAMS,
         STREAM_ADSB,
+//OW FRPT
+        STREAM_FRSKYPASSTHROUGH,
+//OWEND
         NUM_STREAMS
     };
 
@@ -432,7 +438,22 @@ public:
 
     MAV_RESULT set_message_interval(uint32_t msg_id, int32_t interval_us);
 
+//OW
+    static void send_to_all(uint32_t msgid, const char *pkt) { routing.send_to_all(msgid, pkt); }
+//OWEND
+//OW FRPT
+    void send_frsky_passthrough_array();
+//OWEND
+
 protected:
+
+//OW RADIOLINK
+    // called from vehicle class handler
+    void handle_radio_link_stats(const mavlink_message_t &msg, bool log_radio);
+    void handle_radio_link_flow_control(const mavlink_message_t &msg, bool log_radio);
+    // called from common handler
+    void handle_radio_rc_channels(const mavlink_message_t &msg);
+//OWEND
 
     bool mavlink_coordinate_frame_to_location_alt_frame(MAV_FRAME coordinate_frame,
                                                         Location::AltFrame &frame);
@@ -1179,6 +1200,11 @@ public:
 #endif // HAL_HIGH_LATENCY2_ENABLED
 
     virtual uint8_t sysid_this_mav() const = 0;
+
+//OW
+    uint8_t get_landed_state(void) const { return num_gcs() > 0 ? chan(0)->landed_state() : MAV_LANDED_STATE_UNDEFINED; }
+    uint8_t sysid_my_gcs() { return num_gcs() > 0 ? chan(0)->sysid_my_gcs() : 0; }
+//OWEND
 
 protected:
 
