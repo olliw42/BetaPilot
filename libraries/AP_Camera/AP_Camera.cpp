@@ -163,6 +163,9 @@ void AP_Camera::trigger_pic()
     case CamTrigType::mount: {
         AP_Mount* mount = AP::mount();
         if (mount != nullptr) {
+//OW
+            mount->set_cam_photo_video(0, -1);
+//OWEND
             mount->take_picture(0);
         }
         break;
@@ -265,6 +268,15 @@ void AP_Camera::configure(float shooting_mode, float shutter_speed, float apertu
     // we cannot process the configure command so convert to mavlink message
     // and send to all components in case they and process it
 
+//OW TODO: only the sending of the msg should be avoided, not what follows for the BMMCC camera
+#if HAL_MOUNT_ENABLED
+    if (get_trigger_type() == CamTrigType::mount) {
+        set_cam_mode(shooting_mode > 0);
+        return; // do not send DO_DIGICAM command
+    }
+#endif
+//OWEND
+
     mavlink_command_long_t mav_cmd_long = {};
 
     // convert mission command to mavlink command_long
@@ -310,6 +322,12 @@ void AP_Camera::control(float session, float zoom_pos, float zoom_step, float fo
     if (is_equal(shooting_cmd,1.0f)) {
         trigger_pic();
     }
+
+//OW
+#if HAL_MOUNT_ENABLED
+    if (get_trigger_type() == CamTrigType::mount) return; // do not send DO_DIGICAM command
+#endif
+//OWEND
 
     mavlink_command_long_t mav_cmd_long = {};
 
@@ -504,6 +522,12 @@ void AP_Camera::take_picture()
     // take a local picture:
     trigger_pic();
 
+//OW
+#if HAL_MOUNT_ENABLED
+    if (get_trigger_type() == CamTrigType::mount) return; // do not send DO_DIGICAM command
+#endif
+//OWEND
+
     // tell all of our components to take a picture:
     mavlink_command_long_t cmd_msg {};
     cmd_msg.command = MAV_CMD_DO_DIGICAM_CONTROL;
@@ -645,3 +669,31 @@ AP_Camera *camera()
 }
 
 }
+
+//OW
+bool AP_Camera::set_cam_mode(bool video_mode)
+{
+#if HAL_MOUNT_ENABLED
+    if (get_trigger_type() == CamTrigType::mount) {
+        AP_Mount* mount = AP::mount();
+        if (mount != nullptr) {
+            return mount->set_cam_mode(0, video_mode);
+        }
+    }
+#endif
+    return false;
+}
+
+bool AP_Camera::set_cam_photo_video(int8_t sw_flag)
+{
+#if HAL_MOUNT_ENABLED
+    if (get_trigger_type() == CamTrigType::mount) {
+        AP_Mount* mount = AP::mount();
+        if (mount != nullptr) {
+            return mount->set_cam_photo_video(0, sw_flag);
+        }
+    }
+#endif
+    return false;
+}
+//OWEND
