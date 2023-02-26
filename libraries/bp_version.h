@@ -5,8 +5,9 @@
 /*
 search for //OW to find all changes
 
+ upgraded to Copter4.3.4-rc1
 2023.02.11: v057.1
- upgraded to Copter4.3.3-rc1, has get_rate_ef_targets(), does not yet have corrected 1/3 param download
+ upgraded to Copter4.3.4-rc1, has get_rate_ef_targets(), does not yet have corrected 1/3 param download
 2023.01.20: v056
  upgraded to Copter4.3.3 stable
 2023.01.16: v055
