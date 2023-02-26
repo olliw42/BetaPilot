@@ -5,6 +5,7 @@
 /*
 search for //OW to find all changes
 
+ make it compile for MatekF405-CAN
  upgraded to Copter4.3.4-rc1
 2023.02.11: v057.1
  upgraded to Copter4.3.4-rc1, has get_rate_ef_targets(), does not yet have corrected 1/3 param download

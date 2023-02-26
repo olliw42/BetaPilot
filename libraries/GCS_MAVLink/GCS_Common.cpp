@@ -56,6 +56,7 @@
 #include <RC_Channel/RC_Channel.h>
 #include <AP_VisualOdom/AP_VisualOdom.h>
 //OW FRPT
+#include <AP_RCProtocol/AP_RCProtocol.h>
 #include <AP_Frsky_Telem/AP_Frsky_SPort_Protocol.h>
 //OWEND
 
