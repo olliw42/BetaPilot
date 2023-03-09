@@ -121,7 +121,7 @@ private:
 
     uint8_t _sysid;                 // system id of gimbal, supposedly equal to our flight controller sysid
     uint8_t _compid;                // component id of gimbal, 0 indicates gimbal not yet found
-    mavlink_channel_t _chan;        // mavlink channel used to communicate with gimbal
+    class GCS_MAVLINK* _link;       // link we have found gimbal on; nullptr if not seen yet
 
     // initialization etc
 
@@ -196,7 +196,7 @@ private:
         void set(uint8_t m) { roll = pitch = yaw = 0.0f; yaw_is_ef = false; mode = m; }
         void set_angle(MountTarget &t) { set(t, TARGET_MODE_ANGLE); }
         void set_from_vec_deg(const Vector3f &v_deg, uint8_t m) { roll = ToRad(v_deg.x); pitch = ToRad(v_deg.y); yaw = ToRad(v_deg.z); yaw_is_ef = false; mode = m; }
-        void get_q_array(float* q_array);
+        void get_q(Quaternion* q);
     };
 
     struct {

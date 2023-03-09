@@ -120,6 +120,11 @@ public:
     // parameter var table
     static const struct AP_Param::GroupInfo var_info[];
 
+//OW
+    bool set_cam_mode(bool video_mode);
+    bool set_cam_photo_video(int8_t sw_flag);
+//OWEND
+
 protected:
 
     // return true if vehicle mode allows trigg dist
@@ -133,11 +138,6 @@ protected:
 
     // parameters for backends
     AP_Camera_Params _params[AP_CAMERA_MAX_INSTANCES];
-
-//OW
-    bool set_cam_mode(bool video_mode);
-    bool set_cam_photo_video(int8_t sw_flag);
-//OWEND
 
 private:
 

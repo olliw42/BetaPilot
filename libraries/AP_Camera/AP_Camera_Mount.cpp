@@ -59,4 +59,25 @@ bool AP_Camera_Mount::set_auto_focus()
     return false;
 }
 
+//OW
+bool AP_Camera_Mount::set_cam_mode(bool video_mode)
+{
+    AP_Mount* mount = AP::mount();
+    if (mount != nullptr) {
+        return mount->set_cam_mode(0, video_mode);
+    }
+    return false;
+}
+
+bool AP_Camera_Mount::set_cam_photo_video(int8_t sw_flag)
+{
+    AP_Mount* mount = AP::mount();
+    if (mount != nullptr) {
+        return mount->set_cam_photo_video(0, sw_flag);
+    }
+    return false;
+}
+//OWEND
+
+
 #endif // AP_CAMERA_MOUNT_ENABLED

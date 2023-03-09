@@ -186,8 +186,8 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
     _prearmchecks_ok = false;
 
     _sysid = 0;
-    _compid = 0; // gimbal not yet discovered
-    _chan = MAVLINK_COMM_0; // this is a dummy, will be set correctly by find_gimbal()
+    _compid = 0; // gimbal not yet discovered, note: this is different to _link != nullptr
+    _link = nullptr;
 
     _armingchecks_enabled = false;
     _prearmchecks_all_ok = false;
@@ -509,10 +509,11 @@ void BP_Mount_STorM32_MAVLink::find_gimbal(void)
     uint32_t tnow_ms = AP_HAL::millis();
 
     // search for gimbal in routing table
-    if (!_compid) {
+    if (!_compid) { // ATTENTION: this is not the same as if (_link == nullptr) {}!
         // we expect that instance 0 has compid = MAV_COMP_ID_GIMBAL, instance 1 has compid = MAV_COMP_ID_GIMBAL2, etc
         uint8_t compid = (_instance == 0) ? MAV_COMP_ID_GIMBAL : MAV_COMP_ID_GIMBAL2 + (_instance - 1);
-        if (GCS_MAVLINK::find_by_mavtype_and_compid(MAV_TYPE_GIMBAL, compid, _sysid, _chan) && (_sysid == mavlink_system.sysid)) {
+        _link = GCS_MAVLINK::find_by_mavtype_and_compid(MAV_TYPE_GIMBAL, compid, _sysid);
+        if ((_link != nullptr) && (_sysid == mavlink_system.sysid)) {
             _compid = compid;
             _request_device_info_tlast_ms = (tnow_ms < 900) ? 0 : tnow_ms - 900; // start sending requests in 100 ms
         } else {
@@ -766,49 +767,49 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
 
 void BP_Mount_STorM32_MAVLink::send_request_gimbal_device_information(void)
 {
-    if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
-        return;
-    }
+    const mavlink_command_long_t pkt {
+        MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION,  // param1
+        0,  // param2
+        0,  // param3
+        0,  // param4
+        0,  // param5
+        0,  // param6
+        0,  // param7
+        MAV_CMD_REQUEST_MESSAGE, // cmd
+        _sysid, _compid, // target
+        0   // confirmation
+    };
 
-    mavlink_msg_command_long_send(
-        _chan,
-        _sysid, _compid,
-        MAV_CMD_REQUEST_MESSAGE, 0,
-        MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION, 0, 0, 0, 0, 0, 0);
+    _link->send_message(MAVLINK_MSG_ID_COMMAND_LONG, (const char*)&pkt);
 }
 
 
-void BP_Mount_STorM32_MAVLink::GimbalTarget::get_q_array(float* q_array)
+void BP_Mount_STorM32_MAVLink::GimbalTarget::get_q(Quaternion* q)
 {
     switch (mode) {
         case TARGET_MODE_NEUTRAL:
-        case TARGET_MODE_ANGLE: {
-            Quaternion q;
-            q.from_euler(roll, pitch, yaw);
-            q_array[0] = q.q1; q_array[1] = q.q2; q_array[2] = q.q3; q_array[3] = q.q4;
+        case TARGET_MODE_ANGLE:
+            q->from_euler(roll, pitch, yaw);
             break;
-        }
         default:
-            q_array[0] = q_array[1] = q_array[2] = q_array[3] = NAN;
+            q->q1 = q->q2 = q->q3 = q->q4 = NAN;
     }
 }
 
 
 void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(GimbalTarget &gtarget)
 {
-    if (!HAVE_PAYLOAD_SPACE(_chan, GIMBAL_DEVICE_SET_ATTITUDE)) {
-        return;
-    }
+    Quaternion q;
+    gtarget.get_q(&q);
 
-    float q_array[4];
-    gtarget.get_q_array(q_array);
+    const mavlink_gimbal_device_set_attitude_t pkt {
+        { q.q1, q.q2, q.q3, q.q4 },     // attitude as a quaternion
+        NAN, NAN, NAN,                  // angular velocities
+        _device.flags_for_gimbal,       // gimbal device flags
+        _sysid, _compid                 // target
+    };
 
-    mavlink_msg_gimbal_device_set_attitude_send(
-        _chan,
-        _sysid, _compid,
-        _device.flags_for_gimbal, // gimbal device flags
-        q_array,                  // attitude as a quaternion
-        NAN, NAN, NAN);           // angular velocities
+    _link->send_message(MAVLINK_MSG_ID_GIMBAL_DEVICE_SET_ATTITUDE, (const char*)&pkt);
 
     BP_LOG("MTC0", BP_LOG_MTC_GIMBALCONTROL_HEADER,
         (uint8_t)1, // GIMBAL_DEVICE_SET_ATTITUDE
@@ -821,21 +822,19 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(GimbalTarget &gta
 
 void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control(GimbalTarget &gtarget)
 {
-    if (!HAVE_PAYLOAD_SPACE(_chan, STORM32_GIMBAL_MANAGER_CONTROL)) {
-        return;
-    }
+    Quaternion q;
+    gtarget.get_q(&q);
 
-    float q_array[4];
-    gtarget.get_q_array(q_array);
+    const mavlink_storm32_gimbal_manager_control_t pkt {
+        { q.q1, q.q2, q.q3, q.q4 },     // attitude as a quaternion
+        NAN, NAN, NAN,                  // angular velocities
+        _device.flags_for_gimbal, _manager.flags_for_gimbal, // flags
+        _sysid, _compid,                // target
+        _compid,                        // gimbal_id
+        MAV_STORM32_GIMBAL_MANAGER_CLIENT_AUTOPILOT, // client
+    };
 
-    mavlink_msg_storm32_gimbal_manager_control_send(
-        _chan,
-        _sysid, _compid,
-        _compid, // gimbal_id
-        MAV_STORM32_GIMBAL_MANAGER_CLIENT_AUTOPILOT,
-        _device.flags_for_gimbal, _manager.flags_for_gimbal,
-        q_array,
-        NAN, NAN, NAN); // float angular_velocity_x, float angular_velocity_y, float angular_velocity_z
+    _link->send_message(MAVLINK_MSG_ID_STORM32_GIMBAL_MANAGER_CONTROL, (const char*)&pkt);
 
     BP_LOG("MTC0", BP_LOG_MTC_GIMBALCONTROL_HEADER,
         (uint8_t)2, // STORM32_GIMBAL_MANAGER_CONTROL
@@ -848,10 +847,6 @@ void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control(GimbalTarget 
 
 void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_ext(void)
 {
-    if (!HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT)) {
-        return;
-    }
-
     const AP_AHRS &ahrs = AP::ahrs();
 
 #if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
@@ -909,12 +904,16 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_ext(void)
         ground_heading = atan2f(vground.y, vground.x);
         air_heading = atan2f(vair.y, vair.x);
     }
-/* we currently don't send, just log, we need to work it out what we want to do
-    mavlink_msg_autopilot_state_for_gimbal_device_ext_send(
-        _chan,
-        _sysid, _compid,
-        AP_HAL::micros64(),
-        wind.x, wind.y, correction_angle); */
+
+/* we currently don't send, just log, we need to work it out what we want to do */
+    const mavlink_autopilot_state_for_gimbal_device_ext_t pkt {
+        AP_HAL::micros64(),     // time_boot_us
+        wind.x, wind.y,         // wind_x, wind_y
+        correction_angle,       // wind_correction_angle
+        _sysid, _compid,        // target
+    };
+
+    _link->send_message(MAVLINK_MSG_ID_AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT, (const char*)&pkt);
 
     BP_LOG("MTLE", BP_LOG_MTLE_AUTOPILOTSTATEEXT_HEADER,
         wind.x, wind.y, degrees(correction_angle),
@@ -929,17 +928,12 @@ enum THISWOULDBEGREATTOHAVE {
 
 void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device(void)
 {
-    if (!HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE)) {
-        return;
-    }
-
     const AP_AHRS &ahrs = AP::ahrs();
 
-    Quaternion quat;
-    if (!ahrs.get_quaternion(quat)) { // it returns a bool, so it's a good idea to consider it
-        quat.q1 = quat.q2 = quat.q3 = quat.q4 = NAN;
+    Quaternion q;
+    if (!ahrs.get_quaternion(q)) { // it returns a bool, so it's a good idea to consider it
+        q.q1 = q.q2 = q.q3 = q.q4 = NAN;
     }
-    float q[4] = { quat.q1, quat.q2, quat.q3, quat.q4 };
 
     // comment in AP_AHRS.cpp says "Must only be called if have_inertial_nav() is true", but probably not worth checking
     Vector3f vel;
@@ -1065,20 +1059,23 @@ ESTIMATOR_ACCEL_ERROR           takeoff            : 1; // 11 - true if filter i
     uint32_t dt_us = t_us - tlast_us;
     tlast_us = t_us;
 
-    mavlink_msg_autopilot_state_for_gimbal_device_send(
-        _chan,
-        _sysid, _compid,
-        AP_HAL::micros64(),
-        q,
-        0, // uint32_t q_estimated_delay_us,
-        vel.x, vel.y, vel.z,
-        0, // uint32_t v_estimated_delay_us,
-        yawrate,
-        estimator_status, landed_state,
-        angular_velocity_z);
+    const mavlink_autopilot_state_for_gimbal_device_t pkt {
+        AP_HAL::micros64(),         // time_boot_us
+        { q.q1, q.q2, q.q3, q.q4 }, // attitude
+        0,                          // uint32_t q_estimated_delay_us
+        vel.x, vel.y, vel.z,        // speed in NED
+        0,                          // uint32_t v_estimated_delay_us
+        yawrate,                    // feed_forward_angular_velocity_z
+        estimator_status,
+        _sysid, _compid,            // target
+        landed_state,
+        angular_velocity_z
+    };
+
+    _link->send_message(MAVLINK_MSG_ID_AUTOPILOT_STATE_FOR_GIMBAL_DEVICE, (const char*)&pkt);
 
     BP_LOG("MTL0", BP_LOG_MTL_AUTOPILOTSTATE_HEADER,
-        q[0],q[1],q[2],q[3],
+        q.q1, q.q2, q.q3, q.q4,
         vel.x, vel.y, vel.z,
         degrees(angular_velocity_z),
         degrees(yawrate),
@@ -1092,42 +1089,38 @@ ESTIMATOR_ACCEL_ERROR           takeoff            : 1; // 11 - true if filter i
 
 void BP_Mount_STorM32_MAVLink::send_system_time(void)
 {
-    if (!HAVE_PAYLOAD_SPACE(_chan, SYSTEM_TIME)) {
-        return;
-    }
-
     uint64_t time_unix = 0;
     AP::rtc().get_utc_usec(time_unix); // may fail, leaving time_unix at 0
 
     if (!time_unix) return; // no unix time available, so no reason to send
 
-    mavlink_msg_system_time_send(
-        _chan,
+    const mavlink_system_time_t pkt {
         time_unix,
-        AP_HAL::millis());
+        AP_HAL::millis()
+    };
+
+    _link->send_message(MAVLINK_MSG_ID_SYSTEM_TIME, (const char*)&pkt);
 }
 
 
 void BP_Mount_STorM32_MAVLink::send_rc_channels(void)
 {
-    if (!HAVE_PAYLOAD_SPACE(_chan, RC_CHANNELS)) {
-        return;
-    }
-
     // rc().channel(ch)->get_radio_in(), RC_Channels::get_radio_in(ch), and so on
     // these are not the same as hal.rcin->read(), since radio_in can be set by override
     // so we use hal.rcin->read()
 
     #define RCHALIN(ch_index)  hal.rcin->read(ch_index)
 
-    mavlink_msg_rc_channels_send(
-        _chan,
-        AP_HAL::millis(),
-        16,
+    const mavlink_rc_channels_t pkt {
+        AP_HAL::millis(),   // time_boot_ms
         RCHALIN(0), RCHALIN(1), RCHALIN(2), RCHALIN(3), RCHALIN(4), RCHALIN(5), RCHALIN(6), RCHALIN(7),
         RCHALIN(8), RCHALIN(9), RCHALIN(10), RCHALIN(11), RCHALIN(12), RCHALIN(13), RCHALIN(14), RCHALIN(15),
-        0, 0,
-        0);
+        0, 0,               // chan17_raw, chan18_raw
+        16,                 // chancount
+        0                   // rssi
+    };
+
+    _link->send_message(MAVLINK_MSG_ID_RC_CHANNELS, (const char*)&pkt);
 }
 
 
@@ -1348,17 +1341,22 @@ bool BP_Mount_STorM32_MAVLink::set_cam_photo_video(int8_t sw_flag)
 
 void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_configure(bool video_mode)
 {
-    if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
-        return;
-    }
-
     float param1 = (video_mode) ? 1 : 0;
 
-    mavlink_msg_command_long_send(
-        _chan,
-        _sysid, _compid,
-        MAV_CMD_DO_DIGICAM_CONFIGURE, 0,
-        param1, 0, 0, 0, 0, 0, 0);
+    const mavlink_command_long_t pkt {
+        param1,  // param1
+        0,  // param2
+        0,  // param3
+        0,  // param4
+        0,  // param5
+        0,  // param6
+        0,  // param7
+        MAV_CMD_DO_DIGICAM_CONFIGURE, // cmd
+        _sysid, _compid, // target
+        0   // confirmation
+    };
+
+    _link->send_message(MAVLINK_MSG_ID_COMMAND_LONG, (const char*)&pkt);
 
 //    gcs().send_text(MAV_SEVERITY_INFO, "cam digi config %u", video_mode);
 }
@@ -1366,17 +1364,22 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_configure(bool video_mode)
 
 void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_control(bool shoot)
 {
-    if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
-        return;
-    }
-
     float param5 = (shoot) ? 1 : 0;
 
-    mavlink_msg_command_long_send(
-        _chan,
-        _sysid, _compid,
-        MAV_CMD_DO_DIGICAM_CONTROL, 0,
-        0, 0, 0, 0, param5, 0, 0);
+    const mavlink_command_long_t pkt {
+        0,  // param1
+        0,  // param2
+        0,  // param3
+        0,  // param4
+        param5,  // param5
+        0,  // param6
+        0,  // param7
+        MAV_CMD_DO_DIGICAM_CONTROL, // cmd
+        _sysid, _compid, // target
+        0   // confirmation
+    };
+
+    _link->send_message(MAVLINK_MSG_ID_COMMAND_LONG, (const char*)&pkt);
 
 //    gcs().send_text(MAV_SEVERITY_INFO, "cam digi cntrl %u", shoot);
 }
@@ -1391,7 +1394,7 @@ void BP_Mount_STorM32_MAVLink::send_mount_status_to_ground(MountStatus &status)
 {
     // space is checked by send_to_ground()
 
-    mavlink_mount_status_t msg = {
+    const mavlink_mount_status_t msg = {
         pointing_a : (int32_t)(status.pitch_deg * 100.0f),
         pointing_b : (int32_t)(status.roll_deg * 100.0f),
         pointing_c : (int32_t)(status.yaw_deg * 100.0f),
@@ -1416,15 +1419,15 @@ void BP_Mount_STorM32_MAVLink::send_to_ground(uint32_t msgid, const char *pkt)
     }
 
     for (uint8_t i=0; i<gcs().num_gcs(); i++) {
-        GCS_MAVLINK &c = *gcs().chan(i);
+        GCS_MAVLINK* c = gcs().chan(i);
 
-        if (c.get_chan() == _chan) continue; // the gimbal is on this channel
+        if (c == _link) continue; // the gimbal is on this channel
 
-        if (!c.is_active()) continue;
-        if (entry->max_msg_len + GCS_MAVLINK::packet_overhead_chan(c.get_chan()) > c.get_uart()->txspace()) {
+        if (!c->is_active()) continue;
+        if (entry->max_msg_len + GCS_MAVLINK::packet_overhead_chan(c->get_chan()) > c->get_uart()->txspace()) {
             continue; // no space on this channel
         }
-        c.send_message(pkt, entry);
+        c->send_message(pkt, entry);
     }
 }
 

@@ -49,6 +49,11 @@ public:
 
     // auto focus.  returns true on success
     bool set_auto_focus() override;
+
+//OW
+    bool set_cam_mode(bool video_mode) override;
+    bool set_cam_photo_video(int8_t sw_flag) override;
+//OWEND
 };
 
 #endif // AP_CAMERA_MOUNT_ENABLED

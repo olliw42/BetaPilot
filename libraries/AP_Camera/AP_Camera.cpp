@@ -435,5 +435,23 @@ AP_Camera *camera()
 
 }
 
+//OW
+bool AP_Camera::set_cam_mode(bool video_mode)
+{
+    if (primary == nullptr) {
+        return false;
+    }
+    return primary->set_cam_mode(video_mode);
+}
+
+bool AP_Camera::set_cam_photo_video(int8_t sw_flag)
+{
+    if (primary == nullptr) {
+        return false;
+    }
+    return primary->set_cam_photo_video(sw_flag);
+}
+//OWEND
+
 #endif
 

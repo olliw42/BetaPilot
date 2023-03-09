@@ -82,6 +82,11 @@ public:
     // send camera feedback message to GCS
     void send_camera_feedback(mavlink_channel_t chan) const;
 
+//OW
+    virtual bool set_cam_mode(bool video_mode) { return false; }
+    virtual bool set_cam_photo_video(int8_t sw_flag) { return false; }
+//OWEND
+
 protected:
 
     // references
