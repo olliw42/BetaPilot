@@ -48,6 +48,7 @@ two modes/protocols of operation are supported
       only sends out RC_CHANNLES, AUTOPILOT_STATE_FOR_GIMBAL for STorM32-Link
       this mode could in principle be replaced by asking for the streams, but since AP isn't streaming reliably we don't
  16:  do not send AUTOPILOT_STATE_FOR_GIMBAL_EXT
+ 32:  use old attitude quaternion
  64:  do not use 3way photo-video switch mode for 'Camera Mode Toggle' aux function
  128: do not log
 
@@ -144,14 +145,20 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
         "QBfffHHBB"
 
 // log outgoing AUTOPILOT_STATE_FOR_GIMBAL_DEVICE
-#define BP_LOG_MTL_AUTOPILOTSTATE_HEADER \
-        "TimeUS,q1,q2,q3,q4,vx,vy,vz,wz,YawRate,Est,Land,NavEst,NEst2,dtUS", \
-        "s----nnnkk----s", \
-        "F-------------F", \
-        "QfffffffffHBHHI"
+#define BP_LOG_MTL_AUTOPILOTSTATE_Q_HEADER \
+        "TimeUS,q1,q2,q3,q4,qs1,qs2,qs3,qs4", \
+        "s--------", \
+        "F--------", \
+        "Qffffffff"
+
+#define BP_LOG_MTL_AUTOPILOTSTATE_R_HEADER \
+        "TimeUS,vx,vy,vz,wz,YawRate,Est,Land,NavEst,NEst2,dtUS", \
+        "snnnkk----s", \
+        "F---------F", \
+        "QfffffHBHHI"
 
 // log outgoing AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT
-#define BP_LOG_MTLE_AUTOPILOTSTATEEXT_HEADER \
+#define BP_LOG_MTL_AUTOPILOTSTATE_EXT_HEADER \
         "TimeUS,windx,windy,corrangle,vh,wh,gh,ah", \
         "snnddddd", \
         "F-------", \
@@ -768,16 +775,11 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
 void BP_Mount_STorM32_MAVLink::send_request_gimbal_device_information(void)
 {
     const mavlink_command_long_t pkt {
-        MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION,  // param1
-        0,  // param2
-        0,  // param3
-        0,  // param4
-        0,  // param5
-        0,  // param6
-        0,  // param7
-        MAV_CMD_REQUEST_MESSAGE, // cmd
-        _sysid, _compid, // target
-        0   // confirmation
+        MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION,   // param1
+        0, 0, 0, 0, 0, 0,                           // param2 - param7
+        MAV_CMD_REQUEST_MESSAGE,                    // cmd
+        _sysid, _compid,                            // target
+        0                                           // confirmation
     };
 
     _link->send_message(MAVLINK_MSG_ID_COMMAND_LONG, (const char*)&pkt);
@@ -842,248 +844,6 @@ void BP_Mount_STorM32_MAVLink::send_storm32_gimbal_manager_control(GimbalTarget 
         _device.flags_for_gimbal, _manager.flags_for_gimbal,
         gtarget.mode,
         _qshot.mode);
-}
-
-
-void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_ext(void)
-{
-    const AP_AHRS &ahrs = AP::ahrs();
-
-#if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
-    Vector3f airspeed_vec_bf;
-    if (!ahrs.airspeed_vector_true(airspeed_vec_bf)) {
-        // if we don't have an airspeed estimate then we don't have a valid wind estimate on copters
-        return;
-    }
-#endif
-
-/*
- https://github.com/ArduPilot/ardupilot/issues/6571
- v_ground = v_air + v_wind // note direction of wind
- there are soo many different accessors, estimates, etc
- vfr_hud_airspeed(),
- ahrs.groundspeed()
- ahrs.groundspeed_vector()
- ahrs.yaw, ahrs.yaw_sensor
- ahrs.airspeed_estimate(airspeed)
- ahrs.airspeed_estimate_true(airspeed)
- ahrs.airspeed_vector_true(airspeed_vec_bf) // gives it in BF, not NED!
- AP::gps().ground_speed()
- AP_Airspeed::get_singleton()->get_airspeed()
- ????
- this gives some good insight!?
- ahrs.groundspeed_vector() -> search for AP_AHRS_DCM::groundspeed_vector(void)
- if airspeed_estimate_true(airspeed) then calculates it as gndVelADS = airspeed_vector + wind2d
- else if gotGPS then gndVelGPS = Vector2f(cosf(cog), sinf(cog)) * AP::gps().ground_speed()
- => AP does indeed do vg = va + vw
- => shows how ground speed is estimated
- question: how does this relate to ahrs.get_velocity_NED(vground)?
- ahrs.airspeed_estimate(airspeed)
- does true_airspeed_vec = nav_vel - wind_vel
- this suggests that nav_vel is a good ground speed
- also suggests that airspeed, wind are in NED too
-*/
-    Vector3f wind;
-    wind = ahrs.wind_estimate();
-
-    float vehicle_heading = ahrs.yaw;
-    float wind_heading = atan2f(-wind.y, -wind.x);
-    float ground_heading = NAN;
-    float air_heading = NAN;
-
-    float correction_angle = NAN;
-    Vector3f vground;
-    if (ahrs.get_velocity_NED(vground)) { // ??? is this correct, really ground speed ???
-        Vector3f vair = vground - wind;
-        float vg2 = vground.x * vground.x + vground.y * vground.y;
-        float va2 = vair.x * vair.x + vair.y * vair.y;
-        float vgva = vground.x * vair.x + vground.y * vair.y;
-        correction_angle = acosf(vgva / sqrtf(vg2 * va2));
-        if ((vground.x * vair.y - vground.y * vair.x) < 0.0f) correction_angle = -correction_angle;
-
-        ground_heading = atan2f(vground.y, vground.x);
-        air_heading = atan2f(vair.y, vair.x);
-    }
-
-/* we currently don't send, just log, we need to work it out what we want to do */
-    const mavlink_autopilot_state_for_gimbal_device_ext_t pkt {
-        AP_HAL::micros64(),     // time_boot_us
-        wind.x, wind.y,         // wind_x, wind_y
-        correction_angle,       // wind_correction_angle
-        _sysid, _compid,        // target
-    };
-
-    _link->send_message(MAVLINK_MSG_ID_AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT, (const char*)&pkt);
-
-    BP_LOG("MTLE", BP_LOG_MTLE_AUTOPILOTSTATEEXT_HEADER,
-        wind.x, wind.y, degrees(correction_angle),
-        degrees(vehicle_heading), degrees(wind_heading), degrees(ground_heading), degrees(air_heading));
-}
-
-
-enum THISWOULDBEGREATTOHAVE {
-    MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF = 5,
-};
-
-
-void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device(void)
-{
-    const AP_AHRS &ahrs = AP::ahrs();
-
-    Quaternion q;
-    if (!ahrs.get_quaternion(q)) { // it returns a bool, so it's a good idea to consider it
-        q.q1 = q.q2 = q.q3 = q.q4 = NAN;
-    }
-
-    // comment in AP_AHRS.cpp says "Must only be called if have_inertial_nav() is true", but probably not worth checking
-    Vector3f vel;
-    if (!ahrs.get_velocity_NED(vel)) { // it returns a bool, so it's a good idea to consider it
-        vel.x = vel.y = vel.z = 0.0f; // or NAN ???
-    }
-
-    float angular_velocity_z = ahrs.get_yaw_rate_earth(); // NAN;
-
-    float yawrate = NAN;
-    // see https://github.com/ArduPilot/ardupilot/issues/22564
-    const AP_Vehicle *vehicle = AP::vehicle();
-    Vector3f rate_ef_targets;
-    if ((vehicle != nullptr) && vehicle->get_rate_ef_targets(rate_ef_targets)) {
-        yawrate = rate_ef_targets.z;
-    }
-
-// TODO: how do notify.flags.armed and hal.util->get_soft_armed() compare against each other, also across vehicles?
-/* old:
-    bool ahrs_nav_status_horiz_vel = false;
-    nav_filter_status nav_status;
-    if (ahrs.get_filter_status(nav_status) && nav_status.flags.horiz_vel) {
-        ahrs_nav_status_horiz_vel = true;
-    }
-
-    uint8_t status = 0;
-    if (ahrs.healthy()) { status |= STORM32LINK_FCSTATUS_AP_AHRSHEALTHY; }
-    if (ahrs.initialised()) { status |= STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED; }
-    if (ahrs_nav_status_horiz_vel) { status |= STORM32LINK_FCSTATUS_AP_NAVHORIZVEL; }
-    if (gps.status() >= AP_GPS::GPS_OK_FIX_3D) { status |= STORM32LINK_FCSTATUS_AP_GPS3DFIX; }
-    if (notify.flags.armed) { status |= STORM32LINK_FCSTATUS_AP_ARMED; }
-    //if (hal.util->get_soft_armed()) { status |= STORM32LINK_FCSTATUS_AP_ARMED; }
-    // for copter this is !ap.land_complete, for plane this is new_is_flying
-    if (notify.flags.flying) { status |= STORM32LINK_FCSTATUS_AP_ISFLYING; }
-*/
-/*
-mavlink flags                   nav_filter_status
-ESTIMATOR_ATTITUDE              attitude           : 1; // 0 - true if attitude estimate is valid
-ESTIMATOR_VELOCITY_HORIZ        horiz_vel          : 1; // 1 - true if horizontal velocity estimate is valid
-ESTIMATOR_VELOCITY_VERT         vert_vel           : 1; // 2 - true if the vertical velocity estimate is valid
-ESTIMATOR_POS_HORIZ_REL         horiz_pos_rel      : 1; // 3 - true if the relative horizontal position estimate is valid
-ESTIMATOR_POS_HORIZ_ABS         horiz_pos_abs      : 1; // 4 - true if the absolute horizontal position estimate is valid
-ESTIMATOR_POS_VERT_ABS          vert_pos           : 1; // 5 - true if the vertical position estimate is valid
-ESTIMATOR_POS_VERT_AGL          terrain_alt        : 1; // 6 - true if the terrain height estimate is valid
-ESTIMATOR_CONST_POS_MODE        const_pos_mode     : 1; // 7 - true if we are in const position mode
-ESTIMATOR_PRED_POS_HORIZ_REL    pred_horiz_pos_rel : 1; // 8 - true if filter expects it can produce a good relative horizontal position estimate - used before takeoff
-ESTIMATOR_PRED_POS_HORIZ_ABS    pred_horiz_pos_abs : 1; // 9 - true if filter expects it can produce a good absolute horizontal position estimate - used before takeoff
-
-ESTIMATOR_GPS_GLITCH            takeoff_detected   : 1; // 10 - true if optical flow takeoff has been detected
-ESTIMATOR_ACCEL_ERROR           takeoff            : 1; // 11 - true if filter is compensating for baro errors during takeoff
-                                touchdown          : 1; // 12 - true if filter is compensating for baro errors during touchdown
-                                using_gps          : 1; // 13 - true if we are using GPS position
-                                gps_glitching      : 1; // 14 - true if GPS glitching is affecting navigation accuracy
-                                gps_quality_good   : 1; // 15 - true if we can use GPS for navigation
-                                initalized         : 1; // 16 - true if the EKF has ever been healthy
-                                rejecting_airspeed : 1; // 17 - true if we are rejecting airspeed data
-                                dead_reckoning     : 1; // 18 - true if we are dead reckoning (e.g. no position or velocity source)
-*/
-    uint16_t nav_estimator_status = 0;
-    uint16_t nav_estimator_status2 = 0;
-
-    const uint32_t ESTIMATOR_MASK = (
-            ESTIMATOR_ATTITUDE |
-            ESTIMATOR_VELOCITY_HORIZ | ESTIMATOR_VELOCITY_VERT |
-            ESTIMATOR_POS_HORIZ_REL | ESTIMATOR_POS_HORIZ_ABS |
-            ESTIMATOR_POS_VERT_ABS | ESTIMATOR_POS_VERT_AGL |
-            ESTIMATOR_CONST_POS_MODE |
-            ESTIMATOR_PRED_POS_HORIZ_REL | ESTIMATOR_PRED_POS_HORIZ_ABS);
-
-    nav_filter_status nav_status;
-    if (ahrs.get_filter_status(nav_status)) {
-        nav_estimator_status = (uint16_t)(nav_status.value & ESTIMATOR_MASK);
-        nav_estimator_status2 = (uint16_t)(nav_status.value >> 10);
-    }
-
-/* estimator status
- btw STorM32 only listens to ESTIMATOR_ATTITUDE and ESTIMATOR_VELOCITY_VERT
- ahrs.healthy() becomes true during flip of quaternion => no-go
- ahrs.initialised() is simply set after AP_AHRS_NAVEKF_SETTLE_TIME_MS 20000 !!
-                    it becomes true some secs after ESTIMATOR_ATTITUDE|ESTIMATOR_VELOCITY_VERT are set
- ESTIMATOR_ATTITUDE can be set during flip of quaternion => no-go
- ESTIMATOR_VELOCITY_VERT are set briefly after the quaternion flip ??Q: really, couldn't it also be raised in the flip?
- ESTIMATOR_VELOCITY_VERT are set however even if there is no gps or alike! I find it hard to trust the data
- => we fake it so:
- for ESTIMATOR_ATTITUDE we delay the flag being raised by few secs
- for ESTIMATOR_VELOCITY_VERT we check for gps like in AP_AHRS_DCM::groundspeed_vector(void)
- btw STorM32 does also check for non-zero velocities for AHRSFix
-*/
-    uint16_t estimator_status = 0;
-    static uint32_t tahrs_healthy_ms = 0;
-    const bool ahrs_healthy = ahrs.healthy(); // it's a bit costly
-    if (!tahrs_healthy_ms && ahrs_healthy) tahrs_healthy_ms = AP_HAL::millis();
-    if (ahrs_healthy && (nav_estimator_status & ESTIMATOR_ATTITUDE) && ((AP_HAL::millis() - tahrs_healthy_ms) > 3000)) {
-        estimator_status |= ESTIMATOR_ATTITUDE; // -> QFix
-        if (ahrs.initialised() && (nav_estimator_status & ESTIMATOR_VELOCITY_VERT) && (AP::gps().status() >= AP_GPS::GPS_OK_FIX_2D)) {
-            estimator_status |= ESTIMATOR_VELOCITY_VERT; // -> AHRSFix
-        }
-    }
-
-/* landed state
- GCS_Common.cpp: virtual MAV_LANDED_STATE landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
- Copter has it: GCS_MAVLINK_Copter::landed_state(), yields ON_GROUND, TAKEOFF, IN_AIR, LANDING
- Plane has it: GCS_MAVLINK_Plane::landed_state(), only yields ON_GROUND or IN_AIR
- Blimp also has it, blimp not relevant for us
- but is protected, so we needed to mock it up
- we probably want to also take into account the arming state to mock something up
- ugly as we will have vehicle dependency here
-*/
-    uint8_t landed_state = gcs().get_landed_state();
-
-#if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
-// for copter we modify the landed states so as to reflect the 2 sec pre-take-off period
-// the way it is done leads to a PREPARING_FOR_TAKEOFF before takeoff, but also after landing!
-// we somehow would have to catch that it was flying before to suppress it
-// but we don't care, the gimbal will do inits when ON_GROUND, and apply them when transitioned to PREPARING_FOR_TAKEOFF
-// it won't do it for other transitions, so e.g. also not for plane
-    const AP_Notify &notify = AP::notify();
-    if ((landed_state == MAV_LANDED_STATE_ON_GROUND) && notify.flags.armed) landed_state = MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF;
-#endif
-
-    static uint32_t tlast_us = 0;
-    uint32_t t_us = AP_HAL::micros();
-    uint32_t dt_us = t_us - tlast_us;
-    tlast_us = t_us;
-
-    const mavlink_autopilot_state_for_gimbal_device_t pkt {
-        AP_HAL::micros64(),         // time_boot_us
-        { q.q1, q.q2, q.q3, q.q4 }, // attitude
-        0,                          // uint32_t q_estimated_delay_us
-        vel.x, vel.y, vel.z,        // speed in NED
-        0,                          // uint32_t v_estimated_delay_us
-        yawrate,                    // feed_forward_angular_velocity_z
-        estimator_status,
-        _sysid, _compid,            // target
-        landed_state,
-        angular_velocity_z
-    };
-
-    _link->send_message(MAVLINK_MSG_ID_AUTOPILOT_STATE_FOR_GIMBAL_DEVICE, (const char*)&pkt);
-
-    BP_LOG("MTL0", BP_LOG_MTL_AUTOPILOTSTATE_HEADER,
-        q.q1, q.q2, q.q3, q.q4,
-        vel.x, vel.y, vel.z,
-        degrees(angular_velocity_z),
-        degrees(yawrate),
-        estimator_status,
-        landed_state,
-        nav_estimator_status,
-        nav_estimator_status2,
-        dt_us);
 }
 
 
@@ -1344,16 +1104,10 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_configure(bool video_mode)
     float param1 = (video_mode) ? 1 : 0;
 
     const mavlink_command_long_t pkt {
-        param1,  // param1
-        0,  // param2
-        0,  // param3
-        0,  // param4
-        0,  // param5
-        0,  // param6
-        0,  // param7
-        MAV_CMD_DO_DIGICAM_CONFIGURE, // cmd
-        _sysid, _compid, // target
-        0   // confirmation
+        param1, 0, 0, 0, 0, 0, 0,       // param1 - param7
+        MAV_CMD_DO_DIGICAM_CONFIGURE,   // cmd
+        _sysid, _compid,                // target
+        0                               // confirmation
     };
 
     _link->send_message(MAVLINK_MSG_ID_COMMAND_LONG, (const char*)&pkt);
@@ -1367,16 +1121,10 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_control(bool shoot)
     float param5 = (shoot) ? 1 : 0;
 
     const mavlink_command_long_t pkt {
-        0,  // param1
-        0,  // param2
-        0,  // param3
-        0,  // param4
-        param5,  // param5
-        0,  // param6
-        0,  // param7
+        0, 0, 0, 0, param5, 0, 0,   // param1 - param7
         MAV_CMD_DO_DIGICAM_CONTROL, // cmd
-        _sysid, _compid, // target
-        0   // confirmation
+        _sysid, _compid,            // target
+        0                           // confirmation
     };
 
     _link->send_message(MAVLINK_MSG_ID_COMMAND_LONG, (const char*)&pkt);
@@ -1430,6 +1178,280 @@ void BP_Mount_STorM32_MAVLink::send_to_ground(uint32_t msgid, const char *pkt)
         c->send_message(pkt, entry);
     }
 }
+
+
+//------------------------------------------------------
+// AUTOPILOT STATE FOR GIMBAL DEVICE
+//------------------------------------------------------
+
+enum THISWOULDBEGREATTOHAVE {
+    MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF = 5,
+};
+
+// TODO: how do notify.flags.armed and hal.util->get_soft_armed() compare against each other, also across vehicles?
+/* old:
+    bool ahrs_nav_status_horiz_vel = false;
+    nav_filter_status nav_status;
+    if (ahrs.get_filter_status(nav_status) && nav_status.flags.horiz_vel) {
+        ahrs_nav_status_horiz_vel = true;
+    }
+
+    uint8_t status = 0;
+    if (ahrs.healthy()) { status |= STORM32LINK_FCSTATUS_AP_AHRSHEALTHY; }
+    if (ahrs.initialised()) { status |= STORM32LINK_FCSTATUS_AP_AHRSINITIALIZED; }
+    if (ahrs_nav_status_horiz_vel) { status |= STORM32LINK_FCSTATUS_AP_NAVHORIZVEL; }
+    if (gps.status() >= AP_GPS::GPS_OK_FIX_3D) { status |= STORM32LINK_FCSTATUS_AP_GPS3DFIX; }
+    if (notify.flags.armed) { status |= STORM32LINK_FCSTATUS_AP_ARMED; }
+    //if (hal.util->get_soft_armed()) { status |= STORM32LINK_FCSTATUS_AP_ARMED; }
+    // for copter this is !ap.land_complete, for plane this is new_is_flying
+    if (notify.flags.flying) { status |= STORM32LINK_FCSTATUS_AP_ISFLYING; }
+*/
+/*
+estimator status:
+
+mavlink flags                   nav_filter_status
+ESTIMATOR_ATTITUDE              attitude           : 1; // 0 - true if attitude estimate is valid
+ESTIMATOR_VELOCITY_HORIZ        horiz_vel          : 1; // 1 - true if horizontal velocity estimate is valid
+ESTIMATOR_VELOCITY_VERT         vert_vel           : 1; // 2 - true if the vertical velocity estimate is valid
+ESTIMATOR_POS_HORIZ_REL         horiz_pos_rel      : 1; // 3 - true if the relative horizontal position estimate is valid
+ESTIMATOR_POS_HORIZ_ABS         horiz_pos_abs      : 1; // 4 - true if the absolute horizontal position estimate is valid
+ESTIMATOR_POS_VERT_ABS          vert_pos           : 1; // 5 - true if the vertical position estimate is valid
+ESTIMATOR_POS_VERT_AGL          terrain_alt        : 1; // 6 - true if the terrain height estimate is valid
+ESTIMATOR_CONST_POS_MODE        const_pos_mode     : 1; // 7 - true if we are in const position mode
+ESTIMATOR_PRED_POS_HORIZ_REL    pred_horiz_pos_rel : 1; // 8 - true if filter expects it can produce a good relative horizontal position estimate - used before takeoff
+ESTIMATOR_PRED_POS_HORIZ_ABS    pred_horiz_pos_abs : 1; // 9 - true if filter expects it can produce a good absolute horizontal position estimate - used before takeoff
+
+ESTIMATOR_GPS_GLITCH            takeoff_detected   : 1; // 10 - true if optical flow takeoff has been detected
+ESTIMATOR_ACCEL_ERROR           takeoff            : 1; // 11 - true if filter is compensating for baro errors during takeoff
+                                touchdown          : 1; // 12 - true if filter is compensating for baro errors during touchdown
+                                using_gps          : 1; // 13 - true if we are using GPS position
+                                gps_glitching      : 1; // 14 - true if GPS glitching is affecting navigation accuracy
+                                gps_quality_good   : 1; // 15 - true if we can use GPS for navigation
+                                initalized         : 1; // 16 - true if the EKF has ever been healthy
+                                rejecting_airspeed : 1; // 17 - true if we are rejecting airspeed data
+                                dead_reckoning     : 1; // 18 - true if we are dead reckoning (e.g. no position or velocity source)
+
+ btw STorM32 only listens to ESTIMATOR_ATTITUDE and ESTIMATOR_VELOCITY_VERT
+ ahrs.healthy() becomes true during flip of quaternion => no-go
+ ahrs.initialised() is simply set after AP_AHRS_NAVEKF_SETTLE_TIME_MS 20000 !!
+                    it becomes true some secs after ESTIMATOR_ATTITUDE|ESTIMATOR_VELOCITY_VERT are set
+ ESTIMATOR_ATTITUDE can be set during flip of quaternion => no-go
+ ESTIMATOR_VELOCITY_VERT are set briefly after the quaternion flip ??Q: really, couldn't it also be raised in the flip?
+ ESTIMATOR_VELOCITY_VERT are set however even if there is no gps or alike! I find it hard to trust the data
+ => we fake it so:
+ for ESTIMATOR_ATTITUDE we delay the flag being raised by few secs
+ for ESTIMATOR_VELOCITY_VERT we check for gps like in AP_AHRS_DCM::groundspeed_vector(void)
+ btw STorM32 does also check for non-zero velocities for AHRSFix
+*/
+
+/*
+landed state:
+ GCS_Common.cpp: virtual MAV_LANDED_STATE landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
+ Copter has it: GCS_MAVLINK_Copter::landed_state(), yields ON_GROUND, TAKEOFF, IN_AIR, LANDING
+ Plane has it: GCS_MAVLINK_Plane::landed_state(), only yields ON_GROUND or IN_AIR
+ Blimp also has it, blimp not relevant for us
+ but is protected, so we needed to mock it up
+ we probably want to also take into account the arming state to mock something up
+ ugly as we will have vehicle dependency here
+*/
+
+
+void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device(void)
+{
+    const AP_AHRS &ahrs = AP::ahrs();
+
+    //-- attitude
+    Quaternion q;
+    if (!ahrs.get_quaternion(q)) { // it returns a bool, so it's a good idea to consider it
+        q.q1 = q.q2 = q.q3 = q.q4 = NAN;
+    }
+
+    Quaternion qold;
+    qold.from_rotation_matrix(ahrs.get_rotation_body_to_ned());
+
+    //-- velocities
+    // comment in AP_AHRS.cpp says "Must only be called if have_inertial_nav() is true", but probably not worth checking
+    Vector3f vel;
+    if (!ahrs.get_velocity_NED(vel)) { // it returns a bool, so it's a good idea to consider it
+        vel.x = vel.y = vel.z = 0.0f; // or NAN ???
+    }
+
+    float angular_velocity_z = ahrs.get_yaw_rate_earth();
+
+    //-- estimator status
+    uint16_t estimator_status = 0;
+
+    uint16_t nav_estimator_status = 0;
+    uint16_t nav_estimator_status2 = 0;
+
+    const uint32_t ESTIMATOR_MASK = (
+            ESTIMATOR_ATTITUDE |
+            ESTIMATOR_VELOCITY_HORIZ | ESTIMATOR_VELOCITY_VERT |
+            ESTIMATOR_POS_HORIZ_REL | ESTIMATOR_POS_HORIZ_ABS |
+            ESTIMATOR_POS_VERT_ABS | ESTIMATOR_POS_VERT_AGL |
+            ESTIMATOR_CONST_POS_MODE |
+            ESTIMATOR_PRED_POS_HORIZ_REL | ESTIMATOR_PRED_POS_HORIZ_ABS);
+
+    nav_filter_status nav_status;
+    if (ahrs.get_filter_status(nav_status)) {
+        nav_estimator_status = (uint16_t)(nav_status.value & ESTIMATOR_MASK);
+        nav_estimator_status2 = (uint16_t)(nav_status.value >> 10);
+    }
+
+    static uint32_t tahrs_healthy_ms = 0;
+    const bool ahrs_healthy = ahrs.healthy(); // it's a bit costly
+    if (!tahrs_healthy_ms && ahrs_healthy) tahrs_healthy_ms = AP_HAL::millis();
+
+    if (ahrs_healthy && (nav_estimator_status & ESTIMATOR_ATTITUDE) && ((AP_HAL::millis() - tahrs_healthy_ms) > 3000)) {
+        estimator_status |= ESTIMATOR_ATTITUDE; // -> QFix
+        if (ahrs.initialised() && (nav_estimator_status & ESTIMATOR_VELOCITY_VERT) && (AP::gps().status() >= AP_GPS::GPS_OK_FIX_2D)) {
+            estimator_status |= ESTIMATOR_VELOCITY_VERT; // -> AHRSFix
+        }
+    }
+
+    //-- landed state
+    uint8_t landed_state = gcs().get_landed_state();
+
+#if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
+// for copter we modify the landed states so as to reflect the 2 sec pre-take-off period
+// the way it is done leads to a PREPARING_FOR_TAKEOFF before takeoff, but also after landing!
+// we somehow would have to catch that it was flying before to suppress it
+// but we don't care, the gimbal will do inits when ON_GROUND, and apply them when transitioned to PREPARING_FOR_TAKEOFF
+// it won't do it for other transitions, so e.g. also not for plane
+    const AP_Notify &notify = AP::notify();
+    if ((landed_state == MAV_LANDED_STATE_ON_GROUND) && notify.flags.armed) landed_state = MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF;
+#endif
+
+    //-- yaw rate
+    // see https://github.com/ArduPilot/ardupilot/issues/22564
+    float yawrate = NAN;
+    const AP_Vehicle *vehicle = AP::vehicle();
+    Vector3f rate_ef_targets;
+    if ((vehicle != nullptr) && vehicle->get_rate_ef_targets(rate_ef_targets)) {
+        yawrate = rate_ef_targets.z;
+    }
+
+    //-- ready to send & log
+    static uint32_t tlast_us = 0;
+    uint32_t t_us = AP_HAL::micros();
+    uint32_t dt_us = t_us - tlast_us;
+    tlast_us = t_us;
+
+    mavlink_autopilot_state_for_gimbal_device_t pkt {
+        AP_HAL::micros64(),         // time_boot_us
+        { q.q1, q.q2, q.q3, q.q4 }, // attitude
+        0,                          // uint32_t q_estimated_delay_us
+        vel.x, vel.y, vel.z,        // speed in NED
+        0,                          // uint32_t v_estimated_delay_us
+        yawrate,                    // float feed_forward_angular_velocity_z
+        estimator_status,
+        _sysid, _compid,            // target
+        landed_state,
+        angular_velocity_z
+    };
+
+    if (_params.zflags & 0x20) {
+        pkt.q[0] = qold.q1; pkt.q[1] = qold.q2; pkt.q[2] = qold.q3; pkt.q[3] = qold.q4;
+    }
+
+    _link->send_message(MAVLINK_MSG_ID_AUTOPILOT_STATE_FOR_GIMBAL_DEVICE, (const char*)&pkt);
+
+    BP_LOG("MTLQ", BP_LOG_MTL_AUTOPILOTSTATE_Q_HEADER,
+        q.q1, q.q2, q.q3, q.q4,
+        qold.q1, qold.q2, qold.q3, qold.q4);
+    BP_LOG("MTLR", BP_LOG_MTL_AUTOPILOTSTATE_R_HEADER,
+        vel.x, vel.y, vel.z,
+        degrees(angular_velocity_z),
+        degrees(yawrate),
+        estimator_status,
+        landed_state,
+        nav_estimator_status,
+        nav_estimator_status2,
+        dt_us);
+}
+
+
+
+void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device_ext(void)
+{
+    const AP_AHRS &ahrs = AP::ahrs();
+
+#if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
+    Vector3f airspeed_vec_bf;
+    if (!ahrs.airspeed_vector_true(airspeed_vec_bf)) {
+        // if we don't have an airspeed estimate then we don't have a valid wind estimate on copters
+        return;
+    }
+#endif
+
+/*
+ https://github.com/ArduPilot/ardupilot/issues/6571
+ v_ground = v_air + v_wind // note direction of wind
+ there are soo many different accessors, estimates, etc
+ vfr_hud_airspeed(),
+ ahrs.groundspeed()
+ ahrs.groundspeed_vector()
+ ahrs.yaw, ahrs.yaw_sensor
+ ahrs.airspeed_estimate(airspeed)
+ ahrs.airspeed_estimate_true(airspeed)
+ ahrs.airspeed_vector_true(airspeed_vec_bf) // gives it in BF, not NED!
+ AP::gps().ground_speed()
+ AP_Airspeed::get_singleton()->get_airspeed()
+ ????
+ this gives some good insight!?
+ ahrs.groundspeed_vector() -> search for AP_AHRS_DCM::groundspeed_vector(void)
+ if airspeed_estimate_true(airspeed) then calculates it as gndVelADS = airspeed_vector + wind2d
+ else if gotGPS then gndVelGPS = Vector2f(cosf(cog), sinf(cog)) * AP::gps().ground_speed()
+ => AP does indeed do vg = va + vw
+ => shows how ground speed is estimated
+ question: how does this relate to ahrs.get_velocity_NED(vground)?
+ ahrs.airspeed_estimate(airspeed)
+ does true_airspeed_vec = nav_vel - wind_vel
+ this suggests that nav_vel is a good ground speed
+ also suggests that airspeed, wind are in NED too
+*/
+    Vector3f wind;
+    wind = ahrs.wind_estimate();
+
+    float vehicle_heading = ahrs.yaw;
+    float wind_heading = atan2f(-wind.y, -wind.x);
+    float ground_heading = NAN;
+    float air_heading = NAN;
+
+    float correction_angle = NAN;
+    Vector3f vground;
+    if (ahrs.get_velocity_NED(vground)) { // ??? is this correct, really ground speed ???
+        Vector3f vair = vground - wind;
+        float vg2 = vground.x * vground.x + vground.y * vground.y;
+        float va2 = vair.x * vair.x + vair.y * vair.y;
+        float vgva = vground.x * vair.x + vground.y * vair.y;
+        correction_angle = acosf(vgva / sqrtf(vg2 * va2));
+        if ((vground.x * vair.y - vground.y * vair.x) < 0.0f) correction_angle = -correction_angle;
+
+        ground_heading = atan2f(vground.y, vground.x);
+        air_heading = atan2f(vair.y, vair.x);
+    }
+
+/* we currently don't send, just log, we need to work it out what we want to do
+    const mavlink_autopilot_state_for_gimbal_device_ext_t pkt {
+        AP_HAL::micros64(),     // time_boot_us
+        wind.x, wind.y,         // wind_x, wind_y
+        correction_angle,       // wind_correction_angle
+        _sysid, _compid,        // target
+    };
+
+    _link->send_message(MAVLINK_MSG_ID_AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT, (const char*)&pkt); */
+
+    BP_LOG("MTLE", BP_LOG_MTL_AUTOPILOTSTATE_EXT_HEADER,
+        wind.x, wind.y, degrees(correction_angle),
+        degrees(vehicle_heading), degrees(wind_heading), degrees(ground_heading), degrees(air_heading));
+}
+
+
+
+
+
+
 
 
 
