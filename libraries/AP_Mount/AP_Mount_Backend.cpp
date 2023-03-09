@@ -88,7 +88,12 @@ void AP_Mount_Backend::send_gimbal_device_attitude_status(mavlink_channel_t chan
                                                    std::numeric_limits<double>::quiet_NaN(),    // roll axis angular velocity (NaN for unknown)
                                                    std::numeric_limits<double>::quiet_NaN(),    // pitch axis angular velocity (NaN for unknown)
                                                    std::numeric_limits<double>::quiet_NaN(),    // yaw axis angular velocity (NaN for unknown)
-                                                   0);  // failure flags (not supported)
+                                                   0,
+//OW
+                                                   std::numeric_limits<double>::quiet_NaN(),
+                                                   std::numeric_limits<double>::quiet_NaN()
+//OWEND
+                                                   );  // failure flags (not supported)
 }
 
 // process MOUNT_CONTROL messages received from GCS. deprecated.

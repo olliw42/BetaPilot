@@ -152,6 +152,10 @@ const AP_Param::GroupInfo AP_Mount_Params::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("_LEAD_PTCH", 13, AP_Mount_Params, pitch_stb_lead, 0.0f),
 
+//OW
+    AP_GROUPINFO("_ZFLAGS", 20, AP_Mount_Params, zflags, 0),
+//OWEND
+
     AP_GROUPEND
 };
 

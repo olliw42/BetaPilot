@@ -134,6 +134,11 @@ protected:
     // parameters for backends
     AP_Camera_Params _params[AP_CAMERA_MAX_INSTANCES];
 
+//OW
+    bool set_cam_mode(bool video_mode);
+    bool set_cam_photo_video(int8_t sw_flag);
+//OWEND
+
 private:
 
     static AP_Camera *_singleton;

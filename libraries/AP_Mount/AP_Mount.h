@@ -21,6 +21,13 @@
 
 #include "AP_Mount_config.h"
 
+//OW
+#ifdef HAL_MOUNT_ENABLED
+#undef HAL_MOUNT_ENABLED
+#endif
+#define HAL_MOUNT_ENABLED 1
+//OWEND
+
 #if HAL_MOUNT_ENABLED
 
 #include <AP_Math/AP_Math.h>
@@ -42,6 +49,9 @@ class AP_Mount_SToRM32_serial;
 class AP_Mount_Gremsy;
 class AP_Mount_Siyi;
 class AP_Mount_Scripting;
+//OW
+class BP_Mount_STorM32_MAVLink;
+//OWEND
 
 /*
   This is a workaround to allow the MAVLink backend access to the
@@ -60,6 +70,9 @@ class AP_Mount
     friend class AP_Mount_Gremsy;
     friend class AP_Mount_Siyi;
     friend class AP_Mount_Scripting;
+//OW
+    friend class BP_Mount_STorM32_MAVLink;
+//OWEND
 
 public:
     AP_Mount();
@@ -84,6 +97,9 @@ public:
         Mount_Type_BrushlessPWM = 7,    /// Brushless (stabilized) gimbal using PWM protocol
         Mount_Type_Siyi = 8,            /// Siyi gimbal using custom serial protocol
         Mount_Type_Scripting = 9,       /// Scripting gimbal driver
+//OW
+        Mount_Type_STorM32_MAVLink = 83
+//OWEND
     };
 
     // init - detect and initialise all mounts
@@ -190,6 +206,21 @@ public:
 
     // parameter var table
     static const struct AP_Param::GroupInfo        var_info[];
+
+//OW
+    // set photo or video mode
+    bool set_cam_mode(uint8_t instance, bool video_mode);
+
+    // 3-way switch mode
+    bool set_cam_photo_video(uint8_t instance, int8_t sw_flag);
+
+    // this is somewhat different to handle_message() in that it catches all messages
+    // with significant work it potentially could be combined, but let's play it safe and not introduce side effects
+    void handle_msg(mavlink_channel_t chan, const mavlink_message_t &msg);
+
+    // send banner
+    void send_banner(void);
+//OWEND
 
 protected:
 
