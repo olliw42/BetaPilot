@@ -1,10 +1,13 @@
 #pragma once
 
-#define BETAPILOTVERSION "v057.1"
+#define BETAPILOTVERSION "v058.0"
 
 /*
 search for //OW to find all changes
 
+2023.03.09: v058.0
+ aligned with master, 4.4.0-dev
+ lots of work due to AP_Camera, gcs link
 2023.02.11: v057.1
  upgraded to Copter4.3.3-rc1, has get_rate_ef_targets(), does not yet have corrected 1/3 param download
 2023.01.20: v056
