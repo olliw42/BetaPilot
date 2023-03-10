@@ -1,10 +1,12 @@
 #pragma once
 
-#define BETAPILOTVERSION "v057.2"
+#define BETAPILOTVERSION "v057.3"
 
 /*
 search for //OW to find all changes
 
+2023.03.10: v057.3
+ upgraded to Copter4.3.5-rc1
 2023.02.26: v057.2
  make it compile for MatekF405-CAN
  upgraded to Copter4.3.4-rc1

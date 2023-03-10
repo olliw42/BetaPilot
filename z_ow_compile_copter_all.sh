@@ -4,7 +4,7 @@ echo hello
 set -e #any subsequent commands which fail will cause the shell script to exit immediately
 set -x #echo on
 
-version=v0572
+version=v0573
 vehicle=copter
 
 compile(){
