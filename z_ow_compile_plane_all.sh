@@ -3,7 +3,7 @@ echo hello
 set -e #any subsequent commands which fail will cause the shell script to exit immediately
 set -x #echo on
 
-version=v055
+version=v0573
 vehicle=plane
 
 compile(){
@@ -14,10 +14,10 @@ compile(){
 
 #./waf clean
 
-compile MatekH743
-compile CubeOrange
-compile MatekF765-Wing
-compile fmuv3
-compile omnibusf4
-compile omnibusf4pro
+#compile MatekH743
+#compile CubeOrange
+#compile MatekF765-Wing
+#compile fmuv3
+#too large compile omnibusf4
+#too large compile omnibusf4pro
 

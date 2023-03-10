@@ -1,10 +1,13 @@
 #pragma once
 
-#define BETAPILOTVERSION "v056.1"
+#define BETAPILOTVERSION "v057.3"
 
 /*
 search for //OW to find all changes
 
+2023.03.10: v057.3
+ upgraded to Plane4.3.4 stable
+ aligned with BetaCopter435rc1
 2023.01.16: v055
  aux functions
  AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT
