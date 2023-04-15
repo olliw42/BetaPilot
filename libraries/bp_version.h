@@ -1,10 +1,12 @@
 #pragma once
 
-#define BETAPILOTVERSION "v057.3"
+#define BETAPILOTVERSION "v058"
 
 /*
 search for //OW to find all changes
 
+2023.04.15: v058
+ upgraded to Plane4.3.5 stable
 2023.03.10: v057.3
  upgraded to Plane4.3.4 stable
  aligned with BetaCopter435rc1
