@@ -15,6 +15,10 @@
 #include <stdio.h>
 #include <AP_Math/location.h>
 #include <SRV_Channel/SRV_Channel.h>
+//OW
+#include <AP_Logger/AP_Logger.h>
+#include "BP_Mount_STorM32_MAVLink.h"
+//OWEND
 
 const AP_Param::GroupInfo AP_Mount::var_info[] = {
 
@@ -117,6 +121,13 @@ void AP_Mount::init()
             _backends[instance] = new AP_Mount_Siyi(*this, _params[instance], instance);
             _num_instances++;
 #endif // HAL_MOUNT_SIYI_ENABLED
+
+//OW
+        // check for STorM32_MAVLink mounts using MAVLink protocol
+        } else if (mount_type == Mount_Type_STorM32_MAVLink) {
+            _backends[instance] = new BP_Mount_STorM32_MAVLink(*this, _params[instance], instance);
+            _num_instances++;
+//OWEND
 
         }
 
@@ -672,5 +683,41 @@ AP_Mount *mount()
 }
 
 };
+
+//OW
+bool AP_Mount::set_cam_mode(uint8_t instance, bool video_mode)
+{
+    if (!check_instance(instance)) {
+        return false;
+    }
+    return _backends[instance]->set_cam_mode(video_mode);
+}
+
+bool AP_Mount::set_cam_photo_video(uint8_t instance, int8_t sw_flag)
+{
+    if (!check_instance(instance)) {
+        return false;
+    }
+    return _backends[instance]->set_cam_photo_video(sw_flag);
+}
+
+void AP_Mount::handle_msg(mavlink_channel_t chan, const mavlink_message_t &msg)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            _backends[instance]->handle_msg(msg);
+        }
+    }
+}
+
+void AP_Mount::send_banner(void)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            _backends[instance]->send_banner();
+        }
+    }
+}
+//OWEND
 
 #endif /* HAL_MOUNT_ENABLED */
