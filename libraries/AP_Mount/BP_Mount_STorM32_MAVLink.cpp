@@ -526,8 +526,7 @@ void BP_Mount_STorM32_MAVLink::find_gimbal(void)
 /*
 
     // search for a mavlink enabled gimbal
-    //if (_link == nullptr) {
-    if (!_compid) {
+    if (_link == nullptr) {
         // we expect that instance 0 has compid = MAV_COMP_ID_GIMBAL, instance 1 has compid = MAV_COMP_ID_GIMBAL2, etc
         uint8_t compid = (_instance == 0) ? MAV_COMP_ID_GIMBAL : MAV_COMP_ID_GIMBAL2 + (_instance - 1);
         _link = GCS_MAVLINK::find_by_mavtype_and_compid(MAV_TYPE_GIMBAL, compid, _sysid);
@@ -1425,25 +1424,26 @@ void BP_Mount_STorM32_MAVLink::send_mount_status_to_ground(MountStatus &status)
 // this is essentially GCS::send_to_active_channels(uint32_t msgid, const char *pkt)
 // but exempts the gimbal channel
 //TODO: Is dodgy as it assumes that ONLY the gimbal is on the link !!
-//      We actually only need to send to the ground, i.e., the gcs-es (but there could be more than one)
+//      We actually only need to send to the ground, i.e., to the gcs-es (there could be more than one)
 //      This is what this achieves for gcs-ap-g or gcs-ap-cc-g topologies, but not for others
 void BP_Mount_STorM32_MAVLink::send_to_ground(uint32_t msgid, const char *pkt)
 {
     const mavlink_msg_entry_t* entry = mavlink_get_msg_entry(msgid);
-
     if (entry == nullptr) {
         return;
     }
-
     for (uint8_t i=0; i<gcs().num_gcs(); i++) {
         GCS_MAVLINK &c = *gcs().chan(i);
 
         if (c.get_chan() == _chan) continue; // the gimbal is on this channel
 
-        if (!c.is_active()) continue;
-        if (entry->max_msg_len + GCS_MAVLINK::packet_overhead_chan(c.get_chan()) > c.get_uart()->txspace()) {
-            continue; // no space on this channel
+        if (!c.is_active()) {
+            continue;
         }
+        if (!c.is_active()) {
+            continue;
+        }
+        // size checks done by this method:
         c.send_message(pkt, entry);
     }
 }

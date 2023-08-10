@@ -571,7 +571,7 @@ void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_t* 
 void AP_RCProtocol::handle_radio_link_stats(mavlink_radio_link_stats_t* packet)
 {
 // can be handled like CRSF (= receiver) or like RADIO_STATUS (= telemetry)
-// the user does it via RssiType::RECEIVER or RssiType::TELEMETRY_RADIO_RSSI setting
+// the user does decide it via RssiType::RECEIVER or RssiType::TELEMETRY_RADIO_RSSI setting
 // so isn't decided here, but is decide somewhere higher up in the outside
 // this here is needed only in case the user wants RssiType::RECEIVER
 

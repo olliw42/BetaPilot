@@ -485,6 +485,7 @@ protected:
 
 //OW RADIOLINK
     // called from vehicle class handler
+    mavlink_radio_t _mavlink_radio_packet;
     void handle_radio_link_stats(const mavlink_message_t &msg, bool log_radio);
     void handle_radio_link_flow_control(const mavlink_message_t &msg, bool log_radio);
     // called from common handler

@@ -6371,8 +6371,8 @@ bool GCS_MAVLINK::accept_packet(const mavlink_status_t &status,
     // we want to handle messages from a radio
     // we currently narrow it down to "ours" to play it safe
     if ((msg.compid == MAV_COMP_ID_TELEMETRY_RADIO) &&
-        (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS ||
-         msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL || msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_STATS)) {
+        (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS || msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_STATS ||
+         msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL)) {
         return true;
     }
 //OWEND
@@ -6751,24 +6751,22 @@ MAV_RESULT GCS_MAVLINK::handle_control_high_latency(const mavlink_command_long_t
 #endif // HAL_HIGH_LATENCY2_ENABLED
 
 //OW RADIOLINK
-static mavlink_radio_t ow_mavlink_radio_packet;
-
 void GCS_MAVLINK::handle_radio_link_stats(const mavlink_message_t &msg, bool log_radio)
 {
     mavlink_radio_link_stats_t packet;
     mavlink_msg_radio_link_stats_decode(&msg, &packet);
 
-    // let the AP_RCProtocol do it's thing
-    // is doing a thing if AP_RCProtocol::MAVLINK_RADIO is selected by the user
+    // let AP_RCProtocol do its thing
+    // is doing something if AP_RCProtocol::MAVLINK_RADIO is selected by the user
     // will provide rssi if also AP_RSSI::RssiType::RECEIVER is selected by the user
     AP::RC().handle_radio_link_stats(&packet);
 
     // handle the rssi info
-    // is doing a thing if AP_RSSI::RssiType::TELEMETRY_RADIO_RSSI is selected by the user
+    // jump out if AP_RSSI::RssiType::TELEMETRY_RADIO_RSSI is not selected by the user
     AP_RSSI* rssi = AP::rssi();
     if ((rssi != nullptr) && !rssi->enabled(AP_RSSI::RssiType::TELEMETRY_RADIO_RSSI)) return;
 
-    // convert it to what we would get from RADIO_STATUS
+    // convert it to what one would get from RADIO_STATUS
     uint8_t _rssi = packet.rx_rssi1;
     uint8_t _remrssi = (packet.tx_rssi1 == UINT8_MAX) ? 0 : packet.tx_rssi1;
     uint8_t _noise = 0;
@@ -6776,7 +6774,7 @@ void GCS_MAVLINK::handle_radio_link_stats(const mavlink_message_t &msg, bool log
 
     if (packet.flags & RADIO_LINK_STATS_FLAGS_RSSI_DBM) {
         // the rssi values are not in MAVLink standard, but negative dBm
-        // so we convert using ArduPilot's CRSF conversion, see AP_RCProtocol_CRSF::process_link_stats_frame()
+        // so convert using ArduPilot's CRSF conversion, see AP_RCProtocol_CRSF::process_link_stats_frame()
         if (_rssi < 50) {
             _rssi = 254;
         } else if (_rssi > 120) {
@@ -6804,15 +6802,15 @@ void GCS_MAVLINK::handle_radio_link_stats(const mavlink_message_t &msg, bool log
         last_radio_status.remrssi_ms = now;
     }
 
-    // we fake it for logging
-    ow_mavlink_radio_packet.rssi = _rssi;
-    ow_mavlink_radio_packet.remrssi = _remrssi;
-    ow_mavlink_radio_packet.noise = _noise;
-    ow_mavlink_radio_packet.remnoise = _remnoise;
+    // prepare for logging
+    _mavlink_radio_packet.rssi = _rssi;
+    _mavlink_radio_packet.remrssi = _remrssi;
+    _mavlink_radio_packet.noise = _noise;
+    _mavlink_radio_packet.remnoise = _remnoise;
 
     // log rssi, noise, etc if logging Performance monitoring data
     if (log_radio) {
-        AP::logger().Write_Radio(ow_mavlink_radio_packet);
+        AP::logger().Write_Radio(_mavlink_radio_packet);
     }
 }
 
@@ -6852,12 +6850,12 @@ void GCS_MAVLINK::handle_radio_link_flow_control(const mavlink_message_t &msg, b
     }
 #endif
 
-    // we fake it for logging
-    ow_mavlink_radio_packet.txbuf = _txbuf;
+    // prepare for logging
+    _mavlink_radio_packet.txbuf = _txbuf;
 
     // log rssi, noise, etc if logging Performance monitoring data
     if (log_radio) {
-        AP::logger().Write_Radio(ow_mavlink_radio_packet);
+        AP::logger().Write_Radio(_mavlink_radio_packet);
     }
 }
 
