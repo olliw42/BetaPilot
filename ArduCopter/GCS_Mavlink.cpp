@@ -1402,6 +1402,15 @@ void GCS_MAVLINK_Copter::handleMessage(const mavlink_message_t &msg)
         handle_radio_status(msg, copter.should_log(MASK_LOG_PM));
         break;
     }
+//OW RADIOLINK
+    case MAVLINK_MSG_ID_RADIO_LINK_STATS:
+        handle_radio_link_stats(msg, copter.should_log(MASK_LOG_PM));
+        break;
+
+    case MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL:
+        handle_radio_link_flow_control(msg, copter.should_log(MASK_LOG_PM));
+        break;
+//OWEND
 
     case MAVLINK_MSG_ID_TERRAIN_DATA:
     case MAVLINK_MSG_ID_TERRAIN_CHECK:
