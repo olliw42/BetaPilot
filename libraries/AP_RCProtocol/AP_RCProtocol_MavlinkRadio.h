@@ -17,6 +17,6 @@ public:
 
 private:
 
-    int16_t rssi = -1;
+    int16_t rssi = -1; // TODO: can't we just use the backend's fields???
     int16_t link_quality = -1;
 };
