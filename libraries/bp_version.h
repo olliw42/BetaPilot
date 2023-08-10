@@ -57,8 +57,10 @@ search for //OW to find all changes
  upgraded to storm32.xml v 25. Nov. 2020
  upgraded to storm32_lib.h v 17. Nov. 2020
 
+wscript                 1x
+
 ArduCopter specific
-- GCS_Mavlink.cpp:      (2 comments, no change)
+- GCS_Mavlink.cpp:      0x, 1x RADIOLINK, 3x FRPT
 - version.h:            1x
 
 ArduPlane specific
@@ -66,18 +68,33 @@ ArduPlane specific
 - version.h:            1x
 
 Libraries:
-- AP_Mount_Backend.cpp: 4x  (+3 comments)
-- AP_Mount_Backend.h:   1x  (+1 comment)
-- AP_Mount.cpp:         7x  (+1 comment)
-- AP_Mount.h:           6x
-- GCS_Common.cpp:       2x
-- GCS.h:                2x
+- AP_Camera.cpp         5x
+- AP_Camera.h           1x
+- AP_Mount_Backend.cpp: 1x
+- AP_Mount_Backend.h:   4x
+- AP_Mount.cpp:         3x
+- AP_Mount.h:           5x
+- AP_RCProtocol.h       4x
+- AP_RSSI.h             1x
+- ap_message.h          0x, 1x FRPT
+- GCS_Common.cpp:       3x, 3x RADIOLINK, 4x FRPT
+- GCS_MAVLink.h         2x
+- GCS_Param.cpp         0x, 1x FRPT
+- GCS.h:                2x, 1x RADIOLINK, 3x FRPT
+- MAVLink_routing.cpp   1x, 1x RADIOLINK
+- MAVLink_routing.h     1x
+- RC_Channel.cpp        4x
 
 Additional Files in library:
 - bp_version.h
 - AP_Mount/BP_Mount_STorM32_MAVLink.cpp
 - AP_Mount/BP_Mount_STorM32_MAVLink.h
 - AP_Mount/STorM32_lib.h
+
+- AP_Frsky_SPort_Protocol.cpp
+- AP_Frsky_SPort_Protocol.h
+- AP_RCProtocol_MavlinkRadio.cpp
+- AP_RCProtocol_MavlinkRadio.h
 
 
 Effect of SYSID_MYGCS parameter value:
