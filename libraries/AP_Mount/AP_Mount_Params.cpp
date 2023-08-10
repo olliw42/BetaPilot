@@ -166,6 +166,10 @@ const AP_Param::GroupInfo AP_Mount_Params::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO_FLAGS("_DEVID", 15, AP_Mount_Params, dev_id, 0, AP_PARAM_FLAG_INTERNAL_USE_ONLY),
 
+//OW
+    AP_GROUPINFO("_ZFLAGS", 20, AP_Mount_Params, zflags, 0),
+//OWEND
+
     AP_GROUPEND
 };
 

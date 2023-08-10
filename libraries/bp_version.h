@@ -5,6 +5,9 @@
 /*
 search for //OW to find all changes
 
+2023.08.10: v058
+ upgraded to ArduPilot master 4.5.0-dev
+
 2023.03.10: v058
  upgraded to Copter4.3.6 stable
 2023.03.10: v057.3

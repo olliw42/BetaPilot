@@ -46,6 +46,9 @@ class AP_Mount_Siyi;
 class AP_Mount_Scripting;
 class AP_Mount_Xacti;
 class AP_Mount_Viewpro;
+//OW
+class BP_Mount_STorM32_MAVLink;
+//OWEND
 
 /*
   This is a workaround to allow the MAVLink backend access to the
@@ -66,6 +69,9 @@ class AP_Mount
     friend class AP_Mount_Scripting;
     friend class AP_Mount_Xacti;
     friend class AP_Mount_Viewpro;
+//OW
+    friend class BP_Mount_STorM32_MAVLink;
+//OWEND
 
 public:
     AP_Mount();
@@ -114,6 +120,9 @@ public:
 #if HAL_MOUNT_VIEWPRO_ENABLED
         Viewpro = 11,        /// Viewpro gimbal using a custom serial protocol
 #endif
+//OW
+        STorM32_MAVLink = 83
+//OWEND
     };
 
     // init - detect and initialise all mounts
@@ -249,6 +258,21 @@ public:
 
     // parameter var table
     static const struct AP_Param::GroupInfo        var_info[];
+
+//OW
+    // set photo or video mode
+    bool set_cam_mode(uint8_t instance, bool video_mode);
+
+    // 3-way switch mode
+    bool set_cam_photo_video(uint8_t instance, int8_t sw_flag);
+
+    // this is somewhat different to handle_message() in that it catches all messages
+    // with significant work it potentially could be combined, but let's play it safe and not introduce side effects
+    void handle_msg(mavlink_channel_t chan, const mavlink_message_t &msg);
+
+    // send banner
+    void send_banner(void);
+//OWEND
 
 protected:
 

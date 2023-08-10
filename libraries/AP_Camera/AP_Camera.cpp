@@ -661,4 +661,36 @@ AP_Camera *camera()
 
 }
 
+//OW
+bool AP_Camera::set_cam_mode(bool video_mode)
+{
+/* XX ??
+#if HAL_MOUNT_ENABLED
+    if (get_trigger_type() == CamTrigType::mount) {
+        AP_Mount* mount = AP::mount();
+        if (mount != nullptr) {
+            return mount->set_cam_mode(0, video_mode);
+        }
+    }
+#endif
+*/
+    return false;
+}
+
+bool AP_Camera::set_cam_photo_video(int8_t sw_flag)
+{
+/* XX ??
+#if HAL_MOUNT_ENABLED
+    if (get_trigger_type() == CamTrigType::mount) {
+        AP_Mount* mount = AP::mount();
+        if (mount != nullptr) {
+            return mount->set_cam_photo_video(0, sw_flag);
+        }
+    }
+#endif
+*/
+    return false;
+}
+//OWEND
+
 #endif

@@ -4114,11 +4114,13 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
 
 #if AP_EFI_MAV_ENABLED
     case MAVLINK_MSG_ID_EFI_STATUS:
-            AP_EFI *efi = AP::EFI();
-            if (efi) {
-                efi->handle_EFI_message(msg);
-            }
-        	break;
+    {
+        AP_EFI *efi = AP::EFI();
+        if (efi) {
+            efi->handle_EFI_message(msg);
+        }
+        break;
+    }
 #endif
 
 //OW RADIOLINK
@@ -6865,31 +6867,5 @@ void GCS_MAVLINK::handle_radio_rc_channels(const mavlink_message_t &msg)
     mavlink_msg_radio_rc_channels_decode(&msg, &packet);
 
     AP::RC().handle_radio_rc_channels(&packet);
-}
-//OWEND
-//OW FRPT
-// this is tentative, just demo
-// we probably want some timing, some packets do not need to be send so often
-// maybe we also want to make which packets are send dependent on which streams are enabled
-// or vice versa, modify the streams depending on whether frsky passthorugh is send
-// one also could make it dependent on which rate is higher
-
-void GCS_MAVLINK::send_frsky_passthrough_array()
-{
-    AP_Frsky_SPort_Protocol* pt = AP::frsky_sport_protocol();
-    if (pt == nullptr) return;
-
-    uint8_t count = 0;
-    uint8_t packet_buf[MAVLINK_MSG_FRSKY_PASSTHROUGH_ARRAY_FIELD_PACKET_BUF_LEN] = {0}; // max 40 packets!
-
-    pt->assemble_array(packet_buf, &count, 21, AP_HAL::millis());
-
-    if (count == 0) return; // nothing to send
-
-    mavlink_msg_frsky_passthrough_array_send(
-        chan,
-        AP_HAL::millis(), // time since system boot
-        count,
-        packet_buf);
 }
 //OWEND
