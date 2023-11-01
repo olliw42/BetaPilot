@@ -140,6 +140,17 @@ bool MAVLink_routing::check_and_forward(GCS_MAVLINK &in_link, const mavlink_mess
     int16_t target_component = -1;
     get_targets(msg, target_system, target_component);
 
+//OW RADIOLINK
+    // we want to handle messages from a radio as if they had target_system = our system, target_component = 0
+    // we currently narrow it down to "our" messages to play it safe
+    if ((msg.compid == MAV_COMP_ID_TELEMETRY_RADIO) &&
+        (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS || msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_STATS ||
+         msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL)) {
+        target_system = mavlink_system.sysid;
+        target_component = 0;
+    }
+//OWEND
+
     bool broadcast_system = (target_system == 0 || target_system == -1);
     bool broadcast_component = (target_component == 0 || target_component == -1);
     bool match_system = broadcast_system || (target_system == mavlink_system.sysid);
@@ -424,5 +435,34 @@ void MAVLink_routing::get_targets(const mavlink_message_t &msg, int16_t &sysid, 
         compid = _MAV_RETURN_uint8_t(&msg,  msg_entry->target_component_ofs);
     }
 }
+
+//OW
+void MAVLink_routing::send_to_all(uint32_t msgid, const char *pkt)
+{
+    const mavlink_msg_entry_t *entry = mavlink_get_msg_entry(msgid);
+    if (entry == nullptr) {
+        return;
+    }
+
+    bool sent_to_chan[MAVLINK_COMM_NUM_BUFFERS] {};
+
+    for (uint8_t i=0; i<num_routes; i++) {
+        if (sent_to_chan[routes[i].channel]) {
+            continue;
+        }
+        if (comm_get_txspace(routes[i].channel) <
+            ((uint16_t)entry->max_msg_len) + GCS_MAVLINK::packet_overhead_chan(routes[i].channel)) {
+            continue;
+        }
+        _mav_finalize_message_chan_send(routes[i].channel,
+                                        entry->msgid,
+                                        pkt,
+                                        entry->min_msg_len,
+                                        entry->max_msg_len,
+                                        entry->crc_extra);
+        sent_to_chan[routes[i].channel] = true;
+    }
+}
+//OWEND
 
 #endif  // HAL_GCS_ENABLED

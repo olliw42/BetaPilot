@@ -155,6 +155,11 @@ public:
     // set if vehicle is in AUTO mode
     void set_is_auto_mode(bool enable) { _is_in_auto_mode = enable; }
 
+//OW
+    bool set_cam_mode(bool video_mode);
+    bool set_cam_photo_video(int8_t sw_flag);
+//OWEND
+
 #if AP_CAMERA_SCRIPTING_ENABLED
     // structure and accessors for use by scripting backends
     typedef struct {
