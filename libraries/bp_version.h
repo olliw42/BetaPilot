@@ -61,7 +61,7 @@ search for //OW to find all changes
  upgraded to storm32_lib.h v 17. Nov. 2020
 
 ArduCopter specific
-- GCS_Mavlink.cpp:      (2 comments, no change)
+- GCS_Mavlink.cpp:      (2 comments, no change)  1x RADIOLINK
 - version.h:            1x
 
 ArduPlane specific
@@ -69,18 +69,28 @@ ArduPlane specific
 - version.h:            1x
 
 Libraries:
-- AP_Mount_Backend.cpp: 4x  (+3 comments)
-- AP_Mount_Backend.h:   1x  (+1 comment)
-- AP_Mount.cpp:         7x  (+1 comment)
-- AP_Mount.h:           6x
-- GCS_Common.cpp:       2x
-- GCS.h:                2x
+- AP_Camera.cpp:        1x
+- AP_Camera.h:          1x
+- AP_Mount_Backend.cpp: ?
+- AP_Mount_Backend.h:   1x
+- AP_Mount_Params.cpp:  1x
+- AP_Mount_Params.h:    1x
+- AP_Mount.cpp:         3x
+- AP_Mount.h:           8x
+- AP_RCProtocol.cpp:        4x RADIOLINK
+- AP_RCProtocol.h:          4x RADIOLINK
+- AP_RSSI.h:                1x RADIOLINK
+- GCS_Common.cpp:       2x  3x RADIOLINK
+- GCS_MAVLink.h:        2x
+- GCS.h:                2x  1x RADIOLINK
+- MAVLink_routing.cpp:  1x  1x RADIOLINK
+- MAVLink_routing.h:    1x
+- RC_Channel.cpp:       4x
 
 Additional Files in library:
 - bp_version.h
 - AP_Mount/BP_Mount_STorM32_MAVLink.cpp
 - AP_Mount/BP_Mount_STorM32_MAVLink.h
-- AP_Mount/STorM32_lib.h
 
 
 Effect of SYSID_MYGCS parameter value:
