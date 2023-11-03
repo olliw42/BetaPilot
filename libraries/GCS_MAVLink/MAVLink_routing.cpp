@@ -436,33 +436,5 @@ void MAVLink_routing::get_targets(const mavlink_message_t &msg, int16_t &sysid, 
     }
 }
 
-//OW
-void MAVLink_routing::send_to_all(uint32_t msgid, const char *pkt)
-{
-    const mavlink_msg_entry_t *entry = mavlink_get_msg_entry(msgid);
-    if (entry == nullptr) {
-        return;
-    }
-
-    bool sent_to_chan[MAVLINK_COMM_NUM_BUFFERS] {};
-
-    for (uint8_t i=0; i<num_routes; i++) {
-        if (sent_to_chan[routes[i].channel]) {
-            continue;
-        }
-        if (comm_get_txspace(routes[i].channel) <
-            ((uint16_t)entry->max_msg_len) + GCS_MAVLINK::packet_overhead_chan(routes[i].channel)) {
-            continue;
-        }
-        _mav_finalize_message_chan_send(routes[i].channel,
-                                        entry->msgid,
-                                        pkt,
-                                        entry->min_msg_len,
-                                        entry->max_msg_len,
-                                        entry->crc_extra);
-        sent_to_chan[routes[i].channel] = true;
-    }
-}
-//OWEND
 
 #endif  // HAL_GCS_ENABLED

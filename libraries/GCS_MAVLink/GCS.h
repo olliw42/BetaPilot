@@ -480,10 +480,6 @@ public:
 
     MAV_RESULT set_message_interval(uint32_t msg_id, int32_t interval_us);
 
-//OW
-    static void send_to_all(uint32_t msgid, const char *pkt) { routing.send_to_all(msgid, pkt); }
-//OWEND
-
 protected:
 
 //OW RADIOLINK
@@ -1263,7 +1259,6 @@ public:
 
 //OW
     uint8_t get_landed_state(void) const { return num_gcs() > 0 ? chan(0)->landed_state() : MAV_LANDED_STATE_UNDEFINED; }
-    uint8_t sysid_my_gcs() { return num_gcs() > 0 ? chan(0)->sysid_my_gcs() : 0; }
 //OWEND
 
 protected:

@@ -135,10 +135,7 @@ public:
     virtual void handle_param_value(const mavlink_message_t &msg) {}
 
     // handle a GLOBAL_POSITION_INT message
-//OW
-//    bool handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet);
-    virtual bool handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet);
-//OWEND
+    bool handle_global_position_int(uint8_t msg_sysid, const mavlink_global_position_int_t &packet);
 
     // handle GIMBAL_DEVICE_INFORMATION message
     virtual void handle_gimbal_device_information(const mavlink_message_t &msg) {}
@@ -204,8 +201,6 @@ public:
     // send banner
     virtual void send_banner(void) {}
 
-    // frontend access
-    bool is_primary(void) { return (_instance == _frontend._primary); }
 //OWEND
 
     //

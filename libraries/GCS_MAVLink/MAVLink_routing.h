@@ -49,10 +49,6 @@ public:
      */
     bool find_by_mavtype_and_compid(uint8_t mavtype, uint8_t compid, uint8_t &sysid, mavlink_channel_t &channel) const;
 
-//OW
-    void send_to_all(uint32_t msgid, const char *pkt);
-//OWEND
-
 private:
     // a simple linear routing table. We don't expect to have a lot of
     // routes, so a scalable structure isn't worthwhile yet.

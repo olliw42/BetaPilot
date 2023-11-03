@@ -37,28 +37,7 @@ search for //OW to find all changes
  frsky_passthrough_array support, new param SRx_FRPT added to set stream rate
  radio_rc_channels, radio_link_flow_control, radio_link_stats support added
  upgraded to Copter4.3.0-beta1
-2022.09.19: v054
- upgraded to Copter4.2.3
- upgraded to Copter4.2.1
- upgraded to Copter4.2.1-rc1
- upgraded to Copter4.2.0
- upgraded to Plane4.2.1
- Ardu is unfortunately still on storm32.xml v 4. Feb. 2021
-2021.10.08: v052
- upgraded to Copter4.1.0
- upgraded to storm32.xml v 6. Okt. 2021
- more zflags, logging
- reverted correction to CMD_DO_MOUNT_CONTROL bug, it's not going to change and it's acknowledged
-2021.04.05:
- upgraded to Copter4.0.7
-2021.02.05:
- upgraded to Copter4.0.6
- upgraded to storm32.xml v 4. Feb. 2021, 600xx ranges
- dual mount support if enabled
-2020.11.25:
- upgraded to Copter4.0.5
- upgraded to storm32.xml v 25. Nov. 2020
- upgraded to storm32_lib.h v 17. Nov. 2020
+
 
 ArduCopter specific
 - GCS_Mavlink.cpp:      (2 comments, no change)  1x RADIOLINK
