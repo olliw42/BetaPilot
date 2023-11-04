@@ -692,6 +692,9 @@ void RC_Channel::init_aux_function(const aux_func_t ch_option, const AuxSwitchPo
 #if HAL_MOUNT_ENABLED
     case AUX_FUNC::RETRACT_MOUNT1:
     case AUX_FUNC::MOUNT_LOCK:
+//OW
+    case AUX_FUNC::RETRACT_MOUNT1_3POS:
+//OWEND
 #endif
     case AUX_FUNC::LOG_PAUSE:
     case AUX_FUNC::ARM_EMERGENCY_STOP:
@@ -726,6 +729,9 @@ const RC_Channel::LookupTable RC_Channel::lookuptable[] = {
     { AUX_FUNC::PARACHUTE_3POS,"Parachute3Position"},
     { AUX_FUNC::MISSION_RESET,"MissionReset"},
     { AUX_FUNC::RETRACT_MOUNT1,"RetractMount1"},
+//OW
+//    { AUX_FUNC::RETRACT_MOUNT1_3POS,"RetractMount1 3pos"},
+//OWEND
     { AUX_FUNC::RELAY,"Relay1"},
     { AUX_FUNC::MOTOR_ESTOP,"MotorEStop"},
     { AUX_FUNC::MOTOR_INTERLOCK,"MotorInterlock"},
@@ -1526,21 +1532,12 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
         if (mount == nullptr) {
             break;
         }
-//OW
-static enum MAV_MOUNT_MODE mode_last = MAV_MOUNT_MODE_RETRACT;
-//OWEND
         switch (ch_flag) {
         case AuxSwitchPos::HIGH:
-//OW
-            if (mount->get_mode(0) > MAV_MOUNT_MODE_NEUTRAL) mode_last = mount->get_mode(0);
-//OWEND
             mount->set_mode(0,MAV_MOUNT_MODE_RETRACT);
             break;
         case AuxSwitchPos::MIDDLE:
             // nothing
-//OW
-            if (mode_last > MAV_MOUNT_MODE_NEUTRAL) mount->set_mode(0, mode_last);
-//OWEND
             break;
         case AuxSwitchPos::LOW:
             mount->set_mode_to_default(0);
@@ -1557,6 +1554,29 @@ static enum MAV_MOUNT_MODE mode_last = MAV_MOUNT_MODE_RETRACT;
         mount->set_yaw_lock(ch_flag == AuxSwitchPos::HIGH);
         break;
     }
+
+//OW
+//    case AUX_FUNC::RETRACT_MOUNT1:
+    case AUX_FUNC::RETRACT_MOUNT1_3POS: {
+        AP_Mount *mount = AP::mount();
+        if (mount == nullptr) {
+            break;
+        }
+        switch (ch_flag) {
+        case AuxSwitchPos::HIGH:
+            if (mount->get_mode(0) > MAV_MOUNT_MODE_NEUTRAL) _mount_mode_last = mount->get_mode(0);
+            mount->set_mode(0,MAV_MOUNT_MODE_RETRACT);
+            break;
+        case AuxSwitchPos::MIDDLE:
+            if (_mount_mode_last > MAV_MOUNT_MODE_NEUTRAL) mount->set_mode(0, _mount_mode_last);
+            break;
+        case AuxSwitchPos::LOW:
+            mount->set_mode_to_default(0);
+            break;
+        }
+        break;
+    }
+//OWEND
 #endif
 
     case AUX_FUNC::LOG_PAUSE: {
