@@ -1065,13 +1065,13 @@ bool AP_Mount::set_cam_mode(uint8_t instance, bool video_mode)
     return backend->set_cam_mode(video_mode);
 }
 
-bool AP_Mount::set_cam_photo_video(uint8_t instance, int8_t sw_flag)
+bool AP_Mount::set_cam_photo_video_mode(uint8_t instance, int8_t sw_flag)
 {
     auto *backend = get_instance(instance);
     if (backend == nullptr) {
         return false;
     }
-    return backend->set_cam_photo_video(sw_flag);
+    return backend->set_cam_photo_video_mode(sw_flag);
 }
 
 void AP_Mount::handle_msg(mavlink_channel_t chan, const mavlink_message_t &msg)

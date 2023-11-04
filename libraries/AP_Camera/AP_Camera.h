@@ -157,7 +157,7 @@ public:
 
 //OW
     bool set_cam_mode(bool video_mode);
-    bool set_cam_photo_video(int8_t sw_flag);
+    bool set_cam_photo_video_mode(int8_t sw_flag);
 //OWEND
 
 #if AP_CAMERA_SCRIPTING_ENABLED

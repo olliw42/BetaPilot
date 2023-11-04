@@ -193,7 +193,7 @@ public:
     virtual bool set_cam_mode(bool video_mode) { return false; }
 
     // 3-way switch mode
-    virtual bool set_cam_photo_video(int8_t sw_flag) { return false; }
+    virtual bool set_cam_photo_video_mode(int8_t sw_flag) { return false; }
 
     // handle msg - allows to process a msg from a gimbal
     virtual void handle_msg(const mavlink_message_t &msg) {}

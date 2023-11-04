@@ -771,14 +771,14 @@ bool AP_Camera::set_cam_mode(bool video_mode)
     return false;
 }
 
-bool AP_Camera::set_cam_photo_video(int8_t sw_flag)
+bool AP_Camera::set_cam_photo_video_mode(int8_t sw_flag)
 {
 /* XX ??
 #if HAL_MOUNT_ENABLED
     if (get_trigger_type() == CamTrigType::mount) {
         AP_Mount* mount = AP::mount();
         if (mount != nullptr) {
-            return mount->set_cam_photo_video(0, sw_flag);
+            return mount->set_cam_photo_video_mode(0, sw_flag);
         }
     }
 #endif
