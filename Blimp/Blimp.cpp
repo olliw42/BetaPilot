@@ -272,6 +272,22 @@ void Blimp::rotate_NE_to_BF(Vector2f &vec)
 
 }
 
+//OW
+MAV_LANDED_STATE Blimp::get_landed_state() const
+{
+    if (ap.land_complete) {
+        return MAV_LANDED_STATE_ON_GROUND;
+    }
+    if (flightmode->is_landing()) {
+        return MAV_LANDED_STATE_LANDING;
+    }
+    // if (flightmode->is_taking_off()) {
+    //     return MAV_LANDED_STATE_TAKEOFF;
+    // }
+    return MAV_LANDED_STATE_IN_AIR;
+}
+//OWEND
+
 /*
   constructor for main Blimp class
  */

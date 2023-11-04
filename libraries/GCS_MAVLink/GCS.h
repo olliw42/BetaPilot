@@ -24,7 +24,9 @@
 #include <AP_Mount/AP_Mount_config.h>
 #include <AP_SerialManager/AP_SerialManager.h>
 #include <AP_RangeFinder/AP_RangeFinder_config.h>
-
+//OW
+#include <AP_Vehicle/AP_Vehicle.h>
+//OWEND
 #include "ap_message.h"
 
 #define GCS_DEBUG_SEND_MESSAGE_TIMINGS 0
@@ -504,7 +506,10 @@ protected:
     virtual MAV_STATE vehicle_system_status() const = 0;
 
     virtual MAV_VTOL_STATE vtol_state() const { return MAV_VTOL_STATE_UNDEFINED; }
-    virtual MAV_LANDED_STATE landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
+//OW
+//    virtual MAV_LANDED_STATE landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
+    MAV_LANDED_STATE landed_state() const { return AP::vehicle()->get_landed_state(); }
+//OWEND
 
     // return a MAVLink parameter type given a AP_Param type
     static MAV_PARAM_TYPE mav_param_type(enum ap_var_type t);
@@ -1256,10 +1261,6 @@ public:
 #endif // HAL_HIGH_LATENCY2_ENABLED
 
     virtual uint8_t sysid_this_mav() const = 0;
-
-//OW
-    uint8_t get_landed_state(void) const { return num_gcs() > 0 ? chan(0)->landed_state() : MAV_LANDED_STATE_UNDEFINED; }
-//OWEND
 
 protected:
 

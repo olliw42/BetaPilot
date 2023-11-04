@@ -40,8 +40,9 @@ protected:
     {
         return MAV_VTOL_STATE_MC;
     };
-    virtual MAV_LANDED_STATE landed_state() const override;
-
+//OW
+//    virtual MAV_LANDED_STATE landed_state() const override;
+//OWEND
 private:
 
     void handleMessage(const mavlink_message_t &msg) override;

@@ -94,6 +94,7 @@ private:
 #endif
 
     MAV_VTOL_STATE vtol_state() const override;
-    MAV_LANDED_STATE landed_state() const override;
-
+//OW
+//    MAV_LANDED_STATE landed_state() const override;
+//OWEND
 };

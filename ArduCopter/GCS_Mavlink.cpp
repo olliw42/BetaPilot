@@ -1544,6 +1544,8 @@ uint64_t GCS_MAVLINK_Copter::capabilities() const
             GCS_MAVLINK::capabilities());
 }
 
+//OW
+/*
 MAV_LANDED_STATE GCS_MAVLINK_Copter::landed_state() const
 {
     if (copter.ap.land_complete) {
@@ -1557,6 +1559,8 @@ MAV_LANDED_STATE GCS_MAVLINK_Copter::landed_state() const
     }
     return MAV_LANDED_STATE_IN_AIR;
 }
+*/
+//OWEND
 
 void GCS_MAVLINK_Copter::send_wind() const
 {

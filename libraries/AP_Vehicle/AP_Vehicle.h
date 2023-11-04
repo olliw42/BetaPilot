@@ -225,6 +225,11 @@ public:
     // returns true if vehicle is in the process of taking off
     virtual bool is_taking_off() const { return false; }
 
+//OW
+    // returns landed state
+    virtual MAV_LANDED_STATE get_landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
+//OWEND
+
     // zeroing the RC outputs can prevent unwanted motor movement:
     virtual bool should_zero_rc_outputs_on_reboot() const { return false; }
 

@@ -894,6 +894,18 @@ bool Plane::is_taking_off() const
     return control_mode->is_taking_off();
 }
 
+//OW
+MAV_LANDED_STATE Plane::get_landed_state() const
+{
+    if (plane.is_flying()) {
+        // note that Q-modes almost always consider themselves as flying
+        return MAV_LANDED_STATE_IN_AIR;
+    }
+
+    return MAV_LANDED_STATE_ON_GROUND;
+}
+//OWEND
+
 // correct AHRS pitch for TRIM_PITCH_CD in non-VTOL modes, and return VTOL view in VTOL
 void Plane::get_osd_roll_pitch_rad(float &roll, float &pitch) const
 {

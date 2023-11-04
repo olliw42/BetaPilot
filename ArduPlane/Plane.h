@@ -1244,6 +1244,9 @@ public:
     void failsafe_check(void);
     bool is_landing() const override;
     bool is_taking_off() const override;
+//OW
+    MAV_LANDED_STATE get_landed_state() const override;
+//OWEND
 #if AP_SCRIPTING_ENABLED
     bool set_target_location(const Location& target_loc) override;
     bool get_target_location(Location& target_loc) override;

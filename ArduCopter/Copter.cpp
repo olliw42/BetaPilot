@@ -459,6 +459,22 @@ bool Copter::is_taking_off() const
     return flightmode->is_taking_off();
 }
 
+//OW
+MAV_LANDED_STATE Copter::get_landed_state() const
+{
+    if (ap.land_complete) {
+        return MAV_LANDED_STATE_ON_GROUND;
+    }
+    if (flightmode->is_landing()) {
+        return MAV_LANDED_STATE_LANDING;
+    }
+    if (flightmode->is_taking_off()) {
+        return MAV_LANDED_STATE_TAKEOFF;
+    }
+    return MAV_LANDED_STATE_IN_AIR;
+}
+//OWEND
+
 bool Copter::current_mode_requires_mission() const
 {
 #if MODE_AUTO_ENABLED == ENABLED

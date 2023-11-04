@@ -549,7 +549,8 @@ uint64_t GCS_MAVLINK_Blimp::capabilities() const
             MAV_PROTOCOL_CAPABILITY_SET_ATTITUDE_TARGET |
             GCS_MAVLINK::capabilities());
 }
-
+//OW
+/*
 MAV_LANDED_STATE GCS_MAVLINK_Blimp::landed_state() const
 {
     if (blimp.ap.land_complete) {
@@ -563,6 +564,8 @@ MAV_LANDED_STATE GCS_MAVLINK_Blimp::landed_state() const
     // }
     return MAV_LANDED_STATE_IN_AIR;
 }
+*/
+//OWEND
 
 void GCS_MAVLINK_Blimp::send_wind() const
 {
