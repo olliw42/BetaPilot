@@ -181,6 +181,8 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
 // STorM32-Link wants 25 Hz, so we update at 25 Hz and 12.5 Hz respectively
 void BP_Mount_STorM32_MAVLink::update()
 {
+    update_target_angles(); // update at 50 Hz
+
     switch (_task_counter) {
         case TASK_SLOT0:
         case TASK_SLOT2:
@@ -206,8 +208,6 @@ void BP_Mount_STorM32_MAVLink::update()
 
     _task_counter++;
     if (_task_counter > TASK_SLOT3) _task_counter = TASK_SLOT0;
-
-    update_target_angles(); // update at 50 Hz
 
     if (!_initialised) {
         find_gimbal();
@@ -271,6 +271,14 @@ void BP_Mount_STorM32_MAVLink::send_target_angles(void)
     // just send stupidly at 12.5 Hz if (!get_target_angles()) return; // if false don't send
 
     update_gimbal_device_flags(get_mode());
+
+    if (mnt_target.target_type == MountTargetType::RATE) {
+        // we ignore it. We may think to just send angle_rad, but if yaw is earth frame
+        // this could result in pretty strange behavior. So better ignore.
+        // Should happen only in MAV_MOUNT_MODE_RC_TARGETING, so no need to test for this
+        // explicitly.
+        return;
+    }
 
     if (_protocol == PROTOCOL_GIMBAL_DEVICE) {
         send_gimbal_device_set_attitude();
@@ -575,15 +583,7 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_information(const mavlink_me
 
     mavlink_msg_gimbal_device_information_decode(&msg, &_device_info);
 
-    if (_device_info.gimbal_device_id != 0) { // something is wrong here, so reject
-        // some few STorM32 firmware versions have a bug in that they set this field to the gimbal's id
-        // so reject only if not a gimbal id
-        // shall be removed after some time
-        if (!(_device_info.gimbal_device_id == MAV_COMP_ID_GIMBAL) &&
-            !(_device_info.gimbal_device_id >= MAV_COMP_ID_GIMBAL2 && _device_info.gimbal_device_id <= MAV_COMP_ID_GIMBAL6)) {
-            return;
-        }
-    }
+    // we could check here for sanity of _device_info.gimbal_device_id, but let's just be happy
 
     // set parameter defaults from gimbal information
     // Q: why default ?? why not actual value ?? I don't understand this
@@ -620,15 +620,7 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
     mavlink_gimbal_device_attitude_status_t payload;
     mavlink_msg_gimbal_device_attitude_status_decode(&msg, &payload);
 
-    if (payload.gimbal_device_id != 0) { // something is wrong here, so reject
-        // some few STorM32 firmware versions have a bug in that they set this field to the gimbal's id
-        // so reject only if not a gimbal id
-        // shall be removed after some time
-        if (!(_device_info.gimbal_device_id == MAV_COMP_ID_GIMBAL) &&
-            !(_device_info.gimbal_device_id >= MAV_COMP_ID_GIMBAL2 && _device_info.gimbal_device_id <= MAV_COMP_ID_GIMBAL6)) {
-            return;
-        }
-    }
+    // we could check here for sanity of _device_info.gimbal_device_id, but let's just be happy
 
     // get relevant data
 
@@ -733,12 +725,6 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_mount_control(void)
         return;
     }
 
-    if (mnt_target.target_type == MountTargetType::RATE) {
-        // we ignore it. We may think to just send angle_rad, but if yaw is eath frame
-        // this oculd result in pretty strange behavior. So better ignore.
-        return;
-    }
-
     // send command_long command containing a do_mount_control command
     // Note: pitch and yaw are reversed
     // ATTENTION: uses get_bf_yaw() to ensure body frame, which uses ahrs.yaw, not delta_yaw!!!
@@ -761,12 +747,6 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_mount_control(void)
 void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(void)
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, GIMBAL_DEVICE_SET_ATTITUDE)) {
-        return;
-    }
-
-    if (mnt_target.target_type == MountTargetType::RATE) {
-        // we ignore it. We may think to just send angle_rad, but if yaw is eath frame
-        // this oculd result in pretty strange behavior. So better ignore.
         return;
     }
 
