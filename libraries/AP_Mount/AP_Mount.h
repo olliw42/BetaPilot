@@ -275,7 +275,7 @@ public:
     bool set_cam_mode(uint8_t instance, bool video_mode);
 
     // 3-way switch mode
-    bool set_cam_photo_video_mode(uint8_t instance, int8_t sw_flag);
+    bool set_cam_photo_video_mode(uint8_t instance, int8_t ch_flag);
 
     // this is somewhat different to handle_message() in that it catches all messages
     // with significant work it potentially could be combined, but let's not introduce side effects

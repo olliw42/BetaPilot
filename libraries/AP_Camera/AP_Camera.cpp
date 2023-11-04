@@ -758,32 +758,48 @@ AP_Camera *camera()
 //OW
 bool AP_Camera::set_cam_mode(bool video_mode)
 {
-/* XX ??
-#if HAL_MOUNT_ENABLED
-    if (get_trigger_type() == CamTrigType::mount) {
-        AP_Mount* mount = AP::mount();
-        if (mount != nullptr) {
-            return mount->set_cam_mode(0, video_mode);
-        }
+    WITH_SEMAPHORE(_rsem);
+
+    if (primary == nullptr) {
+        return false;
     }
-#endif
-*/
-    return false;
+    return primary->set_cam_mode(video_mode);
 }
 
-bool AP_Camera::set_cam_photo_video_mode(int8_t sw_flag)
+bool AP_Camera::set_cam_mode(uint8_t instance, bool video_mode)
 {
-/* XX ??
-#if HAL_MOUNT_ENABLED
-    if (get_trigger_type() == CamTrigType::mount) {
-        AP_Mount* mount = AP::mount();
-        if (mount != nullptr) {
-            return mount->set_cam_photo_video_mode(0, sw_flag);
-        }
+    WITH_SEMAPHORE(_rsem);
+
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return false;
     }
-#endif
-*/
-    return false;
+
+    // call backend
+    return backend->set_cam_mode(video_mode);
+}
+
+bool AP_Camera::set_cam_photo_video_mode(int8_t ch_flag)
+{
+    WITH_SEMAPHORE(_rsem);
+
+    if (primary == nullptr) {
+        return false;
+    }
+    return primary->set_cam_photo_video_mode(ch_flag);
+}
+
+bool AP_Camera::set_cam_photo_video_mode(uint8_t instance, int8_t ch_flag)
+{
+    WITH_SEMAPHORE(_rsem);
+
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return false;
+    }
+
+    // call backend
+    return backend->set_cam_photo_video_mode(ch_flag);
 }
 //OWEND
 

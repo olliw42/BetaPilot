@@ -32,6 +32,14 @@ public:
     /* Do not allow copies */
     CLASS_NO_COPY(AP_Camera_Mount);
 
+//OW
+    // momentary switch to directly set camera to picture or video mode
+    bool set_cam_mode(bool video_mode) override;
+
+    // momentary switch to set camera to picture and video mode and start/stop recording using a 3 pos switch
+    bool set_cam_photo_video_mode(int8_t ch_flag) override;
+//OWEND
+
     // entry point to actually take a picture.  returns true on success
     bool trigger_pic() override;
 

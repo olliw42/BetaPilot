@@ -53,6 +53,14 @@ public:
     // momentary switch to change camera between picture and video modes
     virtual void cam_mode_toggle() {}
 
+//OW
+    // momentary switch to directly set camera to picture or video mode
+    virtual bool set_cam_mode(bool video_mode) { return false; }
+
+    // momentary switch to set camera to picture and video mode and start/stop recording using a 3 pos switch
+    virtual bool set_cam_photo_video_mode(int8_t ch_flag) { return false; }
+//OWEND
+
     // take a picture.  returns true on success
     bool take_picture();
 

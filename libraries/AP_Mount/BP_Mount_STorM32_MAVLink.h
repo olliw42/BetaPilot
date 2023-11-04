@@ -148,8 +148,7 @@ public:
     bool set_cam_mode(bool video_mode) override;
 
     // added: 3-way switch mode
-    bool set_cam_photo_video_mode(int8_t sw_flag) override;
-
+    bool set_cam_photo_video_mode(int8_t ch_flag) override;
 
 private:
 

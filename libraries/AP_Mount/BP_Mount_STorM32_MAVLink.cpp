@@ -1199,18 +1199,18 @@ bool BP_Mount_STorM32_MAVLink::set_cam_mode(bool video_mode)
 }
 
 
-bool BP_Mount_STorM32_MAVLink::set_cam_photo_video_mode(int8_t sw_flag)
+bool BP_Mount_STorM32_MAVLink::set_cam_photo_video_mode(int8_t ch_flag)
 {
     if (!_use_3way_photo_video) return false;
 
-    if (sw_flag > 0) {
+    if (ch_flag > 0) {
         if (_camera_mode != CAMERA_MODE_VIDEO) {
             _camera_mode = CAMERA_MODE_VIDEO;
             send_cmd_do_digicam_configure(true);
         }
         send_cmd_do_digicam_control(true);
     } else
-    if (sw_flag < 0) {
+    if (ch_flag < 0) {
         if (_camera_mode != CAMERA_MODE_PHOTO) {
             _camera_mode = CAMERA_MODE_PHOTO;
             send_cmd_do_digicam_configure(false);
