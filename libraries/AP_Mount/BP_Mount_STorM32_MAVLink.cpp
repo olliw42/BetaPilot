@@ -153,16 +153,17 @@ void BP_Mount_STorM32_MAVLink::init()
 
     _got_device_info = false;
     _armed = false;
-    _prearmchecks_ok = false;
     _initialised = false;
-
-    _mode = MAV_MOUNT_MODE_RC_TARGETING;
 
     _protocol = PROTOCOL_UNDEFINED;
 
+    _gimbal_prearmchecks_ok = false;
     _armingchecks_enabled = false;
     _prearmchecks_done = false;
 
+    _mode = MAV_MOUNT_MODE_RC_TARGETING;
+
+    _mount_status = {};
     _device_status = {};
     flags_for_gimbal = 0;
     _current_angles = { 0.0f, 0.0f, 0.0f, NAN}; // the NAN is important!
@@ -490,21 +491,15 @@ const uint32_t FAILURE_FLAGS =
         // GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER;
 
 
-bool BP_Mount_STorM32_MAVLink::prearmchecks_all_ok(void)
-{
-    return (_armingchecks_enabled && // healthy() called at least once
-            _prearmchecks_ok && // HEARTBEAT reported ok
-            _armed && // gimbal is in NORMAL state
-            ((_device_status.received_failure_flags & FAILURE_FLAGS) == 0));// gimbal has no errors
-}
-
-
 void BP_Mount_STorM32_MAVLink::send_prearmchecks_txt(void)
 {
-    if (!_initialised || !_prearmchecks_ok || !_armed) {
+GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: i%u p%u a%u pr%u", _instance+1, _initialised, _gimbal_prearmchecks_ok, _armed, _protocol);
+
+
+    if (!_initialised || !_gimbal_prearmchecks_ok || !_armed) {
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: arm", _instance+1);
     } else
-    if (_prearmchecks_ok && (_device_status.received_failure_flags & FAILURE_FLAGS)) {
+    if (_device_status.received_failure_flags & FAILURE_FLAGS) {
         char txt[255];
         strcpy(txt, "");
         if (_device_status.received_failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_MOTOR_ERROR) strcat(txt, "mot,");
@@ -514,7 +509,7 @@ void BP_Mount_STorM32_MAVLink::send_prearmchecks_txt(void)
             txt[strlen(txt)-1] = '\0';
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: %s", _instance+1, txt);
         } else {
-            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAILURE FLAGS", _instance+1);
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: err flags", _instance+1);
         }
     }
 }
@@ -522,50 +517,77 @@ void BP_Mount_STorM32_MAVLink::send_prearmchecks_txt(void)
 
 // return true if healthy
 // this is called when ARMING_CHECK_ALL or ARMING_CHECK_CAMERA is set, else not
-// workaround to that healthy() is const
+// is called with 1 Hz
+// workaround to get around that healthy() is const
 bool BP_Mount_STorM32_MAVLink::healthy() const
 {
-    return const_cast<BP_Mount_STorM32_MAVLink*>(this)->prearmchecks_do(); // yes, ugly, but I have not overdesigned the backend
+    return const_cast<BP_Mount_STorM32_MAVLink*>(this)->healthy_nonconst(); // yes, ugly, but I haven't overdesigned the backend
+}
+
+
+bool BP_Mount_STorM32_MAVLink::healthy_nonconst(void)
+{
+    _armingchecks_enabled = true; // to signal that ArduPilot arming check mechanism is active
+
+    return prearmchecks_do();
 }
 
 
 bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
 {
-    _armingchecks_enabled = true;
+    // these we do only at startup
+    if (!_prearmchecks_done) {
 
-    if (prearmchecks_all_ok() && !_prearmchecks_done) { // has just changed
-        _prearmchecks_done = true;
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks passed", _instance+1);
-    } else
-    if ((AP_HAL::millis() - _prearmcheck_sendtext_tlast_ms) > 30000) { // we haven't send it for a long time
-        _prearmcheck_sendtext_tlast_ms = AP_HAL::millis();
-        send_prearmchecks_txt();
+        if (_armingchecks_enabled) { // do only if ArduPilot check is enabled
+            if((AP_HAL::millis() - _prearmcheck_sendtext_tlast_ms) > 30000) { // we haven't send it for a long time
+                _prearmcheck_sendtext_tlast_ms = AP_HAL::millis();
+                send_prearmchecks_txt();
+            }
+        }
+
+        // unhealthy until gimbal has fully passed the startup sequence
+        // implies gimbal has been found, has replied with device info, and status message was received
+        // _initialised:            -> gimbal found (HB received,_compid != 0)
+        //                          -> device info obtained (_got_device_info = true)
+        //                          -> status message received, protocol set (_protocol != PROTOCOL_UNDEFINED)
+        // _gimbal_prearmchecks_ok: -> gimbal HB reported gimbal's prearmchecks ok
+        // _armed:                  -> gimbal HB reported gimbal is in normal state
+        if (!_initialised || !_gimbal_prearmchecks_ok || !_armed) {
+            return false;
+        }
     }
 
-    // unhealthy until gimbal has fully passed the startup sequence
-    // implies gimbal has been found and replied with device info, i.e. _compid != 0 and _got_device_info = true
-    if (!_initialised || !_prearmchecks_ok || !_armed) {
-        return false;
-    }
+    // these we do continuously
 
-    // if we get this far and mount is not gimbal device then mount is healthy
-    if (_protocol == PROTOCOL_MOUNT) {
-        return true;
-    }
+    if (_protocol == PROTOCOL_GIMBAL_DEVICE) {
 
-    // unhealthy if attitude status is NOT received within the last second
-    if ((AP_HAL::millis() - _device_status.received_tlast_ms) > 1000) {
-        return false;
-    }
+        // unhealthy if attitude status is not received within the last second
+        if ((AP_HAL::millis() - _device_status.received_tlast_ms) > 1000) {
+            return false;
+        }
 
-    // check failure flags
-    // We also check for GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER
-    // which essentially only means that gimbal got GIMBAL_DEVICE_SET_ATTITUDE messages.
-    if ((_device_status.received_failure_flags & FAILURE_FLAGS) > 0) {
-        return false;
+        // check failure flags
+        // We also check for GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER
+        // which essentially only means that gimbal got GIMBAL_DEVICE_SET_ATTITUDE messages.
+        if ((_device_status.received_failure_flags & FAILURE_FLAGS) > 0) {
+            return false;
+        }
+
+    } else {
+        // unhealthy if mount status is not received within the last second
+        if ((AP_HAL::millis() - _mount_status.received_tlast_ms) > 1000) {
+            return false;
+        }
     }
 
     // if we get this far the mount is healthy
+
+    // if we got this far the first time we inform the gcs
+    if (!_prearmchecks_done) {
+        _prearmchecks_done = true;
+         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks passed", _instance+1);
+    }
+
     return true;
 }
 
@@ -687,13 +709,16 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             uint8_t storm32_state = (payload.custom_mode & 0xFF);
             _armed = ((storm32_state == STORM32STATE_NORMAL) || (storm32_state == STORM32STATE_STARTUP_FASTLEVEL));
             if ((payload.custom_mode & 0x80000000) == 0) { // we don't follow all changes, but just toggle it to true once
-                _prearmchecks_ok = true;
+                _gimbal_prearmchecks_ok = true;
             }
-            if (prearmchecks_all_ok()) {
-                _prearmchecks_done = true;
-                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks passed", _instance+1);
+            if (!_armingchecks_enabled) { // ArduPilot arming checks disabled, so let's do ourself
+                if (!_prearmchecks_done) prearmchecks_do();
             }
-            }break;
+            break; }
+
+        case MAVLINK_MSG_ID_MOUNT_STATUS:
+            _mount_status.received_tlast_ms = AP_HAL::millis();
+            break;
     }
 }
 
@@ -1028,20 +1053,20 @@ void BP_Mount_STorM32_MAVLink::send_banner(void)
 
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: %s %s v%u.%u%c",
                 _instance + 1,
-                _device_info.vendor_name,
+                "", //_device_info.vendor_name,
                 _device_info.model_name,
                 (unsigned)(_device_info.firmware_version & 0x000000FF),
                 (unsigned)((_device_info.firmware_version & 0x0000FF00) >> 8),
                 c
                 );
 
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (prearmchecks_all_ok()) ? "passed" : "fail");
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_done) ? "passed" : "fail");
 
     } else
     if (_compid) {
         // we have some info
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: gimbal at %u", _instance+1, _compid);
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (prearmchecks_all_ok()) ? "passed" : "fail");
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_done) ? "passed" : "fail");
 
     } else {
         // we don't know yet anything

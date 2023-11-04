@@ -165,7 +165,6 @@ private:
 
     bool _got_device_info;          // gimbal discovered, waiting for gimbal provide device info
     bool _armed;                    // true once the gimbal has reached normal state
-    bool _prearmchecks_ok;          // true when the gimbal stops reporting prearm fail in the HEARTBEAT message
     bool _initialised;              // true once all init steps have been passed
     bool _got_radio_rc_channels;    // true when a RADIO_RC_CHANNELS message has been received
 
@@ -190,17 +189,22 @@ private:
     // determine protocol based on receiving MOUNT_STATUS or GIMBAL_DEVICE_ATTITUDE_STATUS from gimbal
     void determine_protocol(const mavlink_message_t &msg);
 
-    // pre-arm checks
+    // pre-arm and healthy checks
 
+    bool _gimbal_prearmchecks_ok;   // true when the gimbal stops reporting prearm fail in the HEARTBEAT message
     bool _armingchecks_enabled;     // true when ARMING_CHECK_ALL or ARMING_CHECK_CAMERA set, we know from healty()
-    bool _prearmchecks_done;        // becomes true when info has send out
+    bool _prearmchecks_done;        // becomes true when all checks were passed once at startup
     uint32_t _prearmcheck_sendtext_tlast_ms;
 
-    bool prearmchecks_all_ok(void);
+    bool healthy_nonconst(void);    // workaround to healthy() being const
     bool prearmchecks_do(void);
     void send_prearmchecks_txt(void);
 
     // gimbal target & control
+
+    struct {
+        uint32_t received_tlast_ms; // time last MOUNT_STATUS was received (used for health reporting)
+    } _mount_status;
 
     struct {
         uint16_t received_flags;    // obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
