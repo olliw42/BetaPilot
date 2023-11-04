@@ -143,9 +143,10 @@ enum STORM32STATEENUM {
 // BP_Mount_STorM32_MAVLink, main class
 //******************************************************
 
-BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_Params &params, uint8_t instance) :
-    AP_Mount_Backend(frontend, params, instance)
+void BP_Mount_STorM32_MAVLink::init()
 {
+    AP_Mount_Backend::init();
+
     _sysid = 0;
     _compid = 0; // gimbal not yet discovered
     _chan = MAVLINK_COMM_0; // this is a dummy, will be set correctly by find_gimbal()

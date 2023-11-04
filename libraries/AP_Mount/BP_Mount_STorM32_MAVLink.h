@@ -14,10 +14,10 @@ class BP_Mount_STorM32_MAVLink : public AP_Mount_Backend
 
 public:
     // Constructor
-    BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_Params &params, uint8_t instance);
+    using AP_Mount_Backend::AP_Mount_Backend;
 
     // init - performs any required initialisation for this instance
-    void init() override { AP_Mount_Backend::init(); }
+    void init() override;
 
     // update mount position - should be called periodically at 50 Hz
     void update() override;
