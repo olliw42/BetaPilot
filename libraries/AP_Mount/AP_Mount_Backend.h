@@ -122,8 +122,11 @@ public:
     // return gimbal capabilities sent to GCS in the GIMBAL_MANAGER_INFORMATION
     virtual uint32_t get_gimbal_manager_capability_flags() const;
 
+//OW
     // send a GIMBAL_MANAGER_INFORMATION message to GCS
-    void send_gimbal_manager_information(mavlink_channel_t chan);
+//    void send_gimbal_manager_information(mavlink_channel_t chan);
+    virtual void send_gimbal_manager_information(mavlink_channel_t chan);
+//OWEND
 
     // send a GIMBAL_MANAGER_STATUS message to GCS
     void send_gimbal_manager_status(mavlink_channel_t chan);
@@ -201,6 +204,15 @@ public:
     // send banner
     virtual void send_banner(void) {}
 
+    // return gimbal manager flags used by GIMBAL_MANAGER_STATUS message
+    virtual uint32_t get_gimbal_manager_flags() const;
+
+    // handle gimbal manager flags received from gimbal manager messages
+    // GIMBAL_MANAGER_FLAGS_RETRACT, GIMBAL_MANAGER_FLAGS_NEUTRAL are handled in frontend
+    // and sets mode accordingly. Not so nice but it's not my cup of tea.
+    // The function may modify the flags according to its capabilities.
+    // Return false to abort angle/rate processing.
+    virtual bool handle_gimbal_manager_flags(uint32_t flags);
 //OWEND
 
     //

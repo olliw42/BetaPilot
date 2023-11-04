@@ -339,6 +339,8 @@ MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_pitchyaw(const mavlink_com
         return MAV_RESULT_FAILED;
     }
 
+//OW
+/*
     // check flags for change to RETRACT
     const uint32_t flags = packet.x;
     if ((flags & GIMBAL_MANAGER_FLAGS_RETRACT) > 0) {
@@ -350,6 +352,13 @@ MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_pitchyaw(const mavlink_com
         backend->set_mode(MAV_MOUNT_MODE_NEUTRAL);
         return MAV_RESULT_ACCEPTED;
     }
+*/
+    const uint32_t flags = packet.x;
+
+    if (!backend->handle_gimbal_manager_flags(flags)) {
+        return MAV_RESULT_ACCEPTED;
+    }
+//OWEND
 
     // param1 : pitch_angle (in degrees)
     // param2 : yaw angle (in degrees)
@@ -411,6 +420,8 @@ void AP_Mount::handle_gimbal_manager_set_attitude(const mavlink_message_t &msg){
         return;
     }
 
+//OW
+/*
     // check flags for change to RETRACT
     const uint32_t flags = packet.flags;
     if ((flags & GIMBAL_MANAGER_FLAGS_RETRACT) > 0) {
@@ -423,6 +434,13 @@ void AP_Mount::handle_gimbal_manager_set_attitude(const mavlink_message_t &msg){
         backend->set_mode(MAV_MOUNT_MODE_NEUTRAL);
         return;
     }
+*/
+    const uint32_t flags = packet.flags;
+
+    if (!backend->handle_gimbal_manager_flags(flags)) {
+        return;
+    }
+//OWEND
 
     const Quaternion att_quat{packet.q};
     const Vector3f att_rate_degs {
@@ -477,6 +495,8 @@ void AP_Mount::handle_command_gimbal_manager_set_pitchyaw(const mavlink_message_
         return;
     }
 
+//OW
+/*
     // check flags for change to RETRACT
     uint32_t flags = (uint32_t)packet.flags;
     if ((flags & GIMBAL_MANAGER_FLAGS_RETRACT) > 0) {
@@ -488,6 +508,13 @@ void AP_Mount::handle_command_gimbal_manager_set_pitchyaw(const mavlink_message_
         backend->set_mode(MAV_MOUNT_MODE_NEUTRAL);
         return;
     }
+*/
+    const uint32_t flags = packet.flags;
+
+    if (!backend->handle_gimbal_manager_flags(flags)) {
+        return;
+    }
+//OWEND
 
     // Do not allow both angle and rate to be specified at the same time
     if (!isnan(packet.pitch) && !isnan(packet.yaw) && !isnan(packet.pitch_rate) && !isnan(packet.yaw_rate)) {

@@ -197,14 +197,45 @@ void AP_Mount_Backend::send_gimbal_manager_information(mavlink_channel_t chan)
                                                 radians(_params.yaw_angle_max));        // yaw_max in radians
 }
 
+//OW
+// return gimbal manager flags used by GIMBAL_MANAGER_STATUS message
+uint32_t AP_Mount_Backend::get_gimbal_manager_flags() const
+{
+    uint32_t flags = GIMBAL_MANAGER_FLAGS_ROLL_LOCK | GIMBAL_MANAGER_FLAGS_PITCH_LOCK;
+    if (_yaw_lock) {
+        flags |= GIMBAL_MANAGER_FLAGS_YAW_LOCK;
+    }
+    return flags;
+}
+
+// set gimbal manager flags, called from frontend's gimbal manager handlers
+bool AP_Mount_Backend::handle_gimbal_manager_flags(uint32_t flags)
+{
+    // check flags for change to RETRACT
+    if ((flags & GIMBAL_MANAGER_FLAGS_RETRACT) > 0) {
+        set_mode(MAV_MOUNT_MODE_RETRACT);
+    } else
+    // check flags for change to NEUTRAL
+    if ((flags & GIMBAL_MANAGER_FLAGS_NEUTRAL) > 0) {
+        set_mode(MAV_MOUNT_MODE_NEUTRAL);
+    }
+    return true;
+}
+//OWEND
+
+
 // send a GIMBAL_MANAGER_STATUS message to GCS
 void AP_Mount_Backend::send_gimbal_manager_status(mavlink_channel_t chan)
 {
+//OW
+/*
     uint32_t flags = GIMBAL_MANAGER_FLAGS_ROLL_LOCK | GIMBAL_MANAGER_FLAGS_PITCH_LOCK;
 
     if (_yaw_lock) {
         flags |= GIMBAL_MANAGER_FLAGS_YAW_LOCK;
-    }
+    } */
+    uint32_t flags = get_gimbal_manager_flags();
+//OWEND
 
     mavlink_msg_gimbal_manager_status_send(chan,
                                            AP_HAL::millis(),    // autopilot system time

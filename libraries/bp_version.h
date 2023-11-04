@@ -1,11 +1,11 @@
 #pragma once
 
-#define BETAPILOTVERSION "v058"
+#define BETAPILOTVERSION "v059"
 
 /*
 search for //OW to find all changes
 
-2023.08.10: v058
+2023.11.01: v059
  upgraded to ArduPilot master 4.5.0-dev
 
 2023.03.10: v058
@@ -40,7 +40,7 @@ search for //OW to find all changes
 
 
 ArduCopter specific
-- GCS_Mavlink.cpp:      (2 comments, no change)  1x RADIOLINK
+- GCS_Mavlink.cpp:          1x RADIOLINK
 - version.h:            1x
 
 ArduPlane specific
@@ -50,20 +50,19 @@ ArduPlane specific
 Libraries:
 - AP_Camera.cpp:        1x
 - AP_Camera.h:          1x
-- AP_Mount_Backend.cpp: ?
-- AP_Mount_Backend.h:   1x
+- AP_Mount_Backend.cpp: 3x
+- AP_Mount_Backend.h:   4x
 - AP_Mount_Params.cpp:  1x
 - AP_Mount_Params.h:    1x
-- AP_Mount.cpp:         3x
-- AP_Mount.h:           8x
+- AP_Mount.cpp:         16x
+- AP_Mount.h:           7x
 - AP_RCProtocol.cpp:        4x RADIOLINK
 - AP_RCProtocol.h:          4x RADIOLINK
 - AP_RSSI.h:                1x RADIOLINK
 - GCS_Common.cpp:       2x  3x RADIOLINK
 - GCS_MAVLink.h:        2x
-- GCS.h:                2x  1x RADIOLINK
-- MAVLink_routing.cpp:  1x  1x RADIOLINK
-- MAVLink_routing.h:    1x
+- GCS.h:                1x  1x RADIOLINK
+- MAVLink_routing.cpp:      1x RADIOLINK
 - RC_Channel.cpp:       4x
 
 Additional Files in library:
