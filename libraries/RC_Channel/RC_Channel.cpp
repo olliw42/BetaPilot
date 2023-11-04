@@ -703,6 +703,10 @@ void RC_Channel::init_aux_function(const aux_func_t ch_option, const AuxSwitchPo
     case AUX_FUNC::CAMERA_MANUAL_FOCUS:
     case AUX_FUNC::CAMERA_AUTO_FOCUS:
     case AUX_FUNC::CAMERA_LENS:
+//OW
+    case AUX_FUNC::CAMERA_SET_MODE:
+    case AUX_FUNC::CAMERA_TRIG_MODE:
+//OWEND
         run_aux_function(ch_option, ch_flag, AuxFuncTriggerSource::INIT);
         break;
     default:
@@ -1479,7 +1483,7 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
     case AUX_FUNC::CAMERA_TRIGGER:
         do_aux_function_camera_trigger(ch_flag);
         break;
-
+/*
     case AUX_FUNC::CAM_MODE_TOGGLE: {
         // Momentary switch to for cycling camera modes
         AP_Camera *camera = AP_Camera::get_singleton();
@@ -1497,16 +1501,9 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
             camera->cam_mode_toggle();
             break;
         }
-//OW
-        switch (ch_flag) {
-        case AuxSwitchPos::HIGH: camera->set_cam_photo_video_mode(1); break;
-        case AuxSwitchPos::MIDDLE: camera->set_cam_photo_video_mode(0); break;
-        case AuxSwitchPos::LOW: camera->set_cam_photo_video_mode(-1); break;
-        }
-        camera->set_cam_mode(ch_flag == AuxSwitchPos::HIGH);
-//OWEND
         break;
     }
+*/
     case AUX_FUNC::CAMERA_REC_VIDEO:
         return do_aux_function_record_video(ch_flag);
 
@@ -1524,9 +1521,42 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
 
     case AUX_FUNC::CAMERA_LENS:
         return do_aux_function_camera_lens(ch_flag);
+
+//OW
+//    case AUX_FUNC::CAM_MODE_TOGGLE: {
+    case AUX_FUNC::CAMERA_SET_MODE: {
+        AP_Camera *camera = AP_Camera::get_singleton();
+        if (camera == nullptr) {
+            break;
+        }
+        camera->set_cam_mode(ch_flag == AuxSwitchPos::HIGH);
+        break;
+    }
+
+    case AUX_FUNC::CAM_MODE_TOGGLE: {
+//    case AUX_FUNC::CAMERA_TRIG_MODE: {
+        AP_Camera *camera = AP_Camera::get_singleton();
+        if (camera == nullptr) {
+            break;
+        }
+        switch (ch_flag) {
+        case AuxSwitchPos::HIGH:
+            camera->set_cam_photo_video_mode(1);
+            break;
+        case AuxSwitchPos::MIDDLE:
+            camera->set_cam_photo_video_mode(0);
+            break;
+        case AuxSwitchPos::LOW:
+            camera->set_cam_photo_video_mode(-1);
+            break;
+        }
+        break;
+    }
+ //OWEND
 #endif
 
 #if HAL_MOUNT_ENABLED
+/*
     case AUX_FUNC::RETRACT_MOUNT1: {
         AP_Mount *mount = AP::mount();
         if (mount == nullptr) {
@@ -1544,7 +1574,7 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
             break;
         }
         break;
-    }
+    } */
 
     case AUX_FUNC::MOUNT_LOCK: {
         AP_Mount *mount = AP::mount();
@@ -1556,7 +1586,7 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
     }
 
 //OW
-//    case AUX_FUNC::RETRACT_MOUNT1:
+    case AUX_FUNC::RETRACT_MOUNT1:
     case AUX_FUNC::RETRACT_MOUNT1_3POS: {
         AP_Mount *mount = AP::mount();
         if (mount == nullptr) {

@@ -267,8 +267,6 @@ private:
     };
     CameraMode _camera_mode;        // current camera mode
 
-    bool _use_3way_photo_video;
-
     void send_cmd_do_digicam_configure(bool video_mode);
     void send_cmd_do_digicam_control(bool shoot);
 

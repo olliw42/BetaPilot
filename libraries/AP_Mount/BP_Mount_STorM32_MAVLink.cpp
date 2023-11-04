@@ -170,7 +170,6 @@ BP_Mount_STorM32_MAVLink::BP_Mount_STorM32_MAVLink(AP_Mount &frontend, AP_Mount_
     _yaw_lock = false; // can't be currently supported, so we need to ensure this is false. This is important!
 
     _got_radio_rc_channels = false; // disable sending rc channels when RADIO_RC_CHANNELS messages are detected
-    _use_3way_photo_video = true;
     _camera_mode = CAMERA_MODE_UNDEFINED;
 }
 
@@ -1104,7 +1103,7 @@ uint32_t BP_Mount_STorM32_MAVLink::get_gimbal_manager_flags() const
 
 
 //------------------------------------------------------
-// Scripting accescors, and get attitude fakery
+// Scripting accessors, and get attitude fakery
 //------------------------------------------------------
 
 // return target location if available
@@ -1150,8 +1149,6 @@ bool BP_Mount_STorM32_MAVLink::get_attitude_quaternion(Quaternion& att_quat)
 
 bool BP_Mount_STorM32_MAVLink::take_picture()
 {
-    if (_use_3way_photo_video) return false;
-
     if (_camera_mode == CAMERA_MODE_UNDEFINED) {
         _camera_mode = CAMERA_MODE_PHOTO;
         send_cmd_do_digicam_configure(false);
@@ -1169,8 +1166,6 @@ bool BP_Mount_STorM32_MAVLink::take_picture()
 
 bool BP_Mount_STorM32_MAVLink::record_video(bool start_recording)
 {
-    if (_use_3way_photo_video) return false;
-
     if (_camera_mode == CAMERA_MODE_UNDEFINED) {
         _camera_mode = CAMERA_MODE_VIDEO;
         send_cmd_do_digicam_configure(true);
@@ -1188,8 +1183,6 @@ bool BP_Mount_STorM32_MAVLink::record_video(bool start_recording)
 
 bool BP_Mount_STorM32_MAVLink::set_cam_mode(bool video_mode)
 {
-    if (_use_3way_photo_video) return false;
-
     _camera_mode = (video_mode) ? CAMERA_MODE_VIDEO : CAMERA_MODE_PHOTO;
     send_cmd_do_digicam_configure(video_mode);
 
@@ -1201,8 +1194,6 @@ bool BP_Mount_STorM32_MAVLink::set_cam_mode(bool video_mode)
 
 bool BP_Mount_STorM32_MAVLink::set_cam_photo_video_mode(int8_t ch_flag)
 {
-    if (!_use_3way_photo_video) return false;
-
     if (ch_flag > 0) {
         if (_camera_mode != CAMERA_MODE_VIDEO) {
             _camera_mode = CAMERA_MODE_VIDEO;
