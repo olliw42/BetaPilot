@@ -161,7 +161,7 @@ void BP_Mount_STorM32_MAVLink::init()
     _armingchecks_enabled = false;
     _prearmchecks_done = false;
 
-    _mode = MAV_MOUNT_MODE_RC_TARGETING;
+    _mode = MAV_MOUNT_MODE_RC_TARGETING; // irrelevant, will be later set to default in frontend init()
 
     _mount_status = {};
     _device_status = {};
@@ -713,9 +713,17 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             }
             break; }
 
-        case MAVLINK_MSG_ID_MOUNT_STATUS:
-            _mount_status.received_tlast_ms = AP_HAL::millis();
-            break;
+        case MAVLINK_MSG_ID_MOUNT_STATUS: {
+            _mount_status.received_tlast_ms = AP_HAL::millis(); // for health reporting
+
+            mavlink_mount_status_t payload;
+            mavlink_msg_mount_status_decode(&msg, &payload);
+            _current_angles.pitch = radians((float)payload.pointing_a * 0.01f);
+            _current_angles.roll = radians((float)payload.pointing_b * 0.01f);
+            _current_angles.yaw_bf = radians((float)payload.pointing_c * 0.01f);
+            _current_angles.delta_yaw = NAN;
+            send_mount_status_to_ground(); // this is what MissionPlanner wants ...
+            break; }
     }
 }
 
