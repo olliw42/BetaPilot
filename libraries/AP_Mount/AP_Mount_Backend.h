@@ -192,11 +192,11 @@ public:
     virtual void send_camera_settings(mavlink_channel_t chan) const {}
 
 //OW
-    // set photo or video mode
-    virtual bool set_cam_mode(bool video_mode) { return false; }
+    // momentary switch to set to photo or video mode (video_mode false: photo mode, true: video mode)
+    virtual bool cam_set_mode(bool video_mode) { return false; }
 
-    // 3-way switch mode
-    virtual bool set_cam_photo_video_mode(int8_t ch_flag) { return false; }
+    // momentary 3 pos switch to set to photo mode and take picture, set to video mode and start recording, or stop video recording
+    virtual bool cam_do_photo_video_mode(PhotoVideoMode photo_video_mode) { return false; }
 
     // handle msg - allows to process a msg from a gimbal
     virtual void handle_msg(const mavlink_message_t &msg) {}

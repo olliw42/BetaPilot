@@ -1529,7 +1529,7 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
         if (camera == nullptr) {
             break;
         }
-        camera->set_cam_mode(ch_flag == AuxSwitchPos::HIGH);
+        camera->cam_set_mode(ch_flag == AuxSwitchPos::HIGH);
         break;
     }
 
@@ -1541,18 +1541,18 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
         }
         switch (ch_flag) {
         case AuxSwitchPos::HIGH:
-            camera->set_cam_photo_video_mode(1);
+            camera->cam_do_photo_video_mode(PhotoVideoMode::VIDEO_START);
             break;
         case AuxSwitchPos::MIDDLE:
-            camera->set_cam_photo_video_mode(0);
+            camera->cam_do_photo_video_mode(PhotoVideoMode::VIDEO_STOP);
             break;
         case AuxSwitchPos::LOW:
-            camera->set_cam_photo_video_mode(-1);
+            camera->cam_do_photo_video_mode(PhotoVideoMode::PHOTO_TAKE_PIC);
             break;
         }
         break;
     }
- //OWEND
+//OWEND
 #endif
 
 #if HAL_MOUNT_ENABLED

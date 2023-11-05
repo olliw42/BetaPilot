@@ -6,22 +6,22 @@
 extern const AP_HAL::HAL& hal;
 
 //OW
-// momentary switch to directly set camera to picture or video mode
-bool AP_Camera_Mount::set_cam_mode(bool video_mode)
+// momentary switch to set to photo or video mode (video_mode false: photo mode, true: video mode)
+bool AP_Camera_Mount::cam_set_mode(bool video_mode)
 {
     AP_Mount* mount = AP::mount();
     if (mount != nullptr) {
-        return mount->set_cam_mode(get_mount_instance(), video_mode);
+        return mount->cam_set_mode(get_mount_instance(), video_mode);
     }
     return false;
 }
 
-// momentary switch to set camera to picture and video mode and start/stop recording using a 3 pos switch
-bool AP_Camera_Mount::set_cam_photo_video_mode(int8_t ch_flag)
+// momentary 3 pos switch to set to photo mode and take picture, set to video mode and start recording, or stop video recording
+bool AP_Camera_Mount::cam_do_photo_video_mode(PhotoVideoMode photo_video_mode)
 {
     AP_Mount* mount = AP::mount();
     if (mount != nullptr) {
-        return mount->set_cam_photo_video_mode(get_mount_instance(), ch_flag);
+        return mount->cam_do_photo_video_mode(get_mount_instance(), photo_video_mode);
     }
     return false;
 }

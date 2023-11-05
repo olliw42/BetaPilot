@@ -1212,7 +1212,7 @@ bool BP_Mount_STorM32_MAVLink::record_video(bool start_recording)
 }
 
 
-bool BP_Mount_STorM32_MAVLink::set_cam_mode(bool video_mode)
+bool BP_Mount_STorM32_MAVLink::cam_set_mode(bool video_mode)
 {
     _camera_mode = (video_mode) ? CAMERA_MODE_VIDEO : CAMERA_MODE_PHOTO;
     send_cmd_do_digicam_configure(video_mode);
@@ -1223,16 +1223,16 @@ bool BP_Mount_STorM32_MAVLink::set_cam_mode(bool video_mode)
 }
 
 
-bool BP_Mount_STorM32_MAVLink::set_cam_photo_video_mode(int8_t ch_flag)
+bool BP_Mount_STorM32_MAVLink::cam_do_photo_video_mode(PhotoVideoMode photo_video_mode)
 {
-    if (ch_flag > 0) {
+    if (photo_video_mode == PhotoVideoMode::VIDEO_START) {
         if (_camera_mode != CAMERA_MODE_VIDEO) {
             _camera_mode = CAMERA_MODE_VIDEO;
             send_cmd_do_digicam_configure(true);
         }
         send_cmd_do_digicam_control(true);
     } else
-    if (ch_flag < 0) {
+    if (photo_video_mode == PhotoVideoMode::PHOTO_TAKE_PIC) {
         if (_camera_mode != CAMERA_MODE_PHOTO) {
             _camera_mode = CAMERA_MODE_PHOTO;
             send_cmd_do_digicam_configure(false);

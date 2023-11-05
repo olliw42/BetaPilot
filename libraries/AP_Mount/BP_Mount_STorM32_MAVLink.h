@@ -7,6 +7,7 @@
 
 #include "AP_Mount.h"
 #include "AP_Mount_Backend.h"
+#include "AP_Camera/AP_Camera_shareddefs.h"
 
 
 class BP_Mount_STorM32_MAVLink : public AP_Mount_Backend
@@ -144,11 +145,13 @@ public:
     // If this is wanted, the camera component should be enabled in STorM32.
     void send_camera_settings(mavlink_channel_t chan) const override {}
 
-    // added: set photo or video mode
-    bool set_cam_mode(bool video_mode) override;
+    // added:
 
-    // added: 3-way switch mode
-    bool set_cam_photo_video_mode(int8_t ch_flag) override;
+    // momentary switch to set to photo or video mode (video_mode false: photo mode, true: video mode)
+    bool cam_set_mode(bool video_mode) override;
+
+    // momentary 3 pos switch to set to photo mode and take picture, set to video mode and start recording, or stop video recording
+    bool cam_do_photo_video_mode(PhotoVideoMode photo_video_mode) override;
 
 private:
 

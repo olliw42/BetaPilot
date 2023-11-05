@@ -756,17 +756,17 @@ AP_Camera *camera()
 }
 
 //OW
-bool AP_Camera::set_cam_mode(bool video_mode)
+bool AP_Camera::cam_set_mode(bool video_mode)
 {
     WITH_SEMAPHORE(_rsem);
 
     if (primary == nullptr) {
         return false;
     }
-    return primary->set_cam_mode(video_mode);
+    return primary->cam_set_mode(video_mode);
 }
 
-bool AP_Camera::set_cam_mode(uint8_t instance, bool video_mode)
+bool AP_Camera::cam_set_mode(uint8_t instance, bool video_mode)
 {
     WITH_SEMAPHORE(_rsem);
 
@@ -776,20 +776,20 @@ bool AP_Camera::set_cam_mode(uint8_t instance, bool video_mode)
     }
 
     // call backend
-    return backend->set_cam_mode(video_mode);
+    return backend->cam_set_mode(video_mode);
 }
 
-bool AP_Camera::set_cam_photo_video_mode(int8_t ch_flag)
+bool AP_Camera::cam_do_photo_video_mode(PhotoVideoMode photo_video_mode)
 {
     WITH_SEMAPHORE(_rsem);
 
     if (primary == nullptr) {
         return false;
     }
-    return primary->set_cam_photo_video_mode(ch_flag);
+    return primary->cam_do_photo_video_mode(photo_video_mode);
 }
 
-bool AP_Camera::set_cam_photo_video_mode(uint8_t instance, int8_t ch_flag)
+bool AP_Camera::cam_do_photo_video_mode(uint8_t instance, PhotoVideoMode photo_video_mode)
 {
     WITH_SEMAPHORE(_rsem);
 
@@ -799,7 +799,7 @@ bool AP_Camera::set_cam_photo_video_mode(uint8_t instance, int8_t ch_flag)
     }
 
     // call backend
-    return backend->set_cam_photo_video_mode(ch_flag);
+    return backend->cam_do_photo_video_mode(photo_video_mode);
 }
 //OWEND
 
