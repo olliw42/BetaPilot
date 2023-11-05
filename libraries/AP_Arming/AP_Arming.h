@@ -303,6 +303,11 @@ private:
 
     uint32_t last_prearm_display_ms;  // last time we send statustexts for prearm failures
     bool running_arming_checks;  // true if the arming checks currently being performed are being done because the vehicle is trying to arm the vehicle
+
+//OW
+    bool pre_arm_checks_last_result;
+    bool report_immediately;
+//OWEND
 };
 
 namespace AP {

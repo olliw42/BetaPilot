@@ -493,9 +493,6 @@ const uint32_t FAILURE_FLAGS =
 
 void BP_Mount_STorM32_MAVLink::send_prearmchecks_txt(void)
 {
-GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: i%u p%u a%u pr%u", _instance+1, _initialised, _gimbal_prearmchecks_ok, _armed, _protocol);
-
-
     if (!_initialised || !_gimbal_prearmchecks_ok || !_armed) {
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: arm", _instance+1);
     } else
