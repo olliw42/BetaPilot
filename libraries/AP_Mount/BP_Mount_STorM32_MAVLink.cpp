@@ -182,7 +182,7 @@ void BP_Mount_STorM32_MAVLink::init()
 // STorM32-Link wants 25 Hz, so we update at 25 Hz and 12.5 Hz respectively
 void BP_Mount_STorM32_MAVLink::update()
 {
-    update_target_angles(); // update at 50 Hz
+    update_target_angles(); // update at 50 Hz (RC_TARGETING handling assumes this)
 
     switch (_task_counter) {
         case TASK_SLOT0:

@@ -30,7 +30,6 @@ public:
     // Is called by mount pre_arm_checks() (and nowhere else), which in turn is called
     // in AP_Arming::pre_arm_checks() (and nowhere else).
     // The mount prearm checks are tied to camera, and enabled by setting ARMING_CHECK_CAMERA.
-    // Thus Gremsy's method for e.g. checking attitude_status doesn't really make much sense.
     bool healthy() const override;
 
 
@@ -51,7 +50,7 @@ public:
     // - Copter ModeAuto::do_mount_control()
     bool has_pan_control() const override { return false; }
 
-    //>> Deal with some AP nonsense:
+    //>> Deal with some AP strangeness:
 
     // get attitude as a quaternion.  Returns true on success
     // att_quat will be an earth-frame quaternion rotated such that yaw is in body-frame.
@@ -99,7 +98,8 @@ public:
     // => we need to overwrite it
     bool handle_gimbal_manager_flags(uint32_t flags) override;
 
-    // end of AP nonsense<<
+    //<< end of Deal with some AP strangeness
+
 
     // handle GIMBAL_DEVICE_INFORMATION message
     // empty => we need to overwrite it
@@ -125,9 +125,17 @@ public:
     // camera controls for gimbals that include a camera
     //
 
+    // These are called from the Camera_Mount backend (CameraType::Mount = 4).
+    // One could instead use Camera_MAVLink backend (CameraType::MAVLINK = 5), which uses
+    // MAV_CMD_DO_DIGICAM_CONTROL and MAV_CMD_DO_DIGICAM_CONFIGURE commands.
+    // One also could use Camera_MAVLinkCamV2 backend (CameraType::MAVLINK_CAMV2 = 6), which uses
+    // MAV_CMD_IMAGE_START_CAPTURE, MAV_CMD_VIDEO_START_CAPTURE, MAV_CMD_VIDEO_STOP_CAPTURE, and so on. This
+    // backend also digests a MAVLINK_MSG_ID_CAMERA_INFORMATION message.
+    //
+    // We implement them by using MAV_CMD_DO_DIGICAM_CONFIGURE, MAV_CMD_DO_DIGICAM_CONTROL.
+    // So may not provide advantages over CameraType::MAVLINK, maybe is even less powerful.
+
     // take a picture.  returns true on success
-    // We do not need to do anything since AP_Camera::take_picture() will send a a CMD_LONG:DO_DIGICAM_CONTROL to all components
-    // we have modified this such that it is not send if it is CamTrigType::mount (CAM_TRIGG_TYPE = 3).
     bool take_picture() override;
 
     // start or stop video recording.  returns true on success
