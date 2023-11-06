@@ -895,14 +895,14 @@ bool Plane::is_taking_off() const
 }
 
 //OW
-MAV_LANDED_STATE Plane::get_landed_state() const
+AP_Vehicle::LandedState Plane::get_landed_state() const
 {
     if (plane.is_flying()) {
         // note that Q-modes almost always consider themselves as flying
-        return MAV_LANDED_STATE_IN_AIR;
+        return AP_Vehicle::LandedState::InAir;
     }
 
-    return MAV_LANDED_STATE_ON_GROUND;
+    return AP_Vehicle::LandedState::OnGround;
 }
 //OWEND
 

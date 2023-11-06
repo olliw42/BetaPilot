@@ -460,18 +460,18 @@ bool Copter::is_taking_off() const
 }
 
 //OW
-MAV_LANDED_STATE Copter::get_landed_state() const
+AP_Vehicle::LandedState Copter::get_landed_state() const
 {
     if (ap.land_complete) {
-        return MAV_LANDED_STATE_ON_GROUND;
+        return AP_Vehicle::LandedState::OnGround;
     }
     if (flightmode->is_landing()) {
-        return MAV_LANDED_STATE_LANDING;
+        return AP_Vehicle::LandedState::Landing;
     }
     if (flightmode->is_taking_off()) {
-        return MAV_LANDED_STATE_TAKEOFF;
+        return AP_Vehicle::LandedState::TakeOff;
     }
-    return MAV_LANDED_STATE_IN_AIR;
+    return AP_Vehicle::LandedState::InAir;
 }
 //OWEND
 

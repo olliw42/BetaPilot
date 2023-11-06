@@ -993,7 +993,7 @@ landed state:
      we probably want to also take into account the arming state to mock something up
      ugly as we will have vehicle dependency here
 */
-    uint8_t landed_state = AP::vehicle()->get_landed_state();
+    uint8_t landed_state = (uint8_t)AP::vehicle()->get_landed_state();
 
 #if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
     // for copter we modify the landed states so as to reflect the 2 sec pre-take-off period

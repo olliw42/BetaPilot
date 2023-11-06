@@ -310,7 +310,7 @@ private:
     void rotate_NE_to_BF(Vector2f &vec);
     void rotate_BF_to_NE(Vector2f &vec);
 //OW
-    MAV_LANDED_STATE get_landed_state() const override;
+    AP_Vehicle::LandedState get_landed_state() const override;
 //OWEND
 
     // commands.cpp

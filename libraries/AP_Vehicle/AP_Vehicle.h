@@ -226,8 +226,19 @@ public:
     virtual bool is_taking_off() const { return false; }
 
 //OW
+    // landed state enumeration
+    // not strictly required, but should mirror MAV_LANDED_STATE enum
+    enum class LandedState {
+        Undefined = 0,      // landed state unknown/not available
+        OnGround = 1,       // vehicle is landed (on ground)
+        InAir = 2,          // vehicle is in air
+        TakeOff = 3,        // vehicle currently taking off
+        Landing = 4,        // vehicle currently landing
+        Last_ControlOutput  // place new values before this
+    };
+
     // returns landed state
-    virtual MAV_LANDED_STATE get_landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
+    virtual AP_Vehicle::LandedState get_landed_state() const { return LandedState::Undefined; }
 //OWEND
 
     // zeroing the RC outputs can prevent unwanted motor movement:
