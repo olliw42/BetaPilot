@@ -5369,6 +5369,24 @@ void GCS_MAVLINK::send_sys_status()
         errors4); // errors4
 }
 
+//OW
+MAV_LANDED_STATE GCS_MAVLINK::landed_state() const
+{
+    switch (AP::vehicle()->get_landed_state()) {
+        case AP_Vehicle::LandedState::OnGround:
+            return MAV_LANDED_STATE_ON_GROUND;
+        case AP_Vehicle::LandedState::InAir:
+            return MAV_LANDED_STATE_IN_AIR;
+        case AP_Vehicle::LandedState::TakeOff:
+            return MAV_LANDED_STATE_TAKEOFF;
+        case AP_Vehicle::LandedState::Landing:
+            return MAV_LANDED_STATE_LANDING;
+        default:
+            return MAV_LANDED_STATE_UNDEFINED;
+    }
+}
+//OWEND
+
 void GCS_MAVLINK::send_extended_sys_state() const
 {
     mavlink_msg_extended_sys_state_send(chan, vtol_state(), landed_state());

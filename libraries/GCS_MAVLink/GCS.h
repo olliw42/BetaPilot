@@ -508,20 +508,7 @@ protected:
     virtual MAV_VTOL_STATE vtol_state() const { return MAV_VTOL_STATE_UNDEFINED; }
 //OW
 //    virtual MAV_LANDED_STATE landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
-    MAV_LANDED_STATE landed_state() const {
-        switch (AP::vehicle()->get_landed_state()) {
-        case AP_Vehicle::LandedState::OnGround:
-            return MAV_LANDED_STATE_ON_GROUND;
-        case AP_Vehicle::LandedState::InAir:
-            return MAV_LANDED_STATE_IN_AIR;
-        case AP_Vehicle::LandedState::TakeOff:
-            return MAV_LANDED_STATE_TAKEOFF;
-        case AP_Vehicle::LandedState::Landing:
-            return MAV_LANDED_STATE_LANDING;
-        default:
-            return MAV_LANDED_STATE_UNDEFINED;
-        }
-    }
+    MAV_LANDED_STATE landed_state() const;
 //OWEND
 
     // return a MAVLink parameter type given a AP_Param type
