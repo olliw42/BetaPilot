@@ -34,11 +34,11 @@ public:
 
 
     // return true if this mount accepts roll or pitch targets
-    // work it out later
-    // Only used in get_gimbal_manager_capability_flags(), which we overwrite anyhow
-    // => irrelevant for now
-    bool has_roll_control() const override { return true; }
-    bool has_pitch_control() const override { return true; }
+    // affects the gimbal manager capability flags send out by AP
+    // only used in get_gimbal_manager_capability_flags(), which we overwrite anyhow
+    // => irrelevant for now, but we set it to something useful nevertheless
+    bool has_roll_control() const override;
+    bool has_pitch_control() const override;
 
     // returns true if this mount can control its pan (required for multicopters)
     // false: copter is rotated in yaw, not the gimbal
@@ -48,7 +48,8 @@ public:
     // - GCS_MAVLINK_Copter::handle_mount_message(), msg = MAVLINK_MSG_ID_MOUNT_CONTROL
     // - Copter Mode::AutoYaw::set_roi()
     // - Copter ModeAuto::do_mount_control()
-    bool has_pan_control() const override { return false; }
+    // for now do something simple
+    bool has_pan_control() const override;
 
     //>> Deal with some AP strangeness:
 

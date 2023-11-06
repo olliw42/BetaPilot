@@ -166,7 +166,7 @@ void BP_Mount_STorM32_MAVLink::init()
     _mount_status = {};
     _device_status = {};
     flags_for_gimbal = 0;
-    _current_angles = { 0.0f, 0.0f, 0.0f, NAN}; // the NAN is important!
+    _current_angles = {0.0f, 0.0f, 0.0f, NAN}; // the NAN is important!
     _script_control_angles = {};
 
     _yaw_lock = false; // can't be currently supported, so we need to ensure this is false. This is important!
@@ -415,7 +415,6 @@ void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags(enum MAV_MOUNT_MODE mn
 }
 
 
-
 //------------------------------------------------------
 // Gimbal and protocol discovery
 //------------------------------------------------------
@@ -475,6 +474,46 @@ void BP_Mount_STorM32_MAVLink::determine_protocol(const mavlink_message_t &msg)
             _protocol = PROTOCOL_GIMBAL_DEVICE;
             break;
     }
+}
+
+
+//------------------------------------------------------
+// Gimbal control flags
+//------------------------------------------------------
+
+bool BP_Mount_STorM32_MAVLink::has_roll_control() const
+{
+    if (_protocol == PROTOCOL_GIMBAL_DEVICE) {
+        return (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_HAS_ROLL_AXIS);
+    }
+    if (_protocol == PROTOCOL_MOUNT) {
+        return (_params.roll_angle_min < _params.roll_angle_max);
+    }
+    return false;
+}
+
+
+bool BP_Mount_STorM32_MAVLink::has_pitch_control() const
+{
+    if (_protocol == PROTOCOL_GIMBAL_DEVICE) {
+        return (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_HAS_PITCH_AXIS);
+    }
+    if (_protocol == PROTOCOL_MOUNT) {
+        return (_params.pitch_angle_min < _params.pitch_angle_max);
+    }
+    return false;
+}
+
+
+bool BP_Mount_STorM32_MAVLink::has_pan_control() const
+{
+    if (_protocol == PROTOCOL_GIMBAL_DEVICE) {
+        return (_device_info.cap_flags & GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_AXIS);
+    }
+    if (_protocol == PROTOCOL_MOUNT) {
+        return yaw_range_valid();
+    }
+    return false;
 }
 
 
