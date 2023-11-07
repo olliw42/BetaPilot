@@ -1,11 +1,12 @@
 #pragma once
 
 #define BETAPILOTVERSION "v059"
+#define DATEOFBASEBRANCH "20231106"
 
 /*
 search for //OW to find all changes
 
-2023.11.01: v059
+2023.11.06: v059
  upgraded to ArduPilot master 4.5.0-dev
 
 2023.03.10: v058

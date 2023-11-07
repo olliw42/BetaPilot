@@ -8,6 +8,12 @@
 
 #define THISFIRMWARE "ArduPlane V4.5.0-dev"
 
+//OW
+#undef THISFIRMWARE
+#include "../libraries/bp_version.h"
+#define THISFIRMWARE "BetaPlane V4.5.0-dev" BETAPILOTVERSION " " DATEOFBASEBRANCH
+//OWEND
+
 // the following line is parsed by the autotest scripts
 #define FIRMWARE_VERSION 4,5,0,FIRMWARE_VERSION_TYPE_DEV
 
