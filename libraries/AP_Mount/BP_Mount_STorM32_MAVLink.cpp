@@ -989,17 +989,16 @@ landed state:
      Copter has it: GCS_MAVLINK_Copter::landed_state(), yields ON_GROUND, TAKEOFF, IN_AIR, LANDING
      Plane has it: GCS_MAVLINK_Plane::landed_state(), only yields ON_GROUND or IN_AIR
      Blimp also has it, blimp not relevant for us
-     but is protected, so we needed to mock it up
-     we probably want to also take into account the arming state to mock something up
-     ugly as we will have vehicle dependency here
+     we want to also take into account the arming state to mock something up
+     ugly as we have vehicle dependency, but that's how it is
 */
     uint8_t landed_state = (uint8_t)AP::vehicle()->get_landed_state();
 
 #if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
-    // for copter we modify the landed states so as to reflect the 2 sec pre-take-off period
-    // leads to a PREPARING_FOR_TAKEOFF before takeoff, but also after landing!
+    // for copter we modify the landed state so as to reflect the 2 sec pre-take-off period
+    // the code below leads to a PREPARING_FOR_TAKEOFF before takeoff, but also after landing!
     // for the latter we would have to catch that it was flying, but we don't need to care
-    // the gimbal will do inits when ON_GROUND, and apply them when transitioning to PREPARING_FOR_TAKEOFF
+    // the gimbal will do inits when ON_GROUND, and refresh them when transitioning to PREPARING_FOR_TAKEOFF
     // it won't do it for other transitions, so e.g. also not for plane
     const AP_Notify &notify = AP::notify();
     if ((landed_state == MAV_LANDED_STATE_ON_GROUND) && notify.flags.armed) {
@@ -1008,11 +1007,6 @@ landed state:
 #endif
 
     // ready to send
-    static uint32_t tlast_us = 0;
-    uint32_t t_us = AP_HAL::micros();
-    uint32_t dt_us = t_us - tlast_us;
-    tlast_us = t_us;
-
     float qa[4] = {q.q1, q.q2, q.q3, q.q4};
 
     mavlink_msg_autopilot_state_for_gimbal_device_send(
@@ -1028,6 +1022,10 @@ landed state:
         angular_velocity_z          // float angular_velocity_z
         );
 
+    static uint32_t tlast_us = 0;
+    uint32_t t_us = AP_HAL::micros();
+    uint32_t dt_us = t_us - tlast_us;
+    tlast_us = t_us;
 
     BP_LOG("MTL0", BP_LOG_MTL_AUTOPILOTSTATE_HEADER,
         q[0],q[1],q[2],q[3],
