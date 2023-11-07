@@ -529,20 +529,21 @@ const uint32_t FAILURE_FLAGS =
         GIMBAL_DEVICE_ERROR_FLAGS_MOTOR_ERROR |
         GIMBAL_DEVICE_ERROR_FLAGS_SOFTWARE_ERROR |
         GIMBAL_DEVICE_ERROR_FLAGS_COMMS_ERROR;
-        // GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER;
 
 
 void BP_Mount_STorM32_MAVLink::send_prearmchecks_txt(void)
 {
+    uint32_t failure_flags = (_protocol == PROTOCOL_GIMBAL_DEVICE) ? _device_status.received_failure_flags : _gimbal_error_flags;
+
     if (!_initialised || !_gimbal_prearmchecks_ok || !_armed) {
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: arm", _instance+1);
     } else
-    if (_device_status.received_failure_flags & FAILURE_FLAGS) {
+    if (failure_flags & FAILURE_FLAGS) {
         char txt[255];
         strcpy(txt, "");
-        if (_device_status.received_failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_MOTOR_ERROR) strcat(txt, "mot,");
-        if (_device_status.received_failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_ENCODER_ERROR) strcat(txt, "enc,");
-        if (_device_status.received_failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_POWER_ERROR) strcat(txt, "volt,");
+        if (failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_MOTOR_ERROR) strcat(txt, "mot,");
+        if (failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_ENCODER_ERROR) strcat(txt, "enc,");
+        if (failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_POWER_ERROR) strcat(txt, "volt,");
         if (txt[0] != '\0') {
             txt[strlen(txt)-1] = '\0';
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: %s", _instance+1, txt);
@@ -605,8 +606,9 @@ bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
         }
 
         // check failure flags
-        // We also check for GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER
-        // which essentially only means that gimbal got GIMBAL_DEVICE_SET_ATTITUDE messages.
+        // We should also check for GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER
+        // which means that gimbal did not got GIMBAL_DEVICE_SET_ATTITUDE messages.
+//        if ((_device_status.received_failure_flags & (FAILURE_FLAGS | GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER)) > 0) {
         if ((_device_status.received_failure_flags & FAILURE_FLAGS) > 0) {
             return false;
         }
@@ -614,6 +616,11 @@ bool BP_Mount_STorM32_MAVLink::prearmchecks_do(void)
     } else {
         // unhealthy if mount status is not received within the last second
         if ((AP_HAL::millis() - _mount_status.received_tlast_ms) > 1000) {
+            return false;
+        }
+
+        // check failure flags // are set since v2.68b
+        if ((_gimbal_error_flags & FAILURE_FLAGS) > 0) {
             return false;
         }
     }
@@ -749,6 +756,7 @@ void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
             if ((payload.custom_mode & 0x80000000) == 0) { // we don't follow all changes, but just toggle it to true once
                 _gimbal_prearmchecks_ok = true;
             }
+            _gimbal_error_flags = (payload.custom_mode & 0x00FFFF00) >> 8;
             if (!_armingchecks_enabled) { // ArduPilot arming checks disabled, so let's do ourself
                 if (!_prearmchecks_done) prearmchecks_do();
             }
