@@ -212,6 +212,9 @@ private:
     bool prearmchecks_do(void);
     void send_prearmchecks_txt(void);
 
+    uint32_t _request_send_banner_ms;
+    void update_send_banner(void);
+
     // gimbal target & control
 
     struct {

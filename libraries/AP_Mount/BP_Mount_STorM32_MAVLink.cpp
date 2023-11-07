@@ -210,6 +210,8 @@ void BP_Mount_STorM32_MAVLink::update()
     _task_counter++;
     if (_task_counter > TASK_SLOT3) _task_counter = TASK_SLOT0;
 
+    update_send_banner();
+
     if (!_initialised) {
         find_gimbal();
         return;
@@ -1085,6 +1087,19 @@ void BP_Mount_STorM32_MAVLink::send_rc_channels(void)
 
 void BP_Mount_STorM32_MAVLink::send_banner(void)
 {
+    // we postpone sending it by few seconds, to avoid multiple sends
+    _request_send_banner_ms = AP_HAL::millis();
+}
+
+
+void BP_Mount_STorM32_MAVLink::update_send_banner(void)
+{
+    if (!_request_send_banner_ms) return; // no request
+
+    uint32_t tnow_ms = AP_HAL::millis();
+    if ((tnow_ms - _request_send_banner_ms) < 3500) return; // not yet time to send
+    _request_send_banner_ms = 0;
+
     if (_got_device_info) {
         // we have lots of info
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: gimbal at %u", _instance+1, _compid);
