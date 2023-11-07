@@ -4605,7 +4605,7 @@ MAV_RESULT GCS_MAVLINK::handle_command_do_gripper(const mavlink_command_long_t &
 #endif  // AP_GRIPPER_ENABLED
 
 #if HAL_SPRAYER_ENABLED
-MAV_RESULT GCS_MAVLINK::handle_command_do_sprayer(const mavlink_command_long_t &packet)
+MAV_RESULT GCS_MAVLINK::handle_command_do_sprayer(const mavlink_command_int_t &packet)
 {
     AC_Sprayer *sprayer = AP::sprayer();
     if (sprayer == nullptr) {
@@ -4752,11 +4752,6 @@ MAV_RESULT GCS_MAVLINK::handle_command_long_packet(const mavlink_command_long_t 
         result = handle_command_do_gripper(packet);
         break;
 #endif
-#if HAL_SPRAYER_ENABLED
-    case MAV_CMD_DO_SPRAYER:
-        result = handle_command_do_sprayer(packet);
-        break;
-#endif
 
 #if AP_MAVLINK_MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES_ENABLED
     case MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES: {
@@ -4773,17 +4768,6 @@ MAV_RESULT GCS_MAVLINK::handle_command_long_packet(const mavlink_command_long_t 
 #if AP_BATTERY_ENABLED
     case MAV_CMD_BATTERY_RESET:
         result = handle_command_battery_reset(packet);
-        break;
-#endif
-
-#if HAL_ADSB_ENABLED
-    case MAV_CMD_DO_ADSB_OUT_IDENT:
-        if ((AP::ADSB() != nullptr) && AP::ADSB()->ident_start()) {
-            result = MAV_RESULT_ACCEPTED;
-        }
-        else {
-            result = MAV_RESULT_FAILED;
-        }
         break;
 #endif
 
@@ -5066,6 +5050,14 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_packet(const mavlink_command_int_t &p
     case MAV_CMD_DEBUG_TRAP:
         return handle_command_debug_trap(packet);
 
+#if HAL_ADSB_ENABLED
+    case MAV_CMD_DO_ADSB_OUT_IDENT:
+        if ((AP::ADSB() != nullptr) && AP::ADSB()->ident_start()) {
+            return MAV_RESULT_ACCEPTED;
+        }
+        return  MAV_RESULT_FAILED;
+#endif
+
     case MAV_CMD_DO_AUX_FUNCTION:
         return handle_command_do_aux_function(packet);
 
@@ -5079,6 +5071,11 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_packet(const mavlink_command_int_t &p
 
     case MAV_CMD_DO_SET_MODE:
         return handle_command_do_set_mode(packet);
+
+#if HAL_SPRAYER_ENABLED
+    case MAV_CMD_DO_SPRAYER:
+        return handle_command_do_sprayer(packet);
+#endif
 
 #if AP_CAMERA_ENABLED
     case MAV_CMD_DO_DIGICAM_CONFIGURE:
