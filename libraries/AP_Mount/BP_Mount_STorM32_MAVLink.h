@@ -286,6 +286,7 @@ private:
         CAMERA_MODE_VIDEO,
     };
     CameraMode _camera_mode;        // current camera mode
+    bool _camera_is_recording;
 
     void send_cmd_do_digicam_configure(bool video_mode);
     void send_cmd_do_digicam_control(bool shoot);
