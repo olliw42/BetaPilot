@@ -269,9 +269,35 @@ bool BP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
 }
 
 
+void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags(enum MAV_MOUNT_MODE mntmode)
+{
+    flags_for_gimbal = 0;
+
+    switch (mntmode) {
+        case MAV_MOUNT_MODE_RETRACT:
+            flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RETRACT;
+            break;
+        case MAV_MOUNT_MODE_NEUTRAL:
+            flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_NEUTRAL;
+            break;
+        default:
+            break;
+    }
+
+    // we currently only support pitch,roll lock, not pitch,roll follow
+    flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
+
+    // we currently do not support yaw lock
+//    if (_is_yaw_lock) flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_LOCK;
+
+    // set either YAW_IN_VEHICLE_FRAME or YAW_IN_EARTH_FRAME, to indicate new message format, STorM32 will reject otherwise
+    flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_IN_VEHICLE_FRAME;
+}
+
+
 void BP_Mount_STorM32_MAVLink::send_target_angles(void)
 {
-    // just send stupidly at 12.5 Hz if (!get_target_angles()) return; // if false don't send
+    // just send stupidly at 12.5 Hz, no check if get_target_angles() made a change
 
     update_gimbal_device_flags(get_mode());
 
@@ -388,32 +414,6 @@ void BP_Mount_STorM32_MAVLink::update_target_angles(void)
             // we do not know this mode so do nothing
             break;
     }
-}
-
-
-void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags(enum MAV_MOUNT_MODE mntmode)
-{
-    flags_for_gimbal = 0;
-
-    switch (mntmode) {
-        case MAV_MOUNT_MODE_RETRACT:
-            flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RETRACT;
-            break;
-        case MAV_MOUNT_MODE_NEUTRAL:
-            flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_NEUTRAL;
-            break;
-        default:
-            break;
-    }
-
-    // we currently only support pitch,roll lock, not pitch,roll follow
-    flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
-
-    // we currently do not support yaw lock
-//    if (_is_yaw_lock) flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_LOCK;
-
-    // set either YAW_IN_VEHICLE_FRAME or YAW_IN_EARTH_FRAME, to indicate new message format, STorM32 will reject otherwise
-    flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_IN_VEHICLE_FRAME;
 }
 
 
@@ -1219,7 +1219,7 @@ void BP_Mount_STorM32_MAVLink::set_attitude_euler(float roll_deg, float pitch_de
 
 
 // get attitude as a quaternion.  Returns true on success
-bool BP_Mount_STorM32_MAVLink::get_attitude_quaternion(Quaternion& att_quat)
+bool BP_Mount_STorM32_MAVLink::get_attitude_quaternion(Quaternion &att_quat)
 {
     if (!_initialised) {
         return false;

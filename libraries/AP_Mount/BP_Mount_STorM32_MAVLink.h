@@ -62,7 +62,7 @@ public:
     // - scripts via calling AP_Mount::get_attitude_euler()
     // AP nonsense: uses inappropriate Euler angles.
     // => we set roll to zero, to minimize harm.
-    bool get_attitude_quaternion(Quaternion& att_quat) override;
+    bool get_attitude_quaternion(Quaternion &att_quat) override;
 
     // set yaw_lock.  If true, the gimbal's yaw target is maintained in earth-frame meaning
     // it will lock onto an earth-frame heading (e.g. North). If false (aka "follow") the gimbal's yaw
