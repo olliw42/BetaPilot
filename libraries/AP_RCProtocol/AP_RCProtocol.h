@@ -74,7 +74,7 @@ public:
         DRONECAN   = 13,
 #endif
 //OW RADIOLINK
-        MAVLINK_RADIO = 14, // RC_PROTOCOLS +2^14 = 16384
+        MAVLINK_RADIO = 14, // RC_PROTOCOLS +2^15 = 32768
 //OWEND
         NONE    //last enum always is None
     };
