@@ -461,22 +461,6 @@ bool Copter::is_taking_off() const
     return flightmode->is_taking_off();
 }
 
-//OW
-AP_Vehicle::LandedState Copter::get_landed_state() const
-{
-    if (ap.land_complete) {
-        return AP_Vehicle::LandedState::OnGround;
-    }
-    if (flightmode->is_landing()) {
-        return AP_Vehicle::LandedState::Landing;
-    }
-    if (flightmode->is_taking_off()) {
-        return AP_Vehicle::LandedState::TakeOff;
-    }
-    return AP_Vehicle::LandedState::InAir;
-}
-//OWEND
-
 bool Copter::current_mode_requires_mission() const
 {
 #if MODE_AUTO_ENABLED == ENABLED
