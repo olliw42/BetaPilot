@@ -305,7 +305,7 @@ private:
     bool running_arming_checks;  // true if the arming checks currently being performed are being done because the vehicle is trying to arm the vehicle
 
 //OW
-    bool pre_arm_checks_last_result;
+    bool last_prearm_checks_result;
     bool report_immediately;
 //OWEND
 };

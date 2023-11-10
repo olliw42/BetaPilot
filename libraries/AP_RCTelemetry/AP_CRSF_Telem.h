@@ -335,6 +335,9 @@ private:
         bool use_rf_mode;
         AP_RCProtocol_CRSF::ProtocolType protocol;
         bool pending = true;
+//OWCRSF        
+        uint32_t last_request_info_ms;
+//OWEND        
     } _crsf_version;
 
     struct {

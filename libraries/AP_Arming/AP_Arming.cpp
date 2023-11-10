@@ -1546,7 +1546,7 @@ bool AP_Arming::pre_arm_checks(bool report)
 #endif
 //OW
 //    return hardware_safety_check(report)
-    bool res = hardware_safety_check(report)
+    bool checks_result = hardware_safety_check(report)
 //OWEND
 #if HAL_HAVE_IMU_HEATER
         &  heater_min_temperature_checks(report)
@@ -1584,12 +1584,12 @@ bool AP_Arming::pre_arm_checks(bool report)
         &  estop_checks(report);
 
 //OW
-    if (!res && pre_arm_checks_last_result) { // check went from true to false
+    if (!checks_result && last_prearm_checks_result) { // check went from true to false
         report_immediately = true;
     }
-    pre_arm_checks_last_result = res;
+    last_prearm_checks_result = checks_result;
 
-    return res;
+    return checks_result;
 //OWEND
 }
 
