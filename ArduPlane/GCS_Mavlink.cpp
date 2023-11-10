@@ -1508,8 +1508,6 @@ MAV_VTOL_STATE GCS_MAVLINK_Plane::vtol_state() const
 #endif
 };
 
-//OW
-/*
 MAV_LANDED_STATE GCS_MAVLINK_Plane::landed_state() const
 {
     if (plane.is_flying()) {
@@ -1519,5 +1517,4 @@ MAV_LANDED_STATE GCS_MAVLINK_Plane::landed_state() const
 
     return MAV_LANDED_STATE_ON_GROUND;
 }
-*/
-//OWEND
+

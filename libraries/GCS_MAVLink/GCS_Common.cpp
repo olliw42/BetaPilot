@@ -6902,4 +6902,3 @@ void GCS_MAVLINK::handle_radio_rc_channels(const mavlink_message_t &msg)
 //OWEND
 
 #endif  // HAL_GCS_ENABLED
-

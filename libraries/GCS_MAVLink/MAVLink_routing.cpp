@@ -436,5 +436,4 @@ void MAVLink_routing::get_targets(const mavlink_message_t &msg, int16_t &sysid, 
     }
 }
 
-
 #endif  // HAL_GCS_ENABLED
