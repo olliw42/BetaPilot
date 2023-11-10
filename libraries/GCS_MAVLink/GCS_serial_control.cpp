@@ -118,6 +118,22 @@ void GCS_MAVLINK::handle_serial_control(const mavlink_message_t &msg)
         port->begin(packet.baudrate);
     }
 
+//OWSERIALCONTROL
+    #define SERIAL_CONTROL_FLAG_8N1  0x40
+    #define SERIAL_CONTROL_FLAG_8E1  0x80
+
+    if (exclusive && port != nullptr) {
+        if (packet.flags & SERIAL_CONTROL_FLAG_8N1) {
+            port->configure_parity(0);
+            port->set_stop_bits(1);
+        }
+        if (packet.flags & SERIAL_CONTROL_FLAG_8E1) {
+            port->configure_parity(2); // enable even parity
+            port->set_stop_bits(1);
+        }
+    }
+//OWEND
+
     // write the data
     if (packet.count != 0) {
         if ((packet.flags & SERIAL_CONTROL_FLAG_BLOCKING) == 0) {
