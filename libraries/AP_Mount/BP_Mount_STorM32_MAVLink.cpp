@@ -994,7 +994,7 @@ estimator status:
 /*
 landed state:
      GCS_Common.cpp: virtual MAV_LANDED_STATE landed_state() const { return MAV_LANDED_STATE_UNDEFINED; }
-     But protected so we can access it. Hence either (1) move to public, (2) add public getter to gcs class,
+     But protected so we can't access it. Hence either (1) move to public, (2) add public getter to gcs class,
      or (3) add it to vehicle. Latter is most work but nicest, IMHO.
      Copter has it: GCS_MAVLINK_Copter::landed_state(), yields ON_GROUND, TAKEOFF, IN_AIR, LANDING
      Plane has it: GCS_MAVLINK_Plane::landed_state(), only yields ON_GROUND or IN_AIR
