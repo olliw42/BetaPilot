@@ -111,7 +111,7 @@ public:
     void handle_gimbal_device_attitude_status(const mavlink_message_t &msg) override;
 
     // added: handle msg - allows to process a msg from a gimbal
-    void handle_msg(const mavlink_message_t &msg) override;
+    void handle_msg_extra(const mavlink_message_t &msg) override;
 
     // added: send banner
     void send_banner(void) override;
@@ -228,7 +228,7 @@ private:
         uint32_t received_tlast_ms; // time last GIMBAL_DEVICE_ATTITUDE_STATUS was received (used for health reporting)
     } _device_status;
 
-    uint16_t flags_for_gimbal;      // flags to be send to gimbal device
+    uint16_t _flags_for_gimbal;      // flags to be send to gimbal device
 
     struct {
         float roll;
@@ -261,7 +261,9 @@ private:
     // source sysid & compid as its associated gimbal manager's sysid & compid.
     void send_gimbal_device_set_attitude(void);
 
+    uint32_t _tahrs_healthy_ms;
     void send_autopilot_state_for_gimbal_device(void);
+
     void send_rc_channels(void);
 
     uint32_t _send_system_time_tlast_ms;

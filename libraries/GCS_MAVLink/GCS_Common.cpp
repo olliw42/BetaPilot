@@ -1732,7 +1732,7 @@ void GCS_MAVLINK::packetReceived(const mavlink_status_t &status,
 //OW
 #if HAL_MOUNT_ENABLED
     AP_Mount *mount = AP::mount();
-    if (mount != nullptr) mount->handle_msg(chan, msg);
+    if (mount != nullptr) mount->handle_msg_extra(chan, msg);
 #endif
 //OWEND
     handleMessage(msg);

@@ -207,7 +207,7 @@ public:
     virtual bool cam_do_photo_video_mode(PhotoVideoMode photo_video_mode) { return false; }
 
     // handle msg - allows to process a msg from a gimbal
-    virtual void handle_msg(const mavlink_message_t &msg) {}
+    virtual void handle_msg_extra(const mavlink_message_t &msg) {}
 
     // send banner
     virtual void send_banner(void) {}

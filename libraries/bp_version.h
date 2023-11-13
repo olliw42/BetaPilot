@@ -7,12 +7,12 @@
 search for //OW to find all changes
 
 on-top features:
-- RADIO_LINK
+- RADIO_LINK (OWRADIOLINK)
 - AP_Arming: immediate report
-- AP_RCTelemetry: CRSF statustext throttle
-- GCS_serial_control: SERIAL_CONTROL 8E1
+- AP_RCTelemetry: CRSF statustext throttle (OWCRSF)
+- GCS_serial_control: SERIAL_CONTROL 8E1 (OWSERIALCONTORL)
 - RC_Channel, AUX_FUNC: RETRACT_MOUNT1_3POS (eq RETRACT_MOUNT1), CAMERA_SET_MODE, CAMERA_TRIG_MODE (eq CAM_MODE_TOGGLE)
-
+-
 2023.11.06: v059
  upgraded to ArduPilot master 4.5.0-dev, mount revised significantly
 

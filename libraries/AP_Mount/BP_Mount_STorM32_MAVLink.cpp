@@ -23,12 +23,12 @@ extern const AP_HAL::HAL& hal;
 //******************************************************
 // Quaternion & Euler for Gimbal
 //******************************************************
-// It is inappropriate to use NED (roll-pitch-yaw) to convert received quaternion to Euler angles and vice versa.
-// For most gimbals pitch-roll-yaw is appropriate.
-// When the roll angle is zero, both are equivalent, which should be the majority of cases anyhow.
-// The issue with NED is the gimbal lock at pitch +-90 deg, but pitch +-90 deg is a common operation point for
-// gimbals.
-// Tthe angles in this driver are thus pitch-roll-yaw Euler.
+// It is inappropriate to use NED (roll-pitch-yaw) to convert received quaternion to Euler angles
+// and vice versa. For most gimbals pitch-roll-yaw is appropriate. When the roll angle is zero,
+// both are equivalent, which should be the majority of cases.
+// The issue with NED is the gimbal lock at pitch +-90 deg, but pitch +-90 deg is a common
+// operation point for gimbals.
+// The angles in this driver are thus pitch-roll-yaw Euler.
 
 class GimbalQuaternion : public Quaternion
 {
@@ -165,7 +165,7 @@ void BP_Mount_STorM32_MAVLink::init()
 
     _mount_status = {};
     _device_status = {};
-    flags_for_gimbal = 0;
+    _flags_for_gimbal = 0;
     _current_angles = {0.0f, 0.0f, 0.0f, NAN}; // the NAN is important!
     _script_control_angles = {};
 
@@ -271,27 +271,27 @@ bool BP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
 
 void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags(enum MAV_MOUNT_MODE mntmode)
 {
-    flags_for_gimbal = 0;
+    _flags_for_gimbal = 0;
 
     switch (mntmode) {
         case MAV_MOUNT_MODE_RETRACT:
-            flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RETRACT;
+            _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RETRACT;
             break;
         case MAV_MOUNT_MODE_NEUTRAL:
-            flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_NEUTRAL;
+            _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_NEUTRAL;
             break;
         default:
             break;
     }
 
     // we currently only support pitch,roll lock, not pitch,roll follow
-    flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
+    _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
 
     // we currently do not support yaw lock
-//    if (_is_yaw_lock) flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_LOCK;
+//    if (_is_yaw_lock) _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_LOCK;
 
     // set either YAW_IN_VEHICLE_FRAME or YAW_IN_EARTH_FRAME, to indicate new message format, STorM32 will reject otherwise
-    flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_IN_VEHICLE_FRAME;
+    _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_IN_VEHICLE_FRAME;
 }
 
 
@@ -730,7 +730,7 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
 }
 
 
-void BP_Mount_STorM32_MAVLink::handle_msg(const mavlink_message_t &msg)
+void BP_Mount_STorM32_MAVLink::handle_msg_extra(const mavlink_message_t &msg)
 {
     if (_protocol == PROTOCOL_UNDEFINED) { // implies !_initialised && _compid
         determine_protocol(msg);
@@ -849,7 +849,7 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(void)
     mavlink_msg_gimbal_device_set_attitude_send(
         _chan,
         _sysid, _compid,
-        flags_for_gimbal,           // gimbal device flags
+        _flags_for_gimbal,          // gimbal device flags
         qa,                         // attitude as a quaternion
         NAN, NAN, NAN               // angular velocities
         );
@@ -858,7 +858,7 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(void)
     BP_LOG("MTC0", BP_LOG_MTC_GIMBALCONTROL_HEADER,
         (uint8_t)1, // GIMBAL_DEVICE_SET_ATTITUDE
         degrees(mnt_target.angle_rad.roll), degrees(mnt_target.angle_rad.pitch), degrees(target_yaw_bf),
-        (uint16_t)flags_for_gimbal, (uint16_t)0,
+        (uint16_t)_flags_for_gimbal, (uint16_t)0,
         (uint8_t)mnt_target.target_type,
         (uint8_t)0);
 }
@@ -977,13 +977,12 @@ estimator status:
 
     uint16_t estimator_status = 0;
 
-    static uint32_t tahrs_healthy_ms = 0;
     const bool ahrs_healthy = ahrs.healthy(); // it's a bit costly
-    if (!tahrs_healthy_ms && ahrs_healthy) {
-        tahrs_healthy_ms = AP_HAL::millis();
+    if (!_tahrs_healthy_ms && ahrs_healthy) {
+        _tahrs_healthy_ms = AP_HAL::millis();
     }
 
-    if (ahrs_healthy && (nav_estimator_status & ESTIMATOR_ATTITUDE) && ((AP_HAL::millis() - tahrs_healthy_ms) > 3000)) {
+    if (ahrs_healthy && (nav_estimator_status & ESTIMATOR_ATTITUDE) && ((AP_HAL::millis() - _tahrs_healthy_ms) > 3000)) {
         estimator_status |= ESTIMATOR_ATTITUDE; // -> QFix
         if (ahrs.initialised() && (nav_estimator_status & ESTIMATOR_VELOCITY_VERT) && (AP::gps().status() >= AP_GPS::GPS_OK_FIX_2D)) {
             estimator_status |= ESTIMATOR_VELOCITY_VERT; // -> AHRSFix
@@ -1225,10 +1224,7 @@ bool BP_Mount_STorM32_MAVLink::get_attitude_quaternion(Quaternion &att_quat)
         return false;
     }
 
-    if (_protocol != PROTOCOL_GIMBAL_DEVICE) { // not supported if not gimbal device
-        return false;
-    }
-
+    // we set roll to zero since wrong Euler's
     att_quat.from_euler(0.0f, _current_angles.pitch, _current_angles.yaw_bf);
     return true;
 }

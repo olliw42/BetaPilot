@@ -287,7 +287,7 @@ public:
 
     // this is somewhat different to handle_message() in that it catches all messages
     // with significant work it potentially could be combined, but let's not introduce side effects
-    void handle_msg(mavlink_channel_t chan, const mavlink_message_t &msg);
+    void handle_msg_extra(mavlink_channel_t chan, const mavlink_message_t &msg);
 
     // send banner
     void send_banner(void);
