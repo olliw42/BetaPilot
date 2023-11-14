@@ -210,7 +210,7 @@ private:
     bool _armingchecks_enabled;     // true when ARMING_CHECK_ALL or ARMING_CHECK_CAMERA set, we know from healty()
     bool _prearmchecks_passed;      // becomes true when all checks were passed once at startup
     uint32_t _prearmcheck_sendtext_tlast_ms;
-    bool _checks_last;              // result of last check, to detect toggle from true -> false
+    bool _checks_last;              // result of last check, to detect toggle from true -> false, false -> true
     uint32_t _checks_tlast_ms;
 
     bool healthy_nonconst(void);    // workaround to healthy() being const

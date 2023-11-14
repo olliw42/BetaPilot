@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION "v059b"
+#define BETAPILOTVERSION "v059c"
 #define DATEOFBASEBRANCH "20231114"
 
 /*
@@ -8,7 +8,6 @@ search for //OW to find all changes
 
 on-top features:
 - RADIO_LINK (OW RADIOLINK)
-- AP_Arming: immediate report (OWARM)
 - GCS_serial_control: SERIAL_CONTROL 8E1 (OW SERIALCONTROL)
 - RC_Channel, AUX_FUNC: RETRACT_MOUNT1_3POS (eq RETRACT_MOUNT1), CAMERA_SET_MODE, CAMERA_TRIG_MODE (eq CAM_MODE_TOGGLE)
 -
