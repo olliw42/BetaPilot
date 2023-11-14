@@ -290,7 +290,7 @@ public:
     void handle_msg_extra(mavlink_channel_t chan, const mavlink_message_t &msg);
 
     // send banner
-    void send_banner(void);
+    void send_banner();
 //OWEND
 
 protected:

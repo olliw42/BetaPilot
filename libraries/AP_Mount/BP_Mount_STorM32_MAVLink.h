@@ -114,8 +114,7 @@ public:
     void handle_msg_extra(const mavlink_message_t &msg) override;
 
     // added: send banner
-    void send_banner(void) override;
-
+    void send_banner() override;
 
     // accessors for scripting backends
     // AP provides them only for script backend, but can be useful generally.

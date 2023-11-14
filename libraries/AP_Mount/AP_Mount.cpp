@@ -1132,7 +1132,7 @@ void AP_Mount::handle_msg_extra(mavlink_channel_t chan, const mavlink_message_t 
     }
 }
 
-void AP_Mount::send_banner(void)
+void AP_Mount::send_banner()
 {
     for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
         if (_backends[instance] != nullptr) {

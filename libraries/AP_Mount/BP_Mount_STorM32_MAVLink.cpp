@@ -1092,7 +1092,7 @@ void BP_Mount_STorM32_MAVLink::send_rc_channels(void)
 }
 
 
-void BP_Mount_STorM32_MAVLink::send_banner(void)
+void BP_Mount_STorM32_MAVLink::send_banner()
 {
     // we postpone sending it by few seconds, to avoid multiple sends
     _request_send_banner_ms = AP_HAL::millis();

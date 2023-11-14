@@ -210,7 +210,7 @@ public:
     virtual void handle_msg_extra(const mavlink_message_t &msg) {}
 
     // send banner
-    virtual void send_banner(void) {}
+    virtual void send_banner() {}
 
     // return gimbal manager flags used by GIMBAL_MANAGER_STATUS message
     virtual uint32_t get_gimbal_manager_flags() const;
