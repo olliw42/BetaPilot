@@ -171,7 +171,7 @@ private:
     uint8_t _sysid;                 // sysid of gimbal
     uint8_t _compid;                // component id of gimbal, zero if gimbal not yet discovered
     mavlink_channel_t _chan;        // mavlink channel used to communicate with gimbal
-    // Comment: in some places the newer _link construct is used, which is however not smart,
+    // Comment: in some drivers the newer _link construct is used, which is however not smart,
     // since for each message it does a binary search to find and check the size. This is not
     // needed with the older _chan construct, which is thus much more efficient cpu wise. The
     // older _chan also allows for an early test for space avoiding potentially lengthy calcs.

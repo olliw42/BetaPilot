@@ -173,6 +173,8 @@ void BP_Mount_STorM32_MAVLink::init()
 
     _got_radio_rc_channels = false; // disable sending rc channels when RADIO_RC_CHANNELS messages are detected
     _camera_mode = CAMERA_MODE_UNDEFINED;
+
+    _should_log = true; // for now do always log
 }
 
 
@@ -853,11 +855,11 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(void)
 
 
     BP_LOG("MTC0", BP_LOG_MTC_GIMBALCONTROL_HEADER,
-        (uint8_t)1, // GIMBAL_DEVICE_SET_ATTITUDE
-        degrees(mnt_target.angle_rad.roll), degrees(mnt_target.angle_rad.pitch), degrees(target_yaw_bf),
-        (uint16_t)_flags_for_gimbal, (uint16_t)0,
-        (uint8_t)mnt_target.target_type,
-        (uint8_t)0);
+        (uint8_t)1, // Type, GIMBAL_DEVICE_SET_ATTITUDE
+        degrees(mnt_target.angle_rad.roll), degrees(mnt_target.angle_rad.pitch), degrees(target_yaw_bf), // Roll, Pitch, Yaw
+        (uint16_t)_flags_for_gimbal, (uint16_t)0, // GDFlags, GMFlags
+        (uint8_t)mnt_target.target_type, // TMode
+        (uint8_t)0); // QMode
 }
 
 
@@ -1362,6 +1364,9 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_control(bool shoot)
 // send a MOUNT_STATUS message to GCS, this is only to make MissionPlanner and alike happy
 void BP_Mount_STorM32_MAVLink::send_gimbal_device_attitude_status(mavlink_channel_t chan)
 {
+    // space already checked by streamer
+    // checked space of GIMBAL_DEVICE_ATTITUDE_STATUS, but MOUNT_STATUS is (much) smaller, so no issue
+
     mavlink_msg_mount_status_send(
         chan,
         0,          // uint8_t target_system
