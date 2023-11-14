@@ -118,7 +118,7 @@ void GCS_MAVLINK::handle_serial_control(const mavlink_message_t &msg)
         port->begin(packet.baudrate);
     }
 
-//OWSERIALCONTROL
+//OW SERIALCONTROL
     #define SERIAL_CONTROL_FLAG_8N1  0x40
     #define SERIAL_CONTROL_FLAG_8E1  0x80
 

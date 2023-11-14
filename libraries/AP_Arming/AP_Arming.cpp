@@ -183,7 +183,7 @@ void AP_Arming::update(void)
     const uint32_t now_ms = AP_HAL::millis();
     // perform pre-arm checks & display failures every 30 seconds
     bool display_fail = false;
-//OW
+//OW ARM
 //    if (now_ms - last_prearm_display_ms > PREARM_DISPLAY_PERIOD*1000) {
     if ((report_immediately && (now_ms - last_prearm_display_ms > 750)) ||
         (now_ms - last_prearm_display_ms > PREARM_DISPLAY_PERIOD*1000)) {
@@ -1544,7 +1544,7 @@ bool AP_Arming::pre_arm_checks(bool report)
         return true;
     }
 #endif
-//OW
+//OW ARM
 //    return hardware_safety_check(report)
     bool checks_result = hardware_safety_check(report)
 //OWEND
@@ -1583,7 +1583,7 @@ bool AP_Arming::pre_arm_checks(bool report)
         &  serial_protocol_checks(report)
         &  estop_checks(report);
 
-//OW
+//OW ARM
     if (!checks_result && last_prearm_checks_result) { // check went from true to false
         report_immediately = true;
     }
