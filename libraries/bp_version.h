@@ -1,7 +1,7 @@
 #pragma once
 
 #define BETAPILOTVERSION "v059b"
-#define DATEOFBASEBRANCH "20231109"
+#define DATEOFBASEBRANCH "20231114"
 
 /*
 search for //OW to find all changes
@@ -9,7 +9,6 @@ search for //OW to find all changes
 on-top features:
 - RADIO_LINK (OWRADIOLINK)
 - AP_Arming: immediate report
-- AP_RCTelemetry: CRSF statustext throttle (OWCRSF)
 - GCS_serial_control: SERIAL_CONTROL 8E1 (OWSERIALCONTORL)
 - RC_Channel, AUX_FUNC: RETRACT_MOUNT1_3POS (eq RETRACT_MOUNT1), CAMERA_SET_MODE, CAMERA_TRIG_MODE (eq CAM_MODE_TOGGLE)
 -
