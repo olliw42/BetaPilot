@@ -208,12 +208,16 @@ private:
     uint32_t _gimbal_error_flags;   // error flags in custom_mode field of the HEARTBEAT message (restricted to 16 bits)
     bool _gimbal_prearmchecks_ok;   // true when the gimbal stops reporting prearm fail in the HEARTBEAT message
     bool _armingchecks_enabled;     // true when ARMING_CHECK_ALL or ARMING_CHECK_CAMERA set, we know from healty()
-    bool _prearmchecks_done;        // becomes true when all checks were passed once at startup
+    bool _prearmchecks_passed;      // becomes true when all checks were passed once at startup
     uint32_t _prearmcheck_sendtext_tlast_ms;
+    bool _checks_last;              // result of last check, to detect toggle from true -> false
+    uint32_t _checks_tlast_ms;
 
     bool healthy_nonconst(void);    // workaround to healthy() being const
-    bool prearmchecks_do(void);
+    bool update_prearmchecks(void);
     void send_prearmchecks_txt(void);
+    void update_checks(void);
+    bool is_healthy(void);
 
     uint32_t _request_send_banner_ms;
     void update_send_banner(void);
