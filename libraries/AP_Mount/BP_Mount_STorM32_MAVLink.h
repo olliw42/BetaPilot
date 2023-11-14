@@ -80,9 +80,12 @@ public:
     // Is part of stream Extra3. This is nonsense. Streaming is appropriate only if the gimbal is
     // not a gimbal device, but then it should be streamed to all parties except the gimbal, which
     // seems not to be what is done.
-    // => we thus make it to do nothing.
+    // MissionPlaner "understands" gimbal device attitude status, but doesn't use it for campoint, so we
+    // still want to send MOUNT_STATUS.
+    // => for as long as MissionPlanner doesn't do mount/gimbal status properly
+    //    we use this to stream MOUNT_STATUS
     // We don't do any of ArduPilot's private mavlink channel nonsense.
-    void send_gimbal_device_attitude_status(mavlink_channel_t chan) override {}
+    void send_gimbal_device_attitude_status(mavlink_channel_t chan) override;
 
     // send a GIMBAL_MANAGER_INFORMATION message to GCS
     // AP nonsense: does it wrong, just good for its own limits.
@@ -296,9 +299,5 @@ private:
 
     bool _should_log;
 
-    // mount_status forwarding
-    // MissionPlaner "understands" gimbal device attitude status, but doesn't use it for campoint, so we still need to send
-    void send_mount_status_to_ground(void);
-    void send_to_ground(uint32_t msgid, const char *pkt);
 };
 

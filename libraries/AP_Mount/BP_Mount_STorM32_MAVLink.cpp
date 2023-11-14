@@ -725,8 +725,6 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
     if (payload.target_system) { // send MOUNT_STATUS to ground only if target_sysid = 0
         return;
     }
-
-    send_mount_status_to_ground();
 }
 
 
@@ -771,7 +769,6 @@ void BP_Mount_STorM32_MAVLink::handle_msg_extra(const mavlink_message_t &msg)
             _current_angles.roll = radians((float)payload.pointing_b * 0.01f);
             _current_angles.yaw_bf = radians((float)payload.pointing_c * 0.01f);
             _current_angles.delta_yaw = NAN;
-            send_mount_status_to_ground(); // this is what MissionPlanner wants ...
             break; }
     }
 }
@@ -1362,46 +1359,18 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_control(bool shoot)
 // MAVLink mount status forwarding
 //------------------------------------------------------
 
-// forward a MOUNT_STATUS message to ground, this is only to make MissionPlanner and alike happy
-void BP_Mount_STorM32_MAVLink::send_mount_status_to_ground(void)
+// send a MOUNT_STATUS message to GCS, this is only to make MissionPlanner and alike happy
+void BP_Mount_STorM32_MAVLink::send_gimbal_device_attitude_status(mavlink_channel_t chan)
 {
-    // space is checked by send_to_ground()
-
-    const mavlink_mount_status_t pkt = {
+    mavlink_msg_mount_status_send(
+        chan,
+        0,          // uint8_t target_system
+        0,          // uint8_t target_component
         (int32_t)(degrees(_current_angles.pitch) * 100.0f),     // int32_t pointing_a
         (int32_t)(degrees(_current_angles.roll) * 100.0f),      // int32_t pointing_b
         (int32_t)(degrees(_current_angles.yaw_bf) * 100.0f),    // int32_t pointing_c
-        0,          // uint8_t target_system
-        0,          // uint8_t target_component
         get_mode()  // uint8_t mount_mode
-    };
-
-    send_to_ground(MAVLINK_MSG_ID_MOUNT_STATUS, (const char*)&pkt);
-}
-
-
-// this is essentially GCS::send_to_active_channels(uint32_t msgid, const char *pkt)
-// but exempts the gimbal channel
-// It assumes that the gimbal and any GCS are not on the same link, which may not be the
-// case in all and every situation but should a pretty fair assumption.
-void BP_Mount_STorM32_MAVLink::send_to_ground(uint32_t msgid, const char *pkt)
-{
-    const mavlink_msg_entry_t* entry = mavlink_get_msg_entry(msgid);
-    if (entry == nullptr) {
-        return;
-    }
-    for (uint8_t i=0; i<gcs().num_gcs(); i++) {
-        GCS_MAVLINK &c = *gcs().chan(i);
-
-        if (c.get_chan() == _chan) continue; // the gimbal is on this channel
-
-        if (!c.is_active()) {
-            continue;
-        }
-
-        // space check is done by this method
-        c.send_message(pkt, entry);
-    }
+        );
 }
 
 
