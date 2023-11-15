@@ -152,11 +152,11 @@ void BP_Mount_STorM32_MAVLink::init()
     _chan = MAVLINK_COMM_0; // this is a dummy, will be set correctly by find_gimbal()
 
     _got_device_info = false;
-    _armed = false;
     _initialised = false;
 
     _protocol = PROTOCOL_UNDEFINED;
 
+    _gimbal_armed = false;
     _gimbal_prearmchecks_ok = false;
     _armingchecks_enabled = false;
     _prearmchecks_passed = false;
@@ -538,11 +538,11 @@ const uint32_t FAILURE_FLAGS =
         GIMBAL_DEVICE_ERROR_FLAGS_COMMS_ERROR;
 
 
-void BP_Mount_STorM32_MAVLink::send_prearmchecks_txt(void)
+void BP_Mount_STorM32_MAVLink::send_prearmchecks_txt(void) const
 {
     uint32_t failure_flags = (_protocol == PROTOCOL_GIMBAL_DEVICE) ? _device_status.received_failure_flags : _gimbal_error_flags;
 
-    if (!_initialised || !_gimbal_prearmchecks_ok || !_armed) {
+    if (!_initialised || !_gimbal_prearmchecks_ok || !_gimbal_armed) {
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: arm", _instance+1);
     } else
     if (failure_flags & FAILURE_FLAGS) {
@@ -561,7 +561,7 @@ void BP_Mount_STorM32_MAVLink::send_prearmchecks_txt(void)
 }
 
 
-bool BP_Mount_STorM32_MAVLink::is_healthy(void)
+bool BP_Mount_STorM32_MAVLink::is_healthy(void) const
 {
     if (_protocol == PROTOCOL_GIMBAL_DEVICE) {
 
@@ -594,6 +594,7 @@ bool BP_Mount_STorM32_MAVLink::is_healthy(void)
 }
 
 
+// is called with 1 Hz from main loop
 void BP_Mount_STorM32_MAVLink::update_checks(void)
 {
     if (!_armingchecks_enabled || (_prearmchecks_passed && AP::notify().flags.armed)) {
@@ -613,27 +614,14 @@ void BP_Mount_STorM32_MAVLink::update_checks(void)
 
 
 // return true if healthy
-// this is called when ARMING_CHECK_ALL or ARMING_CHECK_CAMERA is set, and if disarmed, else not
+// this is called when ARMING_CHECK_ALL or ARMING_CHECK_CAMERA is set, and if not armed, else not
 // is called with 1 Hz
-// workaround to get around that healthy() is const
 bool BP_Mount_STorM32_MAVLink::healthy() const
-{
-    return const_cast<BP_Mount_STorM32_MAVLink*>(this)->healthy_nonconst(); // yes, ugly, but I haven't overdesigned the backend
-}
-
-
-bool BP_Mount_STorM32_MAVLink::healthy_nonconst(void)
 {
     _armingchecks_enabled = true; // to signal that ArduPilot arming check mechanism is active
 
     _checks_tlast_ms = AP_HAL::millis(); // to sync update_checks()
 
-    return update_prearmchecks();
-}
-
-
-bool BP_Mount_STorM32_MAVLink::update_prearmchecks(void)
-{
     // we do these only at startup
     if (!_prearmchecks_passed) {
 
@@ -648,8 +636,8 @@ bool BP_Mount_STorM32_MAVLink::update_prearmchecks(void)
         //                          -> device info obtained (_got_device_info = true)
         //                          -> status message received, protocol set (_protocol != PROTOCOL_UNDEFINED)
         // _gimbal_prearmchecks_ok: -> gimbal HB reported gimbal's prearmchecks ok
-        // _armed:                  -> gimbal HB reported gimbal is in normal state
-        if (!_initialised || !_gimbal_prearmchecks_ok || !_armed) {
+        // _gimbal_armed:           -> gimbal HB reported gimbal is in normal state
+        if (!_initialised || !_gimbal_prearmchecks_ok || !_gimbal_armed) {
             return false;
         }
     }
@@ -796,7 +784,7 @@ void BP_Mount_STorM32_MAVLink::handle_msg_extra(const mavlink_message_t &msg)
             mavlink_heartbeat_t payload;
             mavlink_msg_heartbeat_decode(&msg, &payload);
             uint8_t storm32_state = (payload.custom_mode & 0xFF);
-            _armed = ((storm32_state == STORM32STATE_NORMAL) || (storm32_state == STORM32STATE_STARTUP_FASTLEVEL));
+            _gimbal_armed = ((storm32_state == STORM32STATE_NORMAL) || (storm32_state == STORM32STATE_STARTUP_FASTLEVEL));
             if ((payload.custom_mode & 0x80000000) == 0) { // we don't follow all changes, but just toggle it to true once
                 _gimbal_prearmchecks_ok = true;
             }

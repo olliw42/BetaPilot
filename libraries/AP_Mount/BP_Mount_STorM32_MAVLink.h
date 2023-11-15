@@ -178,7 +178,6 @@ private:
     // We hence continue to use the _chan construct.
 
     bool _got_device_info;          // gimbal discovered, waiting for gimbal provide device info
-    bool _armed;                    // true once the gimbal has reached normal state
     bool _initialised;              // true once all init steps have been passed
     bool _got_radio_rc_channels;    // true when a RADIO_RC_CHANNELS message has been received
 
@@ -204,20 +203,20 @@ private:
     void determine_protocol(const mavlink_message_t &msg);
 
     // pre-arm and healthy checks
+    // some need to be made mutable to get around that healthy() is const
 
+    bool _gimbal_armed;             // true once the gimbal has reached normal state
     uint32_t _gimbal_error_flags;   // error flags in custom_mode field of the HEARTBEAT message (restricted to 16 bits)
     bool _gimbal_prearmchecks_ok;   // true when the gimbal stops reporting prearm fail in the HEARTBEAT message
-    bool _armingchecks_enabled;     // true when ARMING_CHECK_ALL or ARMING_CHECK_CAMERA set, we know from healty()
-    bool _prearmchecks_passed;      // becomes true when all checks were passed once at startup
-    uint32_t _prearmcheck_sendtext_tlast_ms;
-    bool _checks_last;              // result of last check, to detect toggle from true -> false, false -> true
-    uint32_t _checks_tlast_ms;
+    mutable bool _armingchecks_enabled;     // true when ARMING_CHECK_ALL or ARMING_CHECK_CAMERA set, we know from healty()
+    mutable bool _prearmchecks_passed;      // becomes true when all checks were passed once at startup
+    mutable uint32_t _prearmcheck_sendtext_tlast_ms;
+    mutable bool _checks_last;              // result of last check, to detect toggle from true -> false, false -> true
+    mutable uint32_t _checks_tlast_ms;
 
-    bool healthy_nonconst(void);    // workaround to healthy() being const
-    bool update_prearmchecks(void);
-    void send_prearmchecks_txt(void);
+    void send_prearmchecks_txt(void) const;
+    bool is_healthy(void) const;
     void update_checks(void);
-    bool is_healthy(void);
 
     uint32_t _request_send_banner_ms;
     void update_send_banner(void);
@@ -234,7 +233,7 @@ private:
         uint32_t received_tlast_ms; // time last GIMBAL_DEVICE_ATTITUDE_STATUS was received (used for health reporting)
     } _device_status;
 
-    uint16_t _flags_for_gimbal;      // flags to be send to gimbal device
+    uint16_t _flags_for_gimbal;     // flags to be send to gimbal device
 
     struct {
         float roll;
