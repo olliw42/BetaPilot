@@ -158,7 +158,7 @@ void BP_Mount_STorM32_MAVLink::init()
 
     _gimbal_armed = false;
     _gimbal_prearmchecks_ok = false;
-    _armingchecks_enabled = false;
+    _armingchecks_running = 0;
     _prearmchecks_passed = false;
 
     _mode = MAV_MOUNT_MODE_RC_TARGETING; // irrelevant, will be later set to default in frontend init()
@@ -538,30 +538,27 @@ const uint32_t FAILURE_FLAGS =
         GIMBAL_DEVICE_ERROR_FLAGS_COMMS_ERROR;
 
 
-void BP_Mount_STorM32_MAVLink::send_prearmchecks_txt(void) const
+bool BP_Mount_STorM32_MAVLink::has_failures(char* s)
 {
     uint32_t failure_flags = (_protocol == PROTOCOL_GIMBAL_DEVICE) ? _device_status.received_failure_flags : _gimbal_error_flags;
 
-    if (!_initialised || !_gimbal_prearmchecks_ok || !_gimbal_armed) {
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: arm", _instance+1);
-    } else
-    if (failure_flags & FAILURE_FLAGS) {
-        char txt[255];
-        strcpy(txt, "");
-        if (failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_MOTOR_ERROR) strcat(txt, "mot,");
-        if (failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_ENCODER_ERROR) strcat(txt, "enc,");
-        if (failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_POWER_ERROR) strcat(txt, "volt,");
-        if (txt[0] != '\0') {
-            txt[strlen(txt)-1] = '\0';
-            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: %s", _instance+1, txt);
+    s[0] = '\0';
+    if ((failure_flags & FAILURE_FLAGS) > 0) {
+        if (failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_MOTOR_ERROR) strcat(s, "mot,");
+        if (failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_ENCODER_ERROR) strcat(s, "enc,");
+        if (failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_POWER_ERROR) strcat(s, "volt,");
+        if (s[0] != '\0') {
+            s[strlen(s)-1] = '\0';
         } else {
-            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: err flags", _instance+1);
+            strcpy(s, "err flags");
         }
+        return true;
     }
+    return false;
 }
 
 
-bool BP_Mount_STorM32_MAVLink::is_healthy(void) const
+bool BP_Mount_STorM32_MAVLink::is_healthy(void)
 {
     if (_protocol == PROTOCOL_GIMBAL_DEVICE) {
 
@@ -597,11 +594,20 @@ bool BP_Mount_STorM32_MAVLink::is_healthy(void) const
 // is called with 1 Hz from main loop
 void BP_Mount_STorM32_MAVLink::update_checks(void)
 {
-    if (!_armingchecks_enabled || (_prearmchecks_passed && AP::notify().flags.armed)) {
+char txt[255];
+
+    if (_armingchecks_running) _armingchecks_running--; // count down
+
+    if (!_armingchecks_running || (_prearmchecks_passed && AP::notify().flags.armed)) {
 
         bool checks = is_healthy();
 
         if (_checks_last && !checks) { // checks went from true to false
+            if (has_failures(txt)) {
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: failures: %s", _instance+1, txt);
+            } else {
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: gimbal lost", _instance+1);
+            }
             GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "MNT%u: not healthy", _instance+1);
         }
         if (!_checks_last && checks) { // checks went from false to true
@@ -610,24 +616,23 @@ void BP_Mount_STorM32_MAVLink::update_checks(void)
         _checks_last = checks;
 
     }
-}
 
+    if (!_armingchecks_running) { // we don't do anything else if arming mechanims not enabled
+        return;
+        _healthy = true;
+    }
 
-// return true if healthy
-// this is called when ARMING_CHECK_ALL or ARMING_CHECK_CAMERA is set, and if not armed, else not
-// is called with 1 Hz
-bool BP_Mount_STorM32_MAVLink::healthy() const
-{
-    _armingchecks_enabled = true; // to signal that ArduPilot arming check mechanism is active
-
-    _checks_tlast_ms = AP_HAL::millis(); // to sync update_checks()
-
-    // we do these only at startup
+    // do these only at startup
     if (!_prearmchecks_passed) {
 
-        if((AP_HAL::millis() - _prearmcheck_sendtext_tlast_ms) > 30000) { // we haven't send it for a long time
+        if ((AP_HAL::millis() - _prearmcheck_sendtext_tlast_ms) > 30000) { // we haven't send it for a long while
             _prearmcheck_sendtext_tlast_ms = AP_HAL::millis();
-            send_prearmchecks_txt();
+            if (!_initialised || !_gimbal_prearmchecks_ok || !_gimbal_armed) {
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: arm", _instance+1);
+            } else
+            if (has_failures(txt)) {
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: %s", _instance+1, txt);
+            }
         }
 
         // unhealthy until gimbal has fully passed the startup sequence
@@ -638,26 +643,36 @@ bool BP_Mount_STorM32_MAVLink::healthy() const
         // _gimbal_prearmchecks_ok: -> gimbal HB reported gimbal's prearmchecks ok
         // _gimbal_armed:           -> gimbal HB reported gimbal is in normal state
         if (!_initialised || !_gimbal_prearmchecks_ok || !_gimbal_armed) {
-            return false;
+            _healthy = false;
+            return;
         }
     }
 
-    // these we do continuously
+    // do these continuously
     bool checks = is_healthy();
 
     if (_prearmchecks_passed) { // we are past prearm checks
         if (_checks_last && !checks) { // checks went from true to false
+            if (has_failures(txt)) {
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: %s", _instance+1, txt);
+            } else {
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: gimbal lost", _instance+1);
+            }
             GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "PreArm: Mount: not healthy");
         }
         if (!_checks_last && checks) { // checks went from false to true
             GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks passed", _instance+1);
         }
         _checks_last = checks;
-        return checks;
+        _healthy = checks;
+        return;
     }
 
     _checks_last = checks;
-    if (!checks) return false;
+    if (!checks) {
+        _healthy = false;
+        return;
+    }
 
     // if we get this far the mount is healthy
 
@@ -667,7 +682,18 @@ bool BP_Mount_STorM32_MAVLink::healthy() const
          GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks passed", _instance+1);
     }
 
-    return true;
+    _healthy = true; // report to healthy()
+}
+
+
+// return true if healthy
+// this is called when ARMING_CHECK_ALL or ARMING_CHECK_CAMERA is set, and if not armed, else not
+// is called with 1 Hz
+bool BP_Mount_STorM32_MAVLink::healthy() const
+{
+    _armingchecks_running = 2; // to signal that ArduPilot arming check mechanism is active
+
+    return _healthy;
 }
 
 
@@ -1164,6 +1190,8 @@ void BP_Mount_STorM32_MAVLink::update_send_banner(void)
         // we don't know yet anything
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: no gimbal yet", _instance+1);
     }
+
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: protocol %u", _instance+1, _protocol);
 }
 
 
