@@ -482,6 +482,15 @@ public:
 
 protected:
 
+//OW RADIOLINK
+    // called from vehicle class handler
+    mavlink_radio_t _mavlink_radio_packet;
+    void handle_radio_link_stats(const mavlink_message_t &msg, bool log_radio);
+    void handle_radio_link_flow_control(const mavlink_message_t &msg, bool log_radio);
+    // called from common handler
+    void handle_radio_rc_channels(const mavlink_message_t &msg);
+//OWEND
+
     bool mavlink_coordinate_frame_to_location_alt_frame(MAV_FRAME coordinate_frame,
                                                         Location::AltFrame &frame);
 
@@ -1246,6 +1255,10 @@ public:
 #endif // HAL_HIGH_LATENCY2_ENABLED
 
     virtual uint8_t sysid_this_mav() const = 0;
+
+//OW
+    MAV_LANDED_STATE get_landed_state(void) const { return num_gcs() > 0 ? chan(0)->landed_state() : MAV_LANDED_STATE_UNDEFINED; }
+//OWEND
 
 protected:
 

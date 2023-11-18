@@ -692,6 +692,9 @@ void RC_Channel::init_aux_function(const aux_func_t ch_option, const AuxSwitchPo
 #if HAL_MOUNT_ENABLED
     case AUX_FUNC::RETRACT_MOUNT1:
     case AUX_FUNC::MOUNT_LOCK:
+//OW
+    case AUX_FUNC::RETRACT_MOUNT1_3POS:
+//OWEND
 #endif
     case AUX_FUNC::LOG_PAUSE:
     case AUX_FUNC::ARM_EMERGENCY_STOP:
@@ -700,6 +703,10 @@ void RC_Channel::init_aux_function(const aux_func_t ch_option, const AuxSwitchPo
     case AUX_FUNC::CAMERA_MANUAL_FOCUS:
     case AUX_FUNC::CAMERA_AUTO_FOCUS:
     case AUX_FUNC::CAMERA_LENS:
+//OW
+    case AUX_FUNC::CAMERA_SET_MODE:
+    case AUX_FUNC::CAMERA_TRIG_MODE:
+//OWEND
         run_aux_function(ch_option, ch_flag, AuxFuncTriggerSource::INIT);
         break;
     default:
@@ -726,6 +733,9 @@ const RC_Channel::LookupTable RC_Channel::lookuptable[] = {
     { AUX_FUNC::PARACHUTE_3POS,"Parachute3Position"},
     { AUX_FUNC::MISSION_RESET,"MissionReset"},
     { AUX_FUNC::RETRACT_MOUNT1,"RetractMount1"},
+//OW
+//    { AUX_FUNC::RETRACT_MOUNT1_3POS,"RetractMount1 3pos"},
+//OWEND
     { AUX_FUNC::RELAY,"Relay1"},
     { AUX_FUNC::MOTOR_ESTOP,"MotorEStop"},
     { AUX_FUNC::MOTOR_INTERLOCK,"MotorInterlock"},
@@ -1473,7 +1483,7 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
     case AUX_FUNC::CAMERA_TRIGGER:
         do_aux_function_camera_trigger(ch_flag);
         break;
-
+/*
     case AUX_FUNC::CAM_MODE_TOGGLE: {
         // Momentary switch to for cycling camera modes
         AP_Camera *camera = AP_Camera::get_singleton();
@@ -1493,6 +1503,7 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
         }
         break;
     }
+*/
     case AUX_FUNC::CAMERA_REC_VIDEO:
         return do_aux_function_record_video(ch_flag);
 
@@ -1510,9 +1521,42 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
 
     case AUX_FUNC::CAMERA_LENS:
         return do_aux_function_camera_lens(ch_flag);
+
+//OW
+//    case AUX_FUNC::CAM_MODE_TOGGLE: {
+    case AUX_FUNC::CAMERA_SET_MODE: {
+        AP_Camera *camera = AP_Camera::get_singleton();
+        if (camera == nullptr) {
+            break;
+        }
+        camera->cam_set_mode(ch_flag == AuxSwitchPos::HIGH);
+        break;
+    }
+
+    case AUX_FUNC::CAM_MODE_TOGGLE: {
+//    case AUX_FUNC::CAMERA_TRIG_MODE: {
+        AP_Camera *camera = AP_Camera::get_singleton();
+        if (camera == nullptr) {
+            break;
+        }
+        switch (ch_flag) {
+        case AuxSwitchPos::HIGH:
+            camera->cam_do_photo_video_mode(PhotoVideoMode::VIDEO_START);
+            break;
+        case AuxSwitchPos::MIDDLE:
+            camera->cam_do_photo_video_mode(PhotoVideoMode::VIDEO_STOP);
+            break;
+        case AuxSwitchPos::LOW:
+            camera->cam_do_photo_video_mode(PhotoVideoMode::PHOTO_TAKE_PIC);
+            break;
+        }
+        break;
+    }
+//OWEND
 #endif
 
 #if HAL_MOUNT_ENABLED
+/*
     case AUX_FUNC::RETRACT_MOUNT1: {
         AP_Mount *mount = AP::mount();
         if (mount == nullptr) {
@@ -1530,7 +1574,7 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
             break;
         }
         break;
-    }
+    } */
 
     case AUX_FUNC::MOUNT_LOCK: {
         AP_Mount *mount = AP::mount();
@@ -1540,6 +1584,29 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
         mount->set_yaw_lock(ch_flag == AuxSwitchPos::HIGH);
         break;
     }
+
+//OW
+    case AUX_FUNC::RETRACT_MOUNT1:
+    case AUX_FUNC::RETRACT_MOUNT1_3POS: {
+        AP_Mount *mount = AP::mount();
+        if (mount == nullptr) {
+            break;
+        }
+        switch (ch_flag) {
+        case AuxSwitchPos::HIGH:
+            if (mount->get_mode(0) > MAV_MOUNT_MODE_NEUTRAL) _mount_mode_last = mount->get_mode(0);
+            mount->set_mode(0,MAV_MOUNT_MODE_RETRACT);
+            break;
+        case AuxSwitchPos::MIDDLE:
+            if (_mount_mode_last > MAV_MOUNT_MODE_NEUTRAL) mount->set_mode(0, _mount_mode_last);
+            break;
+        case AuxSwitchPos::LOW:
+            mount->set_mode_to_default(0);
+            break;
+        }
+        break;
+    }
+//OWEND
 #endif
 
     case AUX_FUNC::LOG_PAUSE: {
