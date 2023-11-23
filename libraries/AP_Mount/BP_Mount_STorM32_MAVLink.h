@@ -24,7 +24,7 @@ public:
     void update() override;
 
     // used for gimbals that need to read INS data at full rate
-    void update_fast() override {}
+    //not used void update_fast() override {}
 
     // return true if healthy
     // Is called by mount pre_arm_checks() (and nowhere else), which in turn is called
@@ -61,8 +61,15 @@ public:
     // - AP_Mount_Backend::write_log() via calling AP_Mount::get_attitude_euler()
     // - scripts via calling AP_Mount::get_attitude_euler()
     // AP nonsense: uses inappropriate Euler angles.
-    // => we set roll to zero, to minimize harm.
+    // => set roll to zero, to minimize harm
     bool get_attitude_quaternion(Quaternion &att_quat) override;
+
+    // get angular velocity of mount. Only available on some backends
+    // This is used in
+    // - AP_Mount_Backend::send_gimbal_device_attitude_status()
+    // => not needed, but is supplied since the data may be available
+    bool get_angular_velocity(Vector3f& rates) override;
+
 
     // set yaw_lock.  If true, the gimbal's yaw target is maintained in earth-frame meaning
     // it will lock onto an earth-frame heading (e.g. North). If false (aka "follow") the gimbal's yaw
@@ -244,6 +251,8 @@ private:
         float yaw_bf;
         float delta_yaw;
     } _current_angles;              // current angles, obtained from either MOUNT_STATUS or GIMBAL_DEVICE_ATTITUDE_STATUS
+
+    Vector3f _current_omega;        // current angular velocities, obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
 
     struct {
         float roll;

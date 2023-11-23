@@ -527,6 +527,38 @@ bool BP_Mount_STorM32_MAVLink::has_pan_control() const
 
 
 //------------------------------------------------------
+// Gimbal attitude and rate
+//------------------------------------------------------
+
+bool BP_Mount_STorM32_MAVLink::get_attitude_quaternion(Quaternion &att_quat)
+{
+    if (!_initialised) {
+        return false;
+    }
+
+    // we set roll to zero since wrong Euler's
+    att_quat.from_euler(0.0f, _current_angles.pitch, _current_angles.yaw_bf);
+    return true;
+}
+
+
+bool BP_Mount_STorM32_MAVLink::get_angular_velocity(Vector3f& rates)
+{
+    if (!_initialised) {
+        return false;
+    }
+
+    if (isnan(_current_omega.x) || isnan(_current_omega.y) || isnan(_current_omega.z)) return false;
+
+    rates.x = _current_omega.x;
+    rates.y = _current_omega.y;
+    rates.z = _current_omega.z;
+
+    return true;
+}
+
+
+//------------------------------------------------------
 // Prearm & healthy functions
 //------------------------------------------------------
 
@@ -722,12 +754,12 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_information(const mavlink_me
     if (!isnan(_device_info.yaw_min)) _params.yaw_angle_min.set_default(degrees(_device_info.yaw_min));
     if (!isnan(_device_info.yaw_max)) _params.yaw_angle_max.set_default(degrees(_device_info.yaw_max)); */
 
-    if (!isnan(_device_info.roll_min)) _params.roll_angle_min.set(degrees(_device_info.roll_min));
-    if (!isnan(_device_info.roll_max)) _params.roll_angle_max.set(degrees(_device_info.roll_max));
-    if (!isnan(_device_info.pitch_min)) _params.pitch_angle_min.set(degrees(_device_info.pitch_min));
-    if (!isnan(_device_info.pitch_max)) _params.pitch_angle_max.set(degrees(_device_info.pitch_max));
-    if (!isnan(_device_info.yaw_min)) _params.yaw_angle_min.set(degrees(_device_info.yaw_min));
-    if (!isnan(_device_info.yaw_max)) _params.yaw_angle_max.set(degrees(_device_info.yaw_max));
+    if (!isnan(_device_info.roll_min)) _params.roll_angle_min.set(degrees(_device_info.roll_min) + 0.5f);
+    if (!isnan(_device_info.roll_max)) _params.roll_angle_max.set(degrees(_device_info.roll_max) + 0.5f);
+    if (!isnan(_device_info.pitch_min)) _params.pitch_angle_min.set(degrees(_device_info.pitch_min) + 0.5f);
+    if (!isnan(_device_info.pitch_max)) _params.pitch_angle_max.set(degrees(_device_info.pitch_max) + 0.5f);
+    if (!isnan(_device_info.yaw_min)) _params.yaw_angle_min.set(degrees(_device_info.yaw_min) + 0.5f);
+    if (!isnan(_device_info.yaw_max)) _params.yaw_angle_max.set(degrees(_device_info.yaw_max) + 0.5f);
 
     // mark it as having been found
     _got_device_info = true;
@@ -764,6 +796,10 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
     q.to_gimbal_euler(_current_angles.roll, _current_angles.pitch, _current_angles.yaw_bf);
 
     _current_angles.delta_yaw = payload.delta_yaw;
+
+    _current_omega.x = payload.angular_velocity_x;
+    _current_omega.y = payload.angular_velocity_y;
+    _current_omega.z = payload.angular_velocity_z;
 
     // logging
 
@@ -826,6 +862,7 @@ void BP_Mount_STorM32_MAVLink::handle_msg_extra(const mavlink_message_t &msg)
             _current_angles.roll = radians((float)payload.pointing_b * 0.01f);
             _current_angles.yaw_bf = radians((float)payload.pointing_c * 0.01f);
             _current_angles.delta_yaw = NAN;
+            _current_omega = { NAN, NAN, NAN };
             break; }
     }
 }
@@ -1249,7 +1286,7 @@ uint32_t BP_Mount_STorM32_MAVLink::get_gimbal_manager_flags() const
 
 
 //------------------------------------------------------
-// Scripting accessors, and get attitude fakery
+// Scripting accessors
 //------------------------------------------------------
 
 // return target location if available
@@ -1270,19 +1307,6 @@ void BP_Mount_STorM32_MAVLink::set_attitude_euler(float roll_deg, float pitch_de
     _script_control_angles.roll = radians(roll_deg);
     _script_control_angles.pitch = radians(pitch_deg);
     _script_control_angles.yaw_bf = radians(yaw_bf_deg);
-}
-
-
-// get attitude as a quaternion.  Returns true on success
-bool BP_Mount_STorM32_MAVLink::get_attitude_quaternion(Quaternion &att_quat)
-{
-    if (!_initialised) {
-        return false;
-    }
-
-    // we set roll to zero since wrong Euler's
-    att_quat.from_euler(0.0f, _current_angles.pitch, _current_angles.yaw_bf);
-    return true;
 }
 
 
