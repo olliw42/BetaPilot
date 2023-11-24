@@ -81,7 +81,10 @@ public:
 
     // set yaw_lock.  If true, the gimbal's yaw target is maintained in earth-frame meaning it will lock onto an earth-frame heading (e.g. North)
     // If false (aka "follow") the gimbal's yaw is maintained in body-frame meaning it will rotate with the vehicle
-    void set_yaw_lock(bool yaw_lock) { _yaw_lock = yaw_lock; }
+//OW
+//    void set_yaw_lock(bool yaw_lock) { _yaw_lock = yaw_lock; }
+    virtual void set_yaw_lock(bool yaw_lock) { _yaw_lock = yaw_lock; }
+//OWEND
 
     // set angle target in degrees
     // yaw_is_earth_frame (aka yaw_lock) should be true if yaw angle is earth-frame, false if body-frame
@@ -117,13 +120,19 @@ public:
 #endif
 
     // send a GIMBAL_DEVICE_ATTITUDE_STATUS message to GCS
-    void send_gimbal_device_attitude_status(mavlink_channel_t chan);
+//OW
+//    void send_gimbal_device_attitude_status(mavlink_channel_t chan);
+    virtual void send_gimbal_device_attitude_status(mavlink_channel_t chan);
+//OWEND
 
     // return gimbal capabilities sent to GCS in the GIMBAL_MANAGER_INFORMATION
     virtual uint32_t get_gimbal_manager_capability_flags() const;
 
+//OW
     // send a GIMBAL_MANAGER_INFORMATION message to GCS
-    void send_gimbal_manager_information(mavlink_channel_t chan);
+//    void send_gimbal_manager_information(mavlink_channel_t chan);
+    virtual void send_gimbal_manager_information(mavlink_channel_t chan);
+//OWEND
 
     // send a GIMBAL_MANAGER_STATUS message to GCS
     void send_gimbal_manager_status(mavlink_channel_t chan);
@@ -195,6 +204,30 @@ public:
     // get poi information.  Returns true on success and fills in gimbal attitude, location and poi location
     bool get_poi(uint8_t instance, Quaternion &quat, Location &loc, Location &poi_loc);
 #endif
+
+//OW
+    // momentary switch to set to photo or video mode (video_mode false: photo mode, true: video mode)
+    virtual bool cam_set_mode(bool video_mode) { return false; }
+
+    // momentary 3 pos switch to set to photo mode and take picture, set to video mode and start recording, or stop video recording
+    virtual bool cam_do_photo_video_mode(PhotoVideoMode photo_video_mode) { return false; }
+
+    // handle msg - allows to process a msg from a gimbal
+    virtual void handle_msg_extra(const mavlink_message_t &msg) {}
+
+    // send banner
+    virtual void send_banner() {}
+
+    // return gimbal manager flags used by GIMBAL_MANAGER_STATUS message
+    virtual uint32_t get_gimbal_manager_flags() const;
+
+    // handle gimbal manager flags received from gimbal manager messages
+    // GIMBAL_MANAGER_FLAGS_RETRACT, GIMBAL_MANAGER_FLAGS_NEUTRAL are handled in frontend
+    // and sets mode accordingly. Not so nice but it's not my cup of tea.
+    // The function may modify the flags according to its capabilities.
+    // Return false to abort angle/rate processing.
+    virtual bool handle_gimbal_manager_flags(uint32_t flags);
+//OWEND
 
     //
     // rangefinder

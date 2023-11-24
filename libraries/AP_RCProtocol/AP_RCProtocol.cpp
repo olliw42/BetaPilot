@@ -35,6 +35,9 @@
 #include "AP_RCProtocol_DroneCAN.h"
 #include <AP_Math/AP_Math.h>
 #include <RC_Channel/RC_Channel.h>
+//OW RADIOLINK
+#include "AP_RCProtocol_MavlinkRadio.h"
+//OWEND
 
 #include <AP_Vehicle/AP_Vehicle_Type.h>
 
@@ -82,6 +85,9 @@ void AP_RCProtocol::init()
 #if AP_RCPROTOCOL_DRONECAN_ENABLED
     backend[AP_RCProtocol::DRONECAN] = new AP_RCProtocol_DroneCAN(*this);
 #endif
+//OW RADIOLINK
+    backend[AP_RCProtocol::MAVLINK_RADIO] = new AP_RCProtocol_MavlinkRadio(*this);
+//OWEND
 }
 
 AP_RCProtocol::~AP_RCProtocol()
@@ -505,6 +511,10 @@ const char *AP_RCProtocol::protocol_name_from_protocol(rcprotocol_t protocol)
     case DRONECAN:
         return "DroneCAN";
 #endif
+//OW RADIOLINK
+    case MAVLINK_RADIO:
+        return "MavRadio";
+//OWEND
     case NONE:
         break;
     }
@@ -546,5 +556,60 @@ namespace AP {
         return rcprot;
     }
 };
+
+//OW RADIOLINK
+void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_t* packet)
+{
+    // this message is also used to check if the receiver is present
+    // so let's first do the receiver detection
+    if (_detected_protocol == AP_RCProtocol::NONE) { // we are still searching
+//#ifndef IOMCU_FW
+//? we need this, but originally it is enclosed by an #ifndef IOMCU_FW
+// how does this work?
+        rc_protocols_mask = rc().enabled_protocols();
+//#endif
+        if (!protocol_enabled(MAVLINK_RADIO)) return; // not our turn
+        _detected_protocol = AP_RCProtocol::MAVLINK_RADIO;
+    }
+
+    // here now comes the message handling itself
+
+    if (_detected_protocol != AP_RCProtocol::MAVLINK_RADIO) {
+        return;
+    }
+
+    // update the field, so that the backend can see it
+    memcpy(&(mavlink_radio.rc_channels), packet, sizeof(mavlink_radio_rc_channels_t));
+    mavlink_radio.rc_channels_updated = true;
+
+    // now update the backend
+    backend[_detected_protocol]->update();
+
+    // now we can ask the backend if it got a new input
+    if (backend[_detected_protocol]->new_input()) {
+        _new_input = true;
+        _last_input_ms = AP_HAL::millis();
+    }
+};
+
+void AP_RCProtocol::handle_radio_link_stats(mavlink_radio_link_stats_t* packet)
+{
+// can be handled like CRSF (= receiver) or like RADIO_STATUS (= telemetry)
+// the user does decide it via RssiType::RECEIVER or RssiType::TELEMETRY_RADIO_RSSI setting
+// so isn't decided here, but is decide somewhere higher up in the outside
+// this here is needed only in case the user wants RssiType::RECEIVER
+
+    if (_detected_protocol != AP_RCProtocol::MAVLINK_RADIO) {
+        return;
+    }
+
+    // update the field, so that the backend can see it
+    memcpy(&(mavlink_radio.link_stats), packet, sizeof(mavlink_radio_link_stats_t));
+    mavlink_radio.link_stats_updated = true;
+
+    // now update the backend
+    backend[_detected_protocol]->update();
+}
+//OWEND
 
 #endif  // AP_RCPROTOCOL_ENABLED

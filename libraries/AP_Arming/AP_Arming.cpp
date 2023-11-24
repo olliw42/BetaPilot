@@ -1539,7 +1539,6 @@ bool AP_Arming::pre_arm_checks(bool report)
         return true;
     }
 #endif
-
     return hardware_safety_check(report)
 #if HAL_HAVE_IMU_HEATER
         &  heater_min_temperature_checks(report)
