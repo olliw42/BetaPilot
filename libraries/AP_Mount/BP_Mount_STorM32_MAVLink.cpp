@@ -284,10 +284,6 @@ void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
     if (_flags_from_manager != UINT32_MAX) {
         if (_flags_from_manager & GIMBAL_MANAGER_FLAGS_RC_EXCLUSIVE) _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RC_EXCLUSIVE;
         if (_flags_from_manager & GIMBAL_MANAGER_FLAGS_RC_MIXED) _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RC_MIXED;
-    } else {
-        // for as long as the user isn't using the gimbal manager allow rc inputs.
-        // Helps to avoid user confusion with virtual channels.
-        _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RC_MIXED;
     }
 
     // driver currently does not support pitch,roll follow, only pitch,roll lock
