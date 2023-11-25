@@ -165,6 +165,7 @@ void BP_Mount_STorM32_MAVLink::init()
 
     _mount_status = {};
     _device_status = {};
+    _flags_from_manager = UINT32_MAX; // the UINT32_MAX is important!
     _flags_for_gimbal = 0;
     _current_angles = {0.0f, 0.0f, 0.0f, NAN}; // the NAN is important!
     _script_control_angles = {};
@@ -241,7 +242,9 @@ void BP_Mount_STorM32_MAVLink::update()
 // Called from AP_Mount's gimbal manager handlers, but only if source is in control.
 // The front-end calls set_angle_target() and/or set_rate_target() depending
 // on the info in the gimbal manager messages.
-// Return false to not do this angle/rate processing.
+// Return false to skip this angle/rate processing.
+// AP's gimbal manager should never ask to do things which the gimbal device
+// can't do. Isn't the case but we know well our gimbal device.
 bool BP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
 {
     // check flags for change to RETRACT
@@ -253,9 +256,11 @@ bool BP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
         set_mode(MAV_MOUNT_MODE_NEUTRAL);
     }
 
+    _flags_from_manager = flags;
+
     update_gimbal_device_flags();
 
-    // we currently do not support yaw LOCK
+    // driver currently does not support yaw LOCK
     // front-end is digesting GIMBAL_MANAGER_FLAGS_YAW_LOCK to determine yaw_is_earth_frame
     // we could make it to modify the flag, but for moment let's be happy.
     if (flags & GIMBAL_MANAGER_FLAGS_YAW_LOCK) {
@@ -291,14 +296,23 @@ void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
             break;
     }
 
-    // we currently only support pitch,roll lock, not pitch,roll follow
+    // account for gimbal manager flags
+    if (_flags_from_manager != UINT32_MAX) {
+        if (_flags_from_manager & GIMBAL_MANAGER_FLAGS_RC_EXCLUSIVE) _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RC_EXCLUSIVE;
+        if (_flags_from_manager & GIMBAL_MANAGER_FLAGS_RC_MIXED) _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RC_MIXED;
+    } else {
+        // for as long as the user isn't using the gimbal manager allow rc inputs.
+        // Helps to avoid user confusion with virtual channels.
+        _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RC_MIXED;
+    }
+
+    // driver currently does not support pitch,roll follow, only pitch,roll lock
     _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
 
-    // we currently do not support yaw lock
+    // driver currently does not support yaw lock, only yaw follow
 //    if (_is_yaw_lock) _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_LOCK;
 
     // set either YAW_IN_VEHICLE_FRAME or YAW_IN_EARTH_FRAME, to indicate new message format, STorM32 will reject otherwise
-    _flags_for_gimbal &=~ GIMBAL_MANAGER_FLAGS_YAW_IN_EARTH_FRAME;
     _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_IN_VEHICLE_FRAME;
 }
 
@@ -1241,32 +1255,46 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_manager_information(mavlink_channel_t
 {
     // space already checked by streamer
 
-    // There are few specific gimbal manager capability flags, which we don't use.
-    // So we simply can carry forward the cap_flags received from the gimbal.
+    // The request to send this message should be NACKed for as long as
+    // the gimbal device was not found or its device info was not received.
+    // Not done currently, so as workaround don't send if not yet available.
+    // Should make third parties to repeat requests.
+
+    if (!_got_device_info) return;
+
+    // There are few specific gimbal manager capability flags, which are not used.
+    // So one simply can carry forward the cap_flags received from the gimbal.
+    // The STorM32 gimbal has these capabilities:
+    // - GIMBAL_DEVICE_CAP_FLAGS_HAS_RETRACT | GIMBAL_DEVICE_CAP_FLAGS_HAS_NEUTRAL
+    // - GIMBAL_DEVICE_CAP_FLAGS_HAS_xx_AXIS | GIMBAL_DEVICE_CAP_FLAGS_HAS_xx_FOLLOW |
+    //   GIMBAL_DEVICE_CAP_FLAGS_HAS_xx_LOCK for each enabled axis
+    // - GIMBAL_DEVICE_CAP_FLAGS_SUPPORTS_INFINITE_YAW if turn around enabled
+    // - GIMBAL_DEVICE_CAP_FLAGS_HAS_RC_INPUTS
+    // - !GIMBAL_DEVICE_CAP_FLAGS_SUPPORTS_YAW_IN_EARTH_FRAME is not currently supported by STorM32
+
     uint32_t cap_flags = _device_info.cap_flags;
 
-    // Not all capabilities are supported by this driver, so we erase them.
+    // This driver does not support all capabilities, so we erase them.
     // ATTENTION: This can mean that the gimbal device and gimbal manager capability flags
     // may be different, and any third party which mistakenly thinks it can use those from
     // the gimbal device messages may get confused !
+
     cap_flags &=~ (GIMBAL_MANAGER_CAP_FLAGS_HAS_ROLL_FOLLOW |
                    GIMBAL_MANAGER_CAP_FLAGS_HAS_PITCH_FOLLOW |
                    GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_LOCK |
                    GIMBAL_MANAGER_CAP_FLAGS_SUPPORTS_YAW_IN_EARTH_FRAME);
 
-    uint8_t gimbal_device_id = _compid;
-
     mavlink_msg_gimbal_manager_information_send(
         chan,
-        AP_HAL::millis(),                   // autopilot system time
-        cap_flags,                          // bitmap of gimbal manager capability flags
-        gimbal_device_id,                   // gimbal device id
-        radians(_params.roll_angle_min),    // roll_min in radians
-        radians(_params.roll_angle_max),    // roll_max in radians
-        radians(_params.pitch_angle_min),   // pitch_min in radians
-        radians(_params.pitch_angle_max),   // pitch_max in radians
-        radians(_params.yaw_angle_min),     // yaw_min in radians
-        radians(_params.yaw_angle_max)      // yaw_max in radians
+        AP_HAL::millis(),           // autopilot system time
+        cap_flags,                  // bitmap of gimbal manager capability flags
+        _compid,                    // gimbal device id
+        _device_info.roll_min,      // roll_min in radians
+        _device_info.roll_max,      // roll_max in radians
+        _device_info.pitch_min,     // pitch_min in radians
+        _device_info.pitch_max,     // pitch_max in radians
+        _device_info.yaw_min,       // yaw_min in radians
+        _device_info.yaw_max        // yaw_max in radians
         );
 }
 
@@ -1274,10 +1302,10 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_manager_information(mavlink_channel_t
 // return gimbal manager flags used by GIMBAL_MANAGER_STATUS message
 uint32_t BP_Mount_STorM32_MAVLink::get_gimbal_manager_flags() const
 {
-    // There are currently no specific gimbal manager flags. So we simply
+    // There are currently no specific gimbal manager flags. So one simply
     // can carry forward the _flags received from the gimbal.
 
-    // ATTENTION: Not all capabilities are supported by this driver, but this
+    // ATTENTION: This driver does not support all capabilities, but this
     // should never be a problem since any third party should strictly adhere
     // to the capability flags obtained from the gimbal manager !
 

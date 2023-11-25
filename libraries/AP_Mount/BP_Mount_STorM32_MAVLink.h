@@ -243,6 +243,7 @@ private:
         uint32_t received_tlast_ms; // time last GIMBAL_DEVICE_ATTITUDE_STATUS was received (used for health reporting)
     } _device_status;
 
+    uint32_t _flags_from_manager;   // flags received by gimbal manager
     uint16_t _flags_for_gimbal;     // flags to be send to gimbal device
 
     struct {
