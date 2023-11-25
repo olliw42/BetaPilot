@@ -949,7 +949,7 @@ void AP_Mount::handle_gimbal_report(mavlink_channel_t chan, const mavlink_messag
 void AP_Mount::handle_message(mavlink_channel_t chan, const mavlink_message_t &msg)
 {
 //OW
-    handle_msg_extra(chan, msg);
+    handle_message_extra(chan, msg);
 //OWEND
 
     switch (msg.msgid) {
@@ -1141,11 +1141,11 @@ bool AP_Mount::cam_do_photo_video_mode(uint8_t instance, PhotoVideoMode photo_vi
     return backend->cam_do_photo_video_mode(photo_video_mode);
 }
 
-void AP_Mount::handle_msg_extra(mavlink_channel_t chan, const mavlink_message_t &msg)
+void AP_Mount::handle_message_extra(mavlink_channel_t chan, const mavlink_message_t &msg)
 {
     for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
         if (_backends[instance] != nullptr) {
-            _backends[instance]->handle_msg_extra(msg);
+            _backends[instance]->handle_message_extra(msg);
         }
     }
 }

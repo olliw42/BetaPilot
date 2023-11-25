@@ -842,7 +842,7 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
 }
 
 
-void BP_Mount_STorM32_MAVLink::handle_msg_extra(const mavlink_message_t &msg)
+void BP_Mount_STorM32_MAVLink::handle_message_extra(const mavlink_message_t &msg)
 {
     if (_protocol == Protocol::UNDEFINED) { // implies !_initialised && _compid
         determine_protocol(msg);

@@ -120,8 +120,8 @@ public:
     // empty => we need to overwrite it
     void handle_gimbal_device_attitude_status(const mavlink_message_t &msg) override;
 
-    // added: handle msg - allows to process a msg from a gimbal
-    void handle_msg_extra(const mavlink_message_t &msg) override;
+    // added: handle_message_extra - allows to process a msg from a gimbal
+    void handle_message_extra(const mavlink_message_t &msg) override;
 
     // added: send banner
     void send_banner() override;

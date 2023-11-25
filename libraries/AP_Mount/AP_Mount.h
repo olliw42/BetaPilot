@@ -292,9 +292,8 @@ public:
     // momentary 3 pos switch to set to photo mode and take picture, set to video mode and start recording, or stop video recording
     bool cam_do_photo_video_mode(uint8_t instance, PhotoVideoMode photo_video_mode);
 
-    // this is somewhat different to handle_message() in that it catches all messages
-    // with work it potentially could be combined, but let's not introduce side effects
-    void handle_msg_extra(mavlink_channel_t chan, const mavlink_message_t &msg);
+    // this links into handle_message() to catch all messages
+    void handle_message_extra(mavlink_channel_t chan, const mavlink_message_t &msg);
 
     // send banner
     void send_banner();
