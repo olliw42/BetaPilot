@@ -199,10 +199,10 @@ private:
     // request GIMBAL_DEVICE_INFORMATION, we can get this also if 'old' MOUNT messages are used
     void send_cmd_request_gimbal_device_information(void);
 
-    enum Protocol {
-        PROTOCOL_UNDEFINED = 0,     // we do not yet know
-        PROTOCOL_MOUNT,             // gimbal uses 'old' MOUNT messages
-        PROTOCOL_GIMBAL_DEVICE,     // gimbal is a v2 gimbal device
+    enum class Protocol {
+        UNDEFINED = 0,     // we do not yet know
+        MOUNT,             // gimbal uses 'old' MOUNT messages
+        GIMBAL_DEVICE,     // gimbal is a v2 gimbal device
     };
     Protocol _protocol;
 
@@ -292,17 +292,16 @@ private:
         TASK_SLOT0 = 0,
         TASK_SLOT1,
         TASK_SLOT2,
-        TASK_SLOT3,
+        TASK_SLOT3
     };
-
     uint8_t _task_counter;
 
     // camera
 
-    enum CameraMode {
-        CAMERA_MODE_UNDEFINED = 0,  // we do not yet know
-        CAMERA_MODE_PHOTO,
-        CAMERA_MODE_VIDEO,
+    enum class CameraMode {
+        UNDEFINED = 0,              // we do not yet know
+        PHOTO,
+        VIDEO,
     };
     CameraMode _camera_mode;        // current camera mode
     bool _camera_is_recording;

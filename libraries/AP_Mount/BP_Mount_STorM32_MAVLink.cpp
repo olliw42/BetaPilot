@@ -154,7 +154,7 @@ void BP_Mount_STorM32_MAVLink::init()
     _got_device_info = false;
     _initialised = false;
 
-    _protocol = PROTOCOL_UNDEFINED;
+    _protocol = Protocol::UNDEFINED;
 
     _gimbal_armed = false;
     _gimbal_prearmchecks_ok = false;
@@ -172,7 +172,7 @@ void BP_Mount_STorM32_MAVLink::init()
     _yaw_lock = false; // can't be currently supported, so we need to ensure this is false. This is important!
 
     _got_radio_rc_channels = false; // disable sending rc channels when RADIO_RC_CHANNELS messages are detected
-    _camera_mode = CAMERA_MODE_UNDEFINED;
+    _camera_mode = CameraMode::UNDEFINED;
 
     _should_log = true; // for now do always log
 }
@@ -317,7 +317,7 @@ void BP_Mount_STorM32_MAVLink::send_target_angles(void)
         return;
     }
 
-    if (_protocol == PROTOCOL_GIMBAL_DEVICE) {
+    if (_protocol == Protocol::GIMBAL_DEVICE) {
         send_gimbal_device_set_attitude();
     } else {
         send_cmd_do_mount_control();
@@ -474,7 +474,7 @@ void BP_Mount_STorM32_MAVLink::find_gimbal(void)
     }
 
     // we don't know yet what we should do
-    if (_protocol == PROTOCOL_UNDEFINED) {
+    if (_protocol == Protocol::UNDEFINED) {
         return;
     }
 
@@ -490,10 +490,10 @@ void BP_Mount_STorM32_MAVLink::determine_protocol(const mavlink_message_t &msg)
 
     switch (msg.msgid) {
         case MAVLINK_MSG_ID_MOUNT_STATUS:
-            _protocol = PROTOCOL_MOUNT;
+            _protocol = Protocol::MOUNT;
             break;
             case MAVLINK_MSG_ID_GIMBAL_DEVICE_ATTITUDE_STATUS:
-            _protocol = PROTOCOL_GIMBAL_DEVICE;
+            _protocol = Protocol::GIMBAL_DEVICE;
             break;
     }
 }
@@ -505,10 +505,10 @@ void BP_Mount_STorM32_MAVLink::determine_protocol(const mavlink_message_t &msg)
 
 bool BP_Mount_STorM32_MAVLink::has_roll_control() const
 {
-    if (_protocol == PROTOCOL_GIMBAL_DEVICE) {
+    if (_protocol == Protocol::GIMBAL_DEVICE) {
         return (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_HAS_ROLL_AXIS);
     }
-    if (_protocol == PROTOCOL_MOUNT) {
+    if (_protocol == Protocol::MOUNT) {
         return (_params.roll_angle_min < _params.roll_angle_max);
     }
     return false;
@@ -517,10 +517,10 @@ bool BP_Mount_STorM32_MAVLink::has_roll_control() const
 
 bool BP_Mount_STorM32_MAVLink::has_pitch_control() const
 {
-    if (_protocol == PROTOCOL_GIMBAL_DEVICE) {
+    if (_protocol == Protocol::GIMBAL_DEVICE) {
         return (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_HAS_PITCH_AXIS);
     }
-    if (_protocol == PROTOCOL_MOUNT) {
+    if (_protocol == Protocol::MOUNT) {
         return (_params.pitch_angle_min < _params.pitch_angle_max);
     }
     return false;
@@ -529,10 +529,10 @@ bool BP_Mount_STorM32_MAVLink::has_pitch_control() const
 
 bool BP_Mount_STorM32_MAVLink::has_pan_control() const
 {
-    if (_protocol == PROTOCOL_GIMBAL_DEVICE) {
+    if (_protocol == Protocol::GIMBAL_DEVICE) {
         return (_device_info.cap_flags & GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_AXIS);
     }
-    if (_protocol == PROTOCOL_MOUNT) {
+    if (_protocol == Protocol::MOUNT) {
         return yaw_range_valid();
     }
     return false;
@@ -586,7 +586,7 @@ const uint32_t FAILURE_FLAGS =
 
 bool BP_Mount_STorM32_MAVLink::has_failures(char* s)
 {
-    uint32_t failure_flags = (_protocol == PROTOCOL_GIMBAL_DEVICE) ? _device_status.received_failure_flags : _gimbal_error_flags;
+    uint32_t failure_flags = (_protocol == Protocol::GIMBAL_DEVICE) ? _device_status.received_failure_flags : _gimbal_error_flags;
 
     s[0] = '\0';
     if ((failure_flags & FAILURE_FLAGS) > 0) {
@@ -606,7 +606,7 @@ bool BP_Mount_STorM32_MAVLink::has_failures(char* s)
 
 bool BP_Mount_STorM32_MAVLink::is_healthy(void)
 {
-    if (_protocol == PROTOCOL_GIMBAL_DEVICE) {
+    if (_protocol == Protocol::GIMBAL_DEVICE) {
         // unhealthy if attitude status is not received within the last second
         if ((AP_HAL::millis() - _device_status.received_tlast_ms) > 1000) {
             return false;
@@ -827,7 +827,7 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
 
 void BP_Mount_STorM32_MAVLink::handle_msg_extra(const mavlink_message_t &msg)
 {
-    if (_protocol == PROTOCOL_UNDEFINED) { // implies !_initialised && _compid
+    if (_protocol == Protocol::UNDEFINED) { // implies !_initialised && _compid
         determine_protocol(msg);
         return;
     }
@@ -1316,12 +1316,12 @@ void BP_Mount_STorM32_MAVLink::set_attitude_euler(float roll_deg, float pitch_de
 
 bool BP_Mount_STorM32_MAVLink::take_picture()
 {
-    if (_camera_mode == CAMERA_MODE_UNDEFINED) {
-        _camera_mode = CAMERA_MODE_PHOTO;
+    if (_camera_mode == CameraMode::UNDEFINED) {
+        _camera_mode = CameraMode::PHOTO;
         send_cmd_do_digicam_configure(false);
     }
 
-    if (_camera_mode != CAMERA_MODE_PHOTO) return false;
+    if (_camera_mode != CameraMode::PHOTO) return false;
 
     send_cmd_do_digicam_control(true);
 
@@ -1333,12 +1333,12 @@ bool BP_Mount_STorM32_MAVLink::take_picture()
 
 bool BP_Mount_STorM32_MAVLink::record_video(bool start_recording)
 {
-    if (_camera_mode == CAMERA_MODE_UNDEFINED) {
-        _camera_mode = CAMERA_MODE_VIDEO;
+    if (_camera_mode == CameraMode::UNDEFINED) {
+        _camera_mode = CameraMode::VIDEO;
         send_cmd_do_digicam_configure(true);
     }
 
-    if (_camera_mode != CAMERA_MODE_VIDEO) return false;
+    if (_camera_mode != CameraMode::VIDEO) return false;
 
     send_cmd_do_digicam_control(start_recording);
 
@@ -1350,7 +1350,7 @@ bool BP_Mount_STorM32_MAVLink::record_video(bool start_recording)
 
 bool BP_Mount_STorM32_MAVLink::cam_set_mode(bool video_mode)
 {
-    _camera_mode = (video_mode) ? CAMERA_MODE_VIDEO : CAMERA_MODE_PHOTO;
+    _camera_mode = (video_mode) ? CameraMode::VIDEO : CameraMode::PHOTO;
     send_cmd_do_digicam_configure(video_mode);
 
 //    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "cam set mode %u", video_mode);
@@ -1363,8 +1363,8 @@ bool BP_Mount_STorM32_MAVLink::cam_do_photo_video_mode(PhotoVideoMode photo_vide
 {
     if (photo_video_mode == PhotoVideoMode::VIDEO_START) {
 
-        if (_camera_mode != CAMERA_MODE_VIDEO) {
-            _camera_mode = CAMERA_MODE_VIDEO;
+        if (_camera_mode != CameraMode::VIDEO) {
+            _camera_mode = CameraMode::VIDEO;
             send_cmd_do_digicam_configure(true); // set video mode
         }
 
@@ -1379,15 +1379,15 @@ bool BP_Mount_STorM32_MAVLink::cam_do_photo_video_mode(PhotoVideoMode photo_vide
             _camera_is_recording = false;
         }
 
-        if (_camera_mode != CAMERA_MODE_PHOTO) {
-            _camera_mode = CAMERA_MODE_PHOTO;
+        if (_camera_mode != CameraMode::PHOTO) {
+            _camera_mode = CameraMode::PHOTO;
             send_cmd_do_digicam_configure(false); // set photo mode
         }
         send_cmd_do_digicam_control(true); // take picture
 
     } else {
 
-        if (_camera_mode == CAMERA_MODE_VIDEO) {
+        if (_camera_mode == CameraMode::VIDEO) {
             send_cmd_do_digicam_control(false);
             _camera_is_recording = false;
         }
