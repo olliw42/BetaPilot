@@ -255,7 +255,7 @@ bool BP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
 
     update_gimbal_device_flags();
 
-    // we currently do not support LOCK
+    // we currently do not support yaw LOCK
     // front-end is digesting GIMBAL_MANAGER_FLAGS_YAW_LOCK to determine yaw_is_earth_frame
     // we could make it to modify the flag, but for moment let's be happy.
     if (flags & GIMBAL_MANAGER_FLAGS_YAW_LOCK) {
@@ -298,6 +298,7 @@ void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags(void)
 //    if (_is_yaw_lock) _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_LOCK;
 
     // set either YAW_IN_VEHICLE_FRAME or YAW_IN_EARTH_FRAME, to indicate new message format, STorM32 will reject otherwise
+    _flags_for_gimbal &=~ GIMBAL_MANAGER_FLAGS_YAW_IN_EARTH_FRAME;
     _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_IN_VEHICLE_FRAME;
 }
 
@@ -452,6 +453,7 @@ void BP_Mount_STorM32_MAVLink::find_gimbal(void)
     }
 
     // request GIMBAL_DEVICE_INFORMATION
+    // STorM32 gives this also for mount mode
     if (!_got_device_info) {
         if (tnow_ms - _request_device_info_tlast_ms > 1000) {
             _request_device_info_tlast_ms = tnow_ms;
@@ -538,6 +540,7 @@ bool BP_Mount_STorM32_MAVLink::get_attitude_quaternion(Quaternion &att_quat)
 
     // we set roll to zero since wrong Euler's
     att_quat.from_euler(0.0f, _current_angles.pitch, _current_angles.yaw_bf);
+
     return true;
 }
 
@@ -593,7 +596,6 @@ bool BP_Mount_STorM32_MAVLink::has_failures(char* s)
 bool BP_Mount_STorM32_MAVLink::is_healthy(void)
 {
     if (_protocol == PROTOCOL_GIMBAL_DEVICE) {
-
         // unhealthy if attitude status is not received within the last second
         if ((AP_HAL::millis() - _device_status.received_tlast_ms) > 1000) {
             return false;
@@ -606,7 +608,6 @@ bool BP_Mount_STorM32_MAVLink::is_healthy(void)
         if ((_device_status.received_failure_flags & FAILURE_FLAGS) > 0) {
             return false;
         }
-
     } else {
         // unhealthy if mount status is not received within the last second
         if ((AP_HAL::millis() - _mount_status.received_tlast_ms) > 1000) {
@@ -649,7 +650,7 @@ char txt[255];
 
     }
 
-    if (!_armingchecks_running) { // we don't do anything else if arming mechanims not enabled
+    if (!_armingchecks_running) { // we don't do anything else if arming mechanism not enabled
         return;
         _healthy = true;
     }
@@ -784,7 +785,7 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
     // get relevant data
 
     _device_status.received_flags = payload.flags;
-    // TODO: handle case when received device_flags are not equal to those we send, set with update_gimbal_device_flags_for_gimbal()
+    // TODO: handle case when received device_flags are not equal to those we send, set with update_gimbal_device_flags()
 
     _device_status.received_failure_flags = payload.failure_flags;
 
@@ -811,16 +812,6 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
         degrees(AP::ahrs().yaw),
         payload.flags,
         payload.failure_flags);
-
-    // forward to ground as MOUNT_STATUS message
-
-    if (_compid != MAV_COMP_ID_GIMBAL) { // do it only for the 1st gimbal
-        return;
-    }
-
-    if (payload.target_system) { // send MOUNT_STATUS to ground only if target_sysid = 0
-        return;
-    }
 }
 
 
@@ -847,7 +838,7 @@ void BP_Mount_STorM32_MAVLink::handle_msg_extra(const mavlink_message_t &msg)
             mavlink_msg_heartbeat_decode(&msg, &payload);
             uint8_t storm32_state = (payload.custom_mode & 0xFF);
             _gimbal_armed = ((storm32_state == STORM32STATE_NORMAL) || (storm32_state == STORM32STATE_STARTUP_FASTLEVEL));
-            if ((payload.custom_mode & 0x80000000) == 0) { // we don't follow all changes, but just toggle it to true once
+            if ((payload.custom_mode & 0x80000000) == 0) { // don't follow all changes, but just toggle it to true once
                 _gimbal_prearmchecks_ok = true;
             }
             _gimbal_error_flags = (payload.custom_mode & 0x00FFFF00) >> 8;
@@ -881,9 +872,10 @@ void BP_Mount_STorM32_MAVLink::send_cmd_request_gimbal_device_information(void)
     mavlink_msg_command_long_send(
         _chan,
         _sysid, _compid,
-        MAV_CMD_REQUEST_MESSAGE,    // command
-        0,                          // confirmation
-        MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION, 0, 0, 0, 0, 0, 0 // param1 .. param7
+        MAV_CMD_REQUEST_MESSAGE,                    // command
+        0,                                          // confirmation
+        MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION,   // param1
+        0, 0, 0, 0, 0, 0                            // param2 .. param7
         );
 }
 
@@ -913,7 +905,7 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_mount_control(void)
 
 
 // called by send_target_angles()
-// flags_for_gimbal were just updated, so are correct for sure
+// _flags_for_gimbal were just updated, so are correct for sure
 void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(void)
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, GIMBAL_DEVICE_SET_ATTITUDE)) {
@@ -947,11 +939,11 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(void)
 
 
     BP_LOG("MTC0", BP_LOG_MTC_GIMBALCONTROL_HEADER,
-        (uint8_t)1, // Type, GIMBAL_DEVICE_SET_ATTITUDE
+        (uint8_t)1,                 // Type, GIMBAL_DEVICE_SET_ATTITUDE
         degrees(mnt_target.angle_rad.roll), degrees(mnt_target.angle_rad.pitch), degrees(target_yaw_bf), // Roll, Pitch, Yaw
         (uint16_t)_flags_for_gimbal, (uint16_t)0, // GDFlags, GMFlags
         (uint8_t)mnt_target.target_type, // TMode
-        (uint8_t)0); // QMode
+        (uint8_t)0);                // QMode
 }
 
 
@@ -968,7 +960,7 @@ void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device(void)
 
     const AP_AHRS &ahrs = AP::ahrs();
 
-    // get vehicle attidude
+    // get vehicle attitude
     Quaternion q;
     if (!ahrs.get_quaternion(q)) { // it returns a bool, so it's a good idea to consider it
         q.q1 = q.q2 = q.q3 = q.q4 = NAN;
@@ -1095,13 +1087,12 @@ landed state:
     uint8_t landed_state = (uint8_t)gcs().get_landed_state(); // AP::vehicle()->get_landed_state();
 
 #if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
-    // for copter we modify the landed state so as to reflect the 2 sec pre-take-off period
-    // the code below leads to a PREPARING_FOR_TAKEOFF before takeoff, but also after landing!
-    // for the latter we would have to catch that it was flying, but we don't need to care
-    // the gimbal will do inits when ON_GROUND, and refresh them when transitioning to PREPARING_FOR_TAKEOFF
-    // it won't do it for other transitions, so e.g. also not for plane
-    const AP_Notify &notify = AP::notify();
-    if ((landed_state == MAV_LANDED_STATE_ON_GROUND) && notify.flags.armed) {
+    // for copter the landed state is modified such as to reflect the 2 sec pre-take-off period.
+    // The code below leads to a PREPARING_FOR_TAKEOFF before takeoff, but also after landing!
+    // For the latter one would have to catch that it was flying, but no need to care as
+    // the gimbal will do inits when ON_GROUND, and refreshes them when transitioning to PREPARING_FOR_TAKEOFF.
+    // It won't do it for other transitions, so e.g. also not for plane.
+    if ((landed_state == MAV_LANDED_STATE_ON_GROUND) && AP::notify().flags.armed) {
         landed_state = MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF;
     }
 #endif
@@ -1185,7 +1176,7 @@ void BP_Mount_STorM32_MAVLink::send_rc_channels(void)
 
 void BP_Mount_STorM32_MAVLink::send_banner()
 {
-    // we postpone sending it by few seconds, to avoid multiple sends
+    // postpone sending by few seconds, to avoid multiple sends
     _request_send_banner_ms = AP_HAL::millis();
 }
 
@@ -1202,13 +1193,12 @@ void BP_Mount_STorM32_MAVLink::update_send_banner(void)
         // we have lots of info
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: gimbal at %u", _instance+1, _compid);
 
-        // we can convert the firmware version to STorM32 convention
+        // convert firmware version to STorM32 convention
         char c = (_device_info.firmware_version & 0x00FF0000) >> 16;
         if (c == '\0') c = ' '; else c += 'a' - 1;
 
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: %s v%u.%u%c", //%s %s v%u.%u%c",
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: %s v%u.%u%c",
                 _instance + 1,
-                //_device_info.vendor_name,
                 _device_info.model_name,
                 (unsigned)(_device_info.firmware_version & 0x000000FF),
                 (unsigned)((_device_info.firmware_version & 0x0000FF00) >> 8),
@@ -1228,7 +1218,7 @@ void BP_Mount_STorM32_MAVLink::update_send_banner(void)
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: no gimbal yet", _instance+1);
     }
 
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: protocol %u", _instance+1, _protocol);
+//    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: protocol %u", _instance+1, _protocol);
 }
 
 
@@ -1279,7 +1269,7 @@ uint32_t BP_Mount_STorM32_MAVLink::get_gimbal_manager_flags() const
 
     // ATTENTION: Not all capabilities are supported by this driver, but this
     // should never be a problem since any third party should strictly adhere
-    // to the capability flags!
+    // to the capability flags obtained from the gimbal manager !
 
     return _device_status.received_flags;
 }

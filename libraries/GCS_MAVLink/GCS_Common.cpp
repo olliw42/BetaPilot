@@ -1751,6 +1751,7 @@ void GCS_MAVLINK::packetReceived(const mavlink_status_t &status,
     }
 //OW
 #if HAL_MOUNT_ENABLED
+    // allow mounts to see all messages for this vehicle
     AP_Mount *mount = AP::mount();
     if (mount != nullptr) mount->handle_msg_extra(chan, msg);
 #endif
