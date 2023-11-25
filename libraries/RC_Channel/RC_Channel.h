@@ -6,9 +6,6 @@
 
 #if AP_RC_CHANNEL_ENABLED
 
-//OW
-#include <GCS_MAVLink/GCS_MAVLink.h>
-//OWEND
 #include <AP_Common/AP_Common.h>
 #include <AP_Param/AP_Param.h>
 #include <AP_Math/AP_Math.h>
@@ -428,11 +425,6 @@ private:
 
     static const LookupTable lookuptable[];
 #endif
-//OW
-//#if HAL_MOUNT_ENABLED
-    enum MAV_MOUNT_MODE _mount_mode_last = MAV_MOUNT_MODE_RETRACT;
-//#endif
-//OWEND
 };
 
 
