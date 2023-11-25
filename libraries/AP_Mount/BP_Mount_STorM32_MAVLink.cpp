@@ -422,6 +422,17 @@ void BP_Mount_STorM32_MAVLink::update_target_angles(void)
             // we do not know this mode so do nothing
             break;
     }
+
+    // account for range limits
+    // we only do teh yaw axis (should be done by StorM32 supervisor, but doesn't hurt
+    if (!_got_device_info) return;
+
+    if (!isnan(_device_info.yaw_min) && !isnan(_device_info.yaw_max) &&
+        !(_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_SUPPORTS_INFINITE_YAW)) {
+
+        if (mnt_target.angle_rad.yaw < _device_info.yaw_min) mnt_target.angle_rad.yaw = _device_info.yaw_min;
+        if (mnt_target.angle_rad.yaw > _device_info.yaw_max) mnt_target.angle_rad.yaw = _device_info.yaw_max;
+    }
 }
 
 
@@ -746,21 +757,20 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_information(const mavlink_me
     // we could check here for sanity of _device_info.gimbal_device_id, but let's just be happy
 
     // set parameter defaults from gimbal information
-    // Q: why default ?? why not actual value ?? I don't understand this
-/*
-    if (!isnan(_device_info.roll_min)) _params.roll_angle_min.set_default(degrees(_device_info.roll_min));
-    if (!isnan(_device_info.roll_max)) _params.roll_angle_max.set_default(degrees(_device_info.roll_max));
-    if (!isnan(_device_info.pitch_min)) _params.pitch_angle_min.set_default(degrees(_device_info.pitch_min));
-    if (!isnan(_device_info.pitch_max)) _params.pitch_angle_max.set_default(degrees(_device_info.pitch_max));
-    if (!isnan(_device_info.yaw_min)) _params.yaw_angle_min.set_default(degrees(_device_info.yaw_min));
-    if (!isnan(_device_info.yaw_max)) _params.yaw_angle_max.set_default(degrees(_device_info.yaw_max)); */
+    // Q: why set_default ?? why not actual value ?? allows the user to overwrite em?
 
-    if (!isnan(_device_info.roll_min)) _params.roll_angle_min.set(degrees(_device_info.roll_min) + 0.5f);
-    if (!isnan(_device_info.roll_max)) _params.roll_angle_max.set(degrees(_device_info.roll_max) + 0.5f);
-    if (!isnan(_device_info.pitch_min)) _params.pitch_angle_min.set(degrees(_device_info.pitch_min) + 0.5f);
-    if (!isnan(_device_info.pitch_max)) _params.pitch_angle_max.set(degrees(_device_info.pitch_max) + 0.5f);
-    if (!isnan(_device_info.yaw_min)) _params.yaw_angle_min.set(degrees(_device_info.yaw_min) + 0.5f);
-    if (!isnan(_device_info.yaw_max)) _params.yaw_angle_max.set(degrees(_device_info.yaw_max) + 0.5f);
+    if (!isnan(_device_info.roll_min) && !isnan(_device_info.roll_max)) {
+        if (degrees(_device_info.roll_min) > _params.roll_angle_min) _params.roll_angle_min.set(degrees(_device_info.roll_min));
+        if (degrees(_device_info.roll_max) < _params.roll_angle_max) _params.roll_angle_max.set(degrees(_device_info.roll_max));
+    }
+    if (!isnan(_device_info.pitch_min) && !isnan(_device_info.pitch_max)) {
+        if (degrees(_device_info.pitch_min) > _params.pitch_angle_min) _params.pitch_angle_min.set(degrees(_device_info.pitch_min));
+        if (degrees(_device_info.pitch_max) < _params.pitch_angle_max) _params.pitch_angle_max.set(degrees(_device_info.pitch_max));
+    }
+    if (!isnan(_device_info.yaw_min) && !isnan(_device_info.yaw_max)) {
+        if (degrees(_device_info.yaw_min) > _params.yaw_angle_min) _params.yaw_angle_min.set(degrees(_device_info.yaw_min));
+        if (degrees(_device_info.yaw_max) < _params.yaw_angle_max) _params.yaw_angle_max.set(degrees(_device_info.yaw_max));
+    }
 
     // mark it as having been found
     _got_device_info = true;
