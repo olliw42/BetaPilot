@@ -614,6 +614,10 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_information(const mavlink_me
 
 void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlink_message_t &msg)
 {
+    if (_protocol != Protocol::GIMBAL_DEVICE) {
+        return;
+    }
+
     // this msg is not from our gimbal
     if (msg.sysid != _sysid || msg.compid != _compid) {
         return;
@@ -687,7 +691,8 @@ void BP_Mount_STorM32_MAVLink::handle_message_extra(const mavlink_message_t &msg
             break; }
 
         case MAVLINK_MSG_ID_MOUNT_STATUS: {
-            _mount_status.received_tlast_ms = AP_HAL::millis(); // for health reporting
+            if (_protocol != Protocol::MOUNT) break;
+            _mount_status.received_tlast_ms = AP_HAL::millis(); // used for health check
             mavlink_mount_status_t payload;
             mavlink_msg_mount_status_decode(&msg, &payload);
             _current_angles.pitch = radians((float)payload.pointing_a * 0.01f);
