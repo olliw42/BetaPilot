@@ -1448,6 +1448,10 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_attitude_status(mavlink_channe
     // space already checked by streamer
     // checked space of GIMBAL_DEVICE_ATTITUDE_STATUS, but MOUNT_STATUS is (much) smaller, so no issue
 
+    if (_compid != MAV_COMP_ID_GIMBAL) { // do it only for the 1st gimbal
+        return;
+    }
+
     mavlink_msg_mount_status_send(
         chan,
         0,          // uint8_t target_system
