@@ -345,6 +345,7 @@ enum MountModeScriptMagic {
 
 
 // update_angle_target_from_rate() assumes a 50hz update rate!
+// TODO: one should allow angles outside of +-PI, to go shortest path in case of turn around
 void BP_Mount_STorM32_MAVLink::update_target_angles()
 {
     // update based on mount mode
@@ -438,15 +439,17 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
     }
 
     // account for range limits
-    // we only do teh yaw axis (should be done by StorM32 supervisor, but doesn't hurt
-    if (!_got_device_info) return;
+    // only do the yaw axis (should be done by STorM32 supervisor, but doesn't hurt)
 
-    if (!isnan(_device_info.yaw_min) && !isnan(_device_info.yaw_max) &&
-        !(_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_SUPPORTS_INFINITE_YAW)) {
+    if (_got_device_info) return;
+    if (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_SUPPORTS_INFINITE_YAW) return;
+    if (isnan(_device_info.yaw_min) || isnan(_device_info.yaw_max)) return;
 
-        if (mnt_target.angle_rad.yaw < _device_info.yaw_min) mnt_target.angle_rad.yaw = _device_info.yaw_min;
-        if (mnt_target.angle_rad.yaw > _device_info.yaw_max) mnt_target.angle_rad.yaw = _device_info.yaw_max;
-    }
+    // I believe currently angles are inside +-PI, no wrapPi voodoo needed
+    // TODO: if copter, copter might yaw by what the gimbal can't do
+
+    if (mnt_target.angle_rad.yaw < _device_info.yaw_min) mnt_target.angle_rad.yaw = _device_info.yaw_min;
+    if (mnt_target.angle_rad.yaw > _device_info.yaw_max) mnt_target.angle_rad.yaw = _device_info.yaw_max;
 }
 
 
@@ -870,7 +873,6 @@ void BP_Mount_STorM32_MAVLink::handle_msg_extra(const mavlink_message_t &msg)
 
         case MAVLINK_MSG_ID_MOUNT_STATUS: {
             _mount_status.received_tlast_ms = AP_HAL::millis(); // for health reporting
-
             mavlink_mount_status_t payload;
             mavlink_msg_mount_status_decode(&msg, &payload);
             _current_angles.pitch = radians((float)payload.pointing_a * 0.01f);
@@ -942,6 +944,7 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude()
         if (isnan(_current_angles.delta_yaw)) { // we don't have a valid yaw_ef
             target_yaw_bf = mnt_target.angle_rad.get_bf_yaw();
         } else {
+            // TODO: handle turn around
             target_yaw_bf = wrap_PI(mnt_target.angle_rad.yaw - _current_angles.delta_yaw);
         }
     } else {
@@ -1299,7 +1302,7 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_manager_information(mavlink_channel_t
 }
 
 
-// return gimbal manager flags used by GIMBAL_MANAGER_STATUS message
+// return gimbal manager flags. Used by GIMBAL_MANAGER_STATUS message.
 uint32_t BP_Mount_STorM32_MAVLink::get_gimbal_manager_flags() const
 {
     // There are currently no specific gimbal manager flags. So one simply
