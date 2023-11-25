@@ -1749,13 +1749,6 @@ void GCS_MAVLINK::packetReceived(const mavlink_status_t &status,
         // e.g. enforce-sysid says we shouldn't look at this packet
         return;
     }
-//OW
-#if HAL_MOUNT_ENABLED
-    // allow mounts to see all messages for this vehicle
-    AP_Mount *mount = AP::mount();
-    if (mount != nullptr) mount->handle_msg_extra(chan, msg);
-#endif
-//OWEND
     handleMessage(msg);
 }
 
@@ -3891,6 +3884,11 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
 
     case MAVLINK_MSG_ID_HEARTBEAT: {
         handle_heartbeat(msg);
+//OW
+#if HAL_MOUNT_ENABLED
+        handle_mount_message(msg);
+#endif
+//OWEND
         break;
     }
 
@@ -4002,6 +4000,9 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
         handle_mount_message(msg);
         break;
 #endif
+//OW
+    case MAVLINK_MSG_ID_MOUNT_STATUS:
+//OWEND
     case MAVLINK_MSG_ID_GIMBAL_REPORT:
     case MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION:
     case MAVLINK_MSG_ID_GIMBAL_DEVICE_ATTITUDE_STATUS:
@@ -4202,6 +4203,9 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
 // MAVLINK_MSG_ID_RADIO_LINK_STATS, MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL are handled in the vehicle's GCS_Mavlink.cpp
     case MAVLINK_MSG_ID_RADIO_RC_CHANNELS:
         handle_radio_rc_channels(msg);
+#if HAL_MOUNT_ENABLED
+        handle_mount_message(msg);
+#endif
         break;
 //OWEND
     }

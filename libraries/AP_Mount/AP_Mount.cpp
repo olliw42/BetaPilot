@@ -948,6 +948,10 @@ void AP_Mount::handle_gimbal_report(mavlink_channel_t chan, const mavlink_messag
 
 void AP_Mount::handle_message(mavlink_channel_t chan, const mavlink_message_t &msg)
 {
+//OW
+    handle_msg_extra(chan, msg);
+//OWEND
+
     switch (msg.msgid) {
     case MAVLINK_MSG_ID_GIMBAL_REPORT:
         handle_gimbal_report(chan, msg);
