@@ -794,6 +794,9 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude()
 }
 
 
+// ensure that MAV_LANDED_STATE enum hasn't been extended
+static_assert((uint8_t)MAV_LANDED_STATE_ENUM_END == 5, "MAV_LANDED_STATE enum has changed");
+
 enum LandedStateThisWouldBeGreatToHave {
     MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF = 5,
 };
