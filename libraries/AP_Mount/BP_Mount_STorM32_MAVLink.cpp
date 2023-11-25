@@ -339,8 +339,8 @@ void BP_Mount_STorM32_MAVLink::send_target_angles()
 }
 
 
-enum MountModeThisWouldBeGreatToHave {
-    MAV_MOUNT_MODE_SCRIPT = 7,
+enum MountModeScriptMagic {
+    MAV_MOUNT_MODE_SCRIPT_MAGIC = 83, // 'S'
 };
 
 
@@ -348,7 +348,7 @@ enum MountModeThisWouldBeGreatToHave {
 void BP_Mount_STorM32_MAVLink::update_target_angles()
 {
     // update based on mount mode
-    switch (get_mode()) {
+    switch ((uint8_t)get_mode()) {
 
         // move mount to a "retracted" position
         // -> ANGLE
@@ -424,7 +424,7 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
 
         // point mount to where a script wants it to point
         // -> ANGLE
-        case MAV_MOUNT_MODE_SCRIPT:
+        case MAV_MOUNT_MODE_SCRIPT_MAGIC:
             mnt_target.target_type = MountTargetType::ANGLE;
             mnt_target.angle_rad.roll = _script_control_angles.roll;
             mnt_target.angle_rad.pitch = _script_control_angles.pitch;
