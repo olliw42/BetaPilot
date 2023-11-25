@@ -212,6 +212,17 @@ private:
     // pre-arm and healthy checks
     // some need to be made mutable to get around that healthy() is const
 
+    enum STorM32State {
+        STARTUP_MOTORS = 0,
+        STARTUP_SETTLE,
+        STARTUP_CALIBRATE,
+        STARTUP_LEVEL,
+        STARTUP_MOTORDIRDETECT,
+        STARTUP_RELEVEL,
+        NORMAL,
+        STARTUP_FASTLEVEL,
+    };
+
     bool _gimbal_armed;             // true once the gimbal has reached normal state
     uint32_t _gimbal_error_flags;   // error flags in custom_mode field of the HEARTBEAT message (restricted to 16 bits)
     bool _gimbal_prearmchecks_ok;   // true when the gimbal stops reporting prearm fail in the HEARTBEAT message

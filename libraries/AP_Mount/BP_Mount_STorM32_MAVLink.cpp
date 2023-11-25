@@ -124,22 +124,6 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
 
 
 //******************************************************
-// STorM32 states
-//******************************************************
-
-enum STORM32STATEENUM {
-    STORM32STATE_STARTUP_MOTORS = 0,
-    STORM32STATE_STARTUP_SETTLE,
-    STORM32STATE_STARTUP_CALIBRATE,
-    STORM32STATE_STARTUP_LEVEL,
-    STORM32STATE_STARTUP_MOTORDIRDETECT,
-    STORM32STATE_STARTUP_RELEVEL,
-    STORM32STATE_NORMAL,
-    STORM32STATE_STARTUP_FASTLEVEL,
-};
-
-
-//******************************************************
 // BP_Mount_STorM32_MAVLink, main class
 //******************************************************
 
@@ -864,7 +848,7 @@ void BP_Mount_STorM32_MAVLink::handle_message_extra(const mavlink_message_t &msg
             mavlink_heartbeat_t payload;
             mavlink_msg_heartbeat_decode(&msg, &payload);
             uint8_t storm32_state = (payload.custom_mode & 0xFF);
-            _gimbal_armed = ((storm32_state == STORM32STATE_NORMAL) || (storm32_state == STORM32STATE_STARTUP_FASTLEVEL));
+            _gimbal_armed = ((storm32_state == STorM32State::NORMAL) || (storm32_state == STorM32State::STARTUP_FASTLEVEL));
             if ((payload.custom_mode & 0x80000000) == 0) { // don't follow all changes, but just toggle it to true once
                 _gimbal_prearmchecks_ok = true;
             }
