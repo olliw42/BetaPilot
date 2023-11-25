@@ -191,13 +191,13 @@ private:
     // gimbal and protocol discovery
 
     // search for gimbal in GCS_MAVLink routing table
-    void find_gimbal(void);
+    void find_gimbal();
 
     uint32_t _request_device_info_tlast_ms;
     mavlink_gimbal_device_information_t _device_info;
 
     // request GIMBAL_DEVICE_INFORMATION, we can get this also if 'old' MOUNT messages are used
-    void send_cmd_request_gimbal_device_information(void);
+    void send_cmd_request_gimbal_device_information();
 
     enum class Protocol {
         UNDEFINED = 0,     // we do not yet know
@@ -225,11 +225,11 @@ private:
     uint32_t _checks_tlast_ms;
 
     bool has_failures(char* s);
-    bool is_healthy(void);
-    void update_checks(void);
+    bool is_healthy();
+    void update_checks();
 
     uint32_t _request_send_banner_ms;
-    void update_send_banner(void);
+    void update_send_banner();
 
     // gimbal target & control
 
@@ -260,31 +260,31 @@ private:
         float yaw_bf;
     } _script_control_angles;       // angles set by script
 
-    // set the flags for gimbal according to current condition
-    void update_gimbal_device_flags(void);
+    // set the flags for gimbal according to current conditions
+    void update_gimbal_device_flags();
 
     // determines the target angles based on mount mode, does the crucial job of controlling
-    void update_target_angles(void);
+    void update_target_angles();
 
     // sends the target angles to gimbal, called in update loop with 12.5 Hz
-    void send_target_angles(void);
+    void send_target_angles();
 
     // send do_mount_control command with latest angle targets to the gimbal
-    void send_cmd_do_mount_control(void);
+    void send_cmd_do_mount_control();
 
     // send GIMBAL_DEVICE_SET_ATTITUDE with latest angle targets to the gimbal to control attitude
     // When the gimbal receives this message, it can assume it is coming from its gimbal manager
     // (as nobody else is allowed to send this to it). STorM32 thus identifies the message's
     // source sysid & compid as its associated gimbal manager's sysid & compid.
-    void send_gimbal_device_set_attitude(void);
+    void send_gimbal_device_set_attitude();
 
     uint32_t _tahrs_healthy_ms;
-    void send_autopilot_state_for_gimbal_device(void);
+    void send_autopilot_state_for_gimbal_device();
 
-    void send_rc_channels(void);
+    void send_rc_channels();
 
     uint32_t _send_system_time_tlast_ms;
-    void send_system_time(void);
+    void send_system_time();
 
     // task
 

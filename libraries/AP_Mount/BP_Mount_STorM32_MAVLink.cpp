@@ -276,7 +276,7 @@ bool BP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
 }
 
 
-void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags(void)
+void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
 {
     _flags_for_gimbal = 0;
 
@@ -303,7 +303,7 @@ void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags(void)
 }
 
 
-void BP_Mount_STorM32_MAVLink::send_target_angles(void)
+void BP_Mount_STorM32_MAVLink::send_target_angles()
 {
     // just send stupidly at 12.5 Hz, no check if get_target_angles() made a change
 
@@ -331,7 +331,7 @@ enum MountModeThisWouldBeGreatToHave {
 
 
 // update_angle_target_from_rate() assumes a 50hz update rate!
-void BP_Mount_STorM32_MAVLink::update_target_angles(void)
+void BP_Mount_STorM32_MAVLink::update_target_angles()
 {
     // update based on mount mode
     switch (get_mode()) {
@@ -440,7 +440,7 @@ void BP_Mount_STorM32_MAVLink::update_target_angles(void)
 // Gimbal and protocol discovery
 //------------------------------------------------------
 
-void BP_Mount_STorM32_MAVLink::find_gimbal(void)
+void BP_Mount_STorM32_MAVLink::find_gimbal()
 {
     // search for gimbal only until vehicle is armed
     if (hal.util->get_soft_armed()) {
@@ -604,7 +604,7 @@ bool BP_Mount_STorM32_MAVLink::has_failures(char* s)
 }
 
 
-bool BP_Mount_STorM32_MAVLink::is_healthy(void)
+bool BP_Mount_STorM32_MAVLink::is_healthy()
 {
     if (_protocol == Protocol::GIMBAL_DEVICE) {
         // unhealthy if attitude status is not received within the last second
@@ -636,7 +636,7 @@ bool BP_Mount_STorM32_MAVLink::is_healthy(void)
 
 
 // is called with 1 Hz from main loop
-void BP_Mount_STorM32_MAVLink::update_checks(void)
+void BP_Mount_STorM32_MAVLink::update_checks()
 {
 char txt[255];
 
@@ -873,7 +873,7 @@ void BP_Mount_STorM32_MAVLink::handle_msg_extra(const mavlink_message_t &msg)
 // MAVLink send functions
 //------------------------------------------------------
 
-void BP_Mount_STorM32_MAVLink::send_cmd_request_gimbal_device_information(void)
+void BP_Mount_STorM32_MAVLink::send_cmd_request_gimbal_device_information()
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
         return;
@@ -891,7 +891,7 @@ void BP_Mount_STorM32_MAVLink::send_cmd_request_gimbal_device_information(void)
 
 
 // called by send_target_angles()
-void BP_Mount_STorM32_MAVLink::send_cmd_do_mount_control(void)
+void BP_Mount_STorM32_MAVLink::send_cmd_do_mount_control()
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
         return;
@@ -916,7 +916,7 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_mount_control(void)
 
 // called by send_target_angles()
 // _flags_for_gimbal were just updated, so are correct for sure
-void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude(void)
+void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude()
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, GIMBAL_DEVICE_SET_ATTITUDE)) {
         return;
@@ -962,7 +962,7 @@ enum LandedStateThisWouldBeGreatToHave {
 };
 
 
-void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device(void)
+void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device()
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE)) {
         return;
@@ -1047,7 +1047,7 @@ estimator status:
      ESTIMATOR_VELOCITY_VERT are set however even if there is no gps or alike! I find it hard to trust the data
      => we fake it so:
      for ESTIMATOR_ATTITUDE we delay the flag being raised by few secs
-     for ESTIMATOR_VELOCITY_VERT we check for gps like in AP_AHRS_DCM::groundspeed_vector(void)
+     for ESTIMATOR_VELOCITY_VERT we check for gps like in AP_AHRS_DCM::groundspeed_vector()
      btw STorM32 does also check for non-zero velocities for AHRSFix
 */
 
@@ -1141,7 +1141,7 @@ landed state:
 }
 
 
-void BP_Mount_STorM32_MAVLink::send_system_time(void)
+void BP_Mount_STorM32_MAVLink::send_system_time()
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, SYSTEM_TIME)) {
         return;
@@ -1160,7 +1160,7 @@ void BP_Mount_STorM32_MAVLink::send_system_time(void)
 }
 
 
-void BP_Mount_STorM32_MAVLink::send_rc_channels(void)
+void BP_Mount_STorM32_MAVLink::send_rc_channels()
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, RC_CHANNELS)) {
         return;
@@ -1191,7 +1191,7 @@ void BP_Mount_STorM32_MAVLink::send_banner()
 }
 
 
-void BP_Mount_STorM32_MAVLink::update_send_banner(void)
+void BP_Mount_STorM32_MAVLink::update_send_banner()
 {
     if (!_request_send_banner_ms) return; // no request
 
