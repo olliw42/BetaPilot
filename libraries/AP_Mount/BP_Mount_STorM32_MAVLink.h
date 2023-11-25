@@ -261,7 +261,7 @@ private:
     } _script_control_angles;       // angles set by script
 
     // set the flags for gimbal according to current condition
-    void update_gimbal_device_flags(enum MAV_MOUNT_MODE mntmode);
+    void update_gimbal_device_flags(void);
 
     // determines the target angles based on mount mode, does the crucial job of controlling
     void update_target_angles(void);

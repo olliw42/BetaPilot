@@ -253,7 +253,7 @@ bool BP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
         set_mode(MAV_MOUNT_MODE_NEUTRAL);
     }
 
-    update_gimbal_device_flags(get_mode());
+    update_gimbal_device_flags();
 
     // we currently do not support LOCK
     // front-end is digesting GIMBAL_MANAGER_FLAGS_YAW_LOCK to determine yaw_is_earth_frame
@@ -276,11 +276,11 @@ bool BP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
 }
 
 
-void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags(enum MAV_MOUNT_MODE mntmode)
+void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags(void)
 {
     _flags_for_gimbal = 0;
 
-    switch (mntmode) {
+    switch (get_mode()) {
         case MAV_MOUNT_MODE_RETRACT:
             _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RETRACT;
             break;
@@ -306,7 +306,7 @@ void BP_Mount_STorM32_MAVLink::send_target_angles(void)
 {
     // just send stupidly at 12.5 Hz, no check if get_target_angles() made a change
 
-    update_gimbal_device_flags(get_mode());
+    update_gimbal_device_flags();
 
     if (mnt_target.target_type == MountTargetType::RATE) {
         // we ignore it. We may think to just send angle_rad, but if yaw is earth frame
