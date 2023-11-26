@@ -584,9 +584,7 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_information(const mavlink_me
 
     // we could check here for sanity of _device_info.gimbal_device_id, but let's just be happy
 
-    // set parameter defaults from gimbal information
-    // Q: why set_default ?? why not actual value ?? allows the user to overwrite em?
-
+    // correct parameters from gimbal information
     if (!isnan(_device_info.roll_min) && !isnan(_device_info.roll_max)) {
         if (degrees(_device_info.roll_min) > _params.roll_angle_min) _params.roll_angle_min.set(degrees(_device_info.roll_min));
         if (degrees(_device_info.roll_max) < _params.roll_angle_max) _params.roll_angle_max.set(degrees(_device_info.roll_max));
