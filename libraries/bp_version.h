@@ -1,7 +1,7 @@
 #pragma once
 
 #define BETAPILOTVERSION "v059c"
-#define DATEOFBASEBRANCH "20231124"
+#define DATEOFBASEBRANCH "20231126"
 
 /*
 search for //OW to find all changes
