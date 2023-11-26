@@ -18,6 +18,10 @@
 #include <stdio.h>
 #include <AP_Math/location.h>
 #include <SRV_Channel/SRV_Channel.h>
+//OW
+#include <AP_Logger/AP_Logger.h>
+#include "BP_Mount_STorM32_MAVLink.h"
+//OWEND
 
 const AP_Param::GroupInfo AP_Mount::var_info[] = {
 
@@ -149,6 +153,14 @@ void AP_Mount::init()
             _num_instances++;
             break;
 #endif // HAL_MOUNT_VIEWPRO_ENABLED
+
+//OW
+        // check for STorM32_MAVLink mounts using MAVLink protocol
+        case Type::STorM32_MAVLink:
+            _backends[instance] = new BP_Mount_STorM32_MAVLink(*this, _params[instance], instance);
+            _num_instances++;
+            break;
+//OWEND
         }
 
         // init new instance
@@ -248,6 +260,20 @@ void AP_Mount::set_mode(uint8_t instance, enum MAV_MOUNT_MODE mode)
     backend->set_mode(mode);
 }
 
+//OW
+// set_mode_3pos - sets the mount's retract or default mode from an aux switch
+void AP_Mount::set_mode_3pos(uint8_t instance, uint8_t ch_flag)
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return;
+    }
+
+    // call backend's set_mode_3pos
+    backend->set_mode_3pos(ch_flag);
+}
+//OWEND
+
 // set yaw_lock.  If true, the gimbal's yaw target is maintained in earth-frame meaning it will lock onto an earth-frame heading (e.g. North)
 // If false (aka "follow") the gimbal's yaw is maintained in body-frame meaning it will rotate with the vehicle
 void AP_Mount::set_yaw_lock(uint8_t instance, bool yaw_lock)
@@ -327,6 +353,8 @@ MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_pitchyaw(const mavlink_com
         return MAV_RESULT_FAILED;
     }
 
+//OW
+/*
     // check flags for change to RETRACT
     const uint32_t flags = packet.x;
     if ((flags & GIMBAL_MANAGER_FLAGS_RETRACT) > 0) {
@@ -338,6 +366,13 @@ MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_pitchyaw(const mavlink_com
         backend->set_mode(MAV_MOUNT_MODE_NEUTRAL);
         return MAV_RESULT_ACCEPTED;
     }
+*/
+    const uint32_t flags = packet.x;
+
+    if (!backend->handle_gimbal_manager_flags(flags)) {
+        return MAV_RESULT_ACCEPTED;
+    }
+//OWEND
 
     // param1 : pitch_angle (in degrees)
     // param2 : yaw angle (in degrees)
@@ -399,6 +434,8 @@ void AP_Mount::handle_gimbal_manager_set_attitude(const mavlink_message_t &msg) 
         return;
     }
 
+//OW
+/*
     // check flags for change to RETRACT
     const uint32_t flags = packet.flags;
     if ((flags & GIMBAL_MANAGER_FLAGS_RETRACT) > 0) {
@@ -411,6 +448,13 @@ void AP_Mount::handle_gimbal_manager_set_attitude(const mavlink_message_t &msg) 
         backend->set_mode(MAV_MOUNT_MODE_NEUTRAL);
         return;
     }
+*/
+    const uint32_t flags = packet.flags;
+
+    if (!backend->handle_gimbal_manager_flags(flags)) {
+        return;
+    }
+//OWEND
 
     const Quaternion att_quat{packet.q};
     const Vector3f att_rate_degs {
@@ -465,6 +509,8 @@ void AP_Mount::handle_gimbal_manager_set_pitchyaw(const mavlink_message_t &msg)
         return;
     }
 
+//OW
+/*
     // check flags for change to RETRACT
     uint32_t flags = (uint32_t)packet.flags;
     if ((flags & GIMBAL_MANAGER_FLAGS_RETRACT) > 0) {
@@ -476,6 +522,13 @@ void AP_Mount::handle_gimbal_manager_set_pitchyaw(const mavlink_message_t &msg)
         backend->set_mode(MAV_MOUNT_MODE_NEUTRAL);
         return;
     }
+*/
+    const uint32_t flags = packet.flags;
+
+    if (!backend->handle_gimbal_manager_flags(flags)) {
+        return;
+    }
+//OWEND
 
     // Do not allow both angle and rate to be specified at the same time
     if (!isnan(packet.pitch) && !isnan(packet.yaw) && !isnan(packet.pitch_rate) && !isnan(packet.yaw_rate)) {
@@ -895,6 +948,10 @@ void AP_Mount::handle_gimbal_report(mavlink_channel_t chan, const mavlink_messag
 
 void AP_Mount::handle_message(mavlink_channel_t chan, const mavlink_message_t &msg)
 {
+//OW
+    handle_message_extra(chan, msg);
+//OWEND
+
     switch (msg.msgid) {
     case MAVLINK_MSG_ID_GIMBAL_REPORT:
         handle_gimbal_report(chan, msg);
@@ -1064,5 +1121,43 @@ AP_Mount *mount()
 }
 
 };
+
+//OW
+bool AP_Mount::cam_set_mode(uint8_t instance, bool video_mode)
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return false;
+    }
+    return backend->cam_set_mode(video_mode);
+}
+
+bool AP_Mount::cam_do_photo_video_mode(uint8_t instance, PhotoVideoMode photo_video_mode)
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return false;
+    }
+    return backend->cam_do_photo_video_mode(photo_video_mode);
+}
+
+void AP_Mount::handle_message_extra(mavlink_channel_t chan, const mavlink_message_t &msg)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            _backends[instance]->handle_message_extra(msg);
+        }
+    }
+}
+
+void AP_Mount::send_banner()
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            _backends[instance]->send_banner();
+        }
+    }
+}
+//OWEND
 
 #endif /* HAL_MOUNT_ENABLED */
