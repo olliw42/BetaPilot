@@ -33,11 +33,11 @@
 #include "AP_RCProtocol_FPort.h"
 #include "AP_RCProtocol_FPort2.h"
 #include "AP_RCProtocol_DroneCAN.h"
-#include <AP_Math/AP_Math.h>
-#include <RC_Channel/RC_Channel.h>
 //OW RADIOLINK
 #include "AP_RCProtocol_MavlinkRadio.h"
 //OWEND
+#include <AP_Math/AP_Math.h>
+#include <RC_Channel/RC_Channel.h>
 
 #include <AP_Vehicle/AP_Vehicle_Type.h>
 
@@ -549,20 +549,12 @@ bool AP_RCProtocol::protocol_enabled(rcprotocol_t protocol) const
     return ((1U<<(uint8_t(protocol)+1)) & rc_protocols_mask) != 0;
 }
 
-namespace AP {
-    AP_RCProtocol &RC()
-    {
-        static AP_RCProtocol rcprot;
-        return rcprot;
-    }
-};
-
 //OW RADIOLINK
 void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_t* packet)
 {
-    // this message is also used to check if the receiver is present
+    // receiving this message is also used to check if the receiver is present
     // so let's first do the receiver detection
-    if (_detected_protocol == AP_RCProtocol::NONE) { // we are still searching
+    if (_detected_protocol == AP_RCProtocol::NONE) { // still searching
 //#ifndef IOMCU_FW
 //? we need this, but originally it is enclosed by an #ifndef IOMCU_FW
 // how does this work?
@@ -611,5 +603,13 @@ void AP_RCProtocol::handle_radio_link_stats(mavlink_radio_link_stats_t* packet)
     backend[_detected_protocol]->update();
 }
 //OWEND
+
+namespace AP {
+    AP_RCProtocol &RC()
+    {
+        static AP_RCProtocol rcprot;
+        return rcprot;
+    }
+};
 
 #endif  // AP_RCPROTOCOL_ENABLED

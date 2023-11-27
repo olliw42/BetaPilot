@@ -20,9 +20,7 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Common/AP_Common.h>
-//OW RADIOLINK
 #include <GCS_MAVLink/GCS_MAVLink.h>
-//OWEND
 
 #define MAX_RCIN_CHANNELS 18
 #define MIN_RCIN_CHANNELS  5

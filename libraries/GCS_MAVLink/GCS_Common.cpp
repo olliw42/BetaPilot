@@ -4110,6 +4110,16 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
     case MAVLINK_MSG_ID_RC_CHANNELS_OVERRIDE:
         handle_rc_channels_override(msg);
         break;
+//OW RADIOLINK
+// like with old RADIO_STATUS, the messages
+// MAVLINK_MSG_ID_RADIO_LINK_STATS, MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL are handled in the vehicle's GCS_Mavlink.cpp
+    case MAVLINK_MSG_ID_RADIO_RC_CHANNELS:
+        handle_radio_rc_channels(msg);
+#if HAL_MOUNT_ENABLED
+        handle_mount_message(msg);
+#endif
+        break;
+//OWEND
 
 #if AP_OPTICALFLOW_ENABLED
     case MAVLINK_MSG_ID_OPTICAL_FLOW:
@@ -4197,17 +4207,6 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
         break;
     }
 #endif
-
-//OW RADIOLINK
-// like with old RADIO_STATUS, the messages
-// MAVLINK_MSG_ID_RADIO_LINK_STATS, MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL are handled in the vehicle's GCS_Mavlink.cpp
-    case MAVLINK_MSG_ID_RADIO_RC_CHANNELS:
-        handle_radio_rc_channels(msg);
-#if HAL_MOUNT_ENABLED
-        handle_mount_message(msg);
-#endif
-        break;
-//OWEND
     }
 
 }
@@ -6434,7 +6433,7 @@ bool GCS_MAVLINK::accept_packet(const mavlink_status_t &status,
     }
 
 //OW RADIOLINK
-    // we want to handle messages from a radio
+    // handle messages from a mavlink receiver
     // we currently narrow it down to "ours" to play it safe
     if ((msg.compid == MAV_COMP_ID_TELEMETRY_RADIO) &&
         (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS || msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_STATS ||
