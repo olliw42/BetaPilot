@@ -23,11 +23,11 @@ extern const AP_HAL::HAL& hal;
 //******************************************************
 // Quaternion & Euler for Gimbal
 //******************************************************
-// It is inappropriate to use NED (roll-pitch-yaw) to convert received quaternion to Euler angles
-// and vice versa. For most gimbals pitch-roll-yaw is appropriate. When the roll angle is zero,
-// both are equivalent, which should be the majority of cases.
-// The issue with NED is the gimbal lock at pitch +-90 deg, but pitch +-90 deg is a common
-// operation point for gimbals.
+// For most gimbals it is inappropriate to use NED (roll-pitch-yaw) to convert received
+// quaternion to Euler angles and vice versa. For most gimbals pitch-roll-yaw is
+// appropriate. When the roll angle is zero, both are equivalent, which should be the
+// majority of cases. The issue with NED is the gimbal lock at pitch +-90 deg, but pitch
+// +-90 deg is a common operation point for gimbals.
 // The angles in this driver are thus pitch-roll-yaw Euler.
 
 class GimbalQuaternion : public Quaternion
@@ -228,7 +228,7 @@ void BP_Mount_STorM32_MAVLink::update()
 // on the info in the gimbal manager messages.
 // Return false to skip this angle/rate processing.
 // AP's gimbal manager should never ask to do things which the gimbal device
-// can't do. Isn't the case but we know well our gimbal device.
+// can't do. Isn't so but we know well our gimbal device.
 bool BP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
 {
     // check flags for change to RETRACT
@@ -284,6 +284,10 @@ void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
     if (_flags_from_manager != UINT32_MAX) {
         if (_flags_from_manager & GIMBAL_MANAGER_FLAGS_RC_EXCLUSIVE) _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RC_EXCLUSIVE;
         if (_flags_from_manager & GIMBAL_MANAGER_FLAGS_RC_MIXED) _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RC_MIXED;
+    } else {
+        // for as long as no gimbal manager message has been sent to the fc, enable rc mixed.
+        // Should avoid user confusion when choosing the gimbal device operation mode.
+        _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RC_MIXED;
     }
 
     // driver currently does not support pitch,roll follow, only pitch,roll lock
@@ -337,6 +341,7 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
             const Vector3f &target = _params.retract_angles.get();
             mnt_target.target_type = MountTargetType::ANGLE;
             mnt_target.angle_rad.set(target*DEG_TO_RAD, false);
+            mnt_target_loc_valid = false;
             break;
         }
 
@@ -346,6 +351,7 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
             const Vector3f &target = _params.neutral_angles.get();
             mnt_target.target_type = MountTargetType::ANGLE;
             mnt_target.angle_rad.set(target*DEG_TO_RAD, false);
+            mnt_target_loc_valid = false;
             break;
         }
 
@@ -356,6 +362,7 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
             // SToRM32 doesn't support rate, so update target angle from rate if necessary.
             if (mnt_target.target_type == MountTargetType::RATE) {
                 update_angle_target_from_rate(mnt_target.rate_rads, mnt_target.angle_rad);
+                mnt_target_loc_valid = false;
             }
             break;
 
@@ -373,6 +380,7 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
                 mnt_target.rate_rads = rc_target;
                 break;
             }
+            mnt_target_loc_valid = false;
             break;
         }
 
@@ -382,6 +390,8 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
         case MAV_MOUNT_MODE_GPS_POINT:
             if (get_angle_target_to_roi(mnt_target.angle_rad)) {
                 mnt_target.target_type = MountTargetType::ANGLE;
+                mnt_target_loc_valid = true;
+                mnt_target_loc = _roi_target;
             }
             break;
 
@@ -391,6 +401,8 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
         case MAV_MOUNT_MODE_HOME_LOCATION:
             if (get_angle_target_to_home(mnt_target.angle_rad)) {
                 mnt_target.target_type = MountTargetType::ANGLE;
+                mnt_target_loc_valid = true;
+                mnt_target_loc = AP::ahrs().get_home();
             }
             break;
 
@@ -400,6 +412,8 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
         case MAV_MOUNT_MODE_SYSID_TARGET:
             if (get_angle_target_to_sysid(mnt_target.angle_rad)) {
                 mnt_target.target_type = MountTargetType::ANGLE;
+                mnt_target_loc_valid = true;
+                mnt_target_loc = _target_sysid_location;
             }
             break;
 
@@ -411,6 +425,7 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
             mnt_target.angle_rad.pitch = _script_control_angles.pitch;
             mnt_target.angle_rad.yaw = _script_control_angles.yaw_bf;
             mnt_target.angle_rad.yaw_is_ef = false;
+            mnt_target_loc_valid = false;
             break;
 
         default:
@@ -425,7 +440,7 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
     if (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_SUPPORTS_INFINITE_YAW) return;
     if (isnan(_device_info.yaw_min) || isnan(_device_info.yaw_max)) return;
 
-    // I believe currently angles are inside +-PI, no wrapPi voodoo needed
+    // I believe currently angles are inside +-PI, no wrapPI needed
     // TODO: if copter, copter might yaw by what the gimbal can't do
 
     if (mnt_target.angle_rad.yaw < _device_info.yaw_min) mnt_target.angle_rad.yaw = _device_info.yaw_min;
@@ -1196,7 +1211,7 @@ bool BP_Mount_STorM32_MAVLink::is_healthy()
 }
 
 
-// is called with 1 Hz from main loop
+// is called with 1 Hz from update loop
 void BP_Mount_STorM32_MAVLink::update_checks()
 {
 char txt[255];
@@ -1227,13 +1242,13 @@ char txt[255];
         _healthy = true;
     }
 
-    // do these only at startup
+    // do these only at startup, until prearm checks have been passed once
     if (!_prearmchecks_passed) {
 
         if ((AP_HAL::millis() - _prearmcheck_sendtext_tlast_ms) > 30000) { // we haven't send it for a long while
             _prearmcheck_sendtext_tlast_ms = AP_HAL::millis();
             if (!_initialised || !_gimbal_prearmchecks_ok || !_gimbal_armed) {
-                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: arm", _instance+1);
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: not armed", _instance+1);
             } else
             if (has_failures(txt)) {
                 GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks FAIL: %s", _instance+1, txt);
@@ -1241,7 +1256,6 @@ char txt[255];
         }
 
         // unhealthy until gimbal has fully passed the startup sequence
-        // implies gimbal has been found, has replied with device info, and status message was received
         // _initialised:            -> gimbal found (HB received,_compid != 0)
         //                          -> device info obtained (_got_device_info = true)
         //                          -> status message received, protocol set (_protocol != PROTOCOL_UNDEFINED)
@@ -1254,6 +1268,8 @@ char txt[255];
     }
 
     // do these continuously
+    // - check failures
+    // - check connection to gimbal
     bool checks = is_healthy();
 
     if (_prearmchecks_passed) { // we are past prearm checks
@@ -1273,12 +1289,13 @@ char txt[255];
     }
 
     _checks_last = checks;
+
     if (!checks) {
         _healthy = false;
         return;
     }
 
-    // if we get this far the mount is healthy
+    // if we get this far in prearm state, then mount is healthy
 
     // if we got this far the first time we inform the gcs
     if (!_prearmchecks_passed) {
@@ -1286,7 +1303,7 @@ char txt[255];
          GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks passed", _instance+1);
     }
 
-    _healthy = true; // report to healthy()
+    _healthy = true;
 }
 
 
@@ -1308,11 +1325,11 @@ bool BP_Mount_STorM32_MAVLink::healthy() const
 // return target location if available
 // returns true if a target location is available and fills in target_loc argument
 bool BP_Mount_STorM32_MAVLink::get_location_target(Location &_target_loc)
-{/*
-    if (target_loc_valid) {
-        _target_loc = target_loc;
+{
+    if (mnt_target_loc_valid) {
+        _target_loc = mnt_target_loc;
         return true;
-    } */
+    }
     return false;
 }
 
@@ -1462,7 +1479,7 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_control(bool shoot)
 void BP_Mount_STorM32_MAVLink::send_gimbal_device_attitude_status(mavlink_channel_t chan)
 {
     // space already checked by streamer
-    // checked space of GIMBAL_DEVICE_ATTITUDE_STATUS, but MOUNT_STATUS is (much) smaller, so no issue
+    // has checked for space of GIMBAL_DEVICE_ATTITUDE_STATUS, but MOUNT_STATUS is (much) smaller, so no issue
 
     if (_compid != MAV_COMP_ID_GIMBAL) { // do it only for the 1st gimbal
         return;

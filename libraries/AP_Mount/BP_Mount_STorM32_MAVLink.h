@@ -263,7 +263,6 @@ private:
         float yaw_bf;
         float delta_yaw;
     } _current_angles;              // current angles, obtained from either MOUNT_STATUS or GIMBAL_DEVICE_ATTITUDE_STATUS
-
     Vector3f _current_omega;        // current angular velocities, obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
 
     struct {
@@ -271,6 +270,9 @@ private:
         float pitch;
         float yaw_bf;
     } _script_control_angles;       // angles set by script
+
+    bool mnt_target_loc_valid;      // true when a location is set by a mount mode
+    Location mnt_target_loc;        // target location set by a mount mode
 
     // set the flags for gimbal according to current conditions
     void update_gimbal_device_flags();
