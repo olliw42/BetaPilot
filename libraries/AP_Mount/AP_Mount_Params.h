@@ -31,4 +31,8 @@ public:
     AP_Float    pitch_stb_lead;     // pitch lead control gain (only used by servo backend)
     AP_Int8     sysid_default;      // target sysid for mount to follow
     AP_Int32    dev_id;             // Device id taking into account bus
+
+//OW
+    AP_Int8     zflags;
+//OWEND
 };
