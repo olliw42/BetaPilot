@@ -233,6 +233,10 @@ public:
     // The function may modify the flags according to its capabilities.
     // Return false to abort angle/rate processing.
     virtual bool handle_gimbal_manager_flags(uint32_t flags);
+
+    // used for scripting
+    virtual bool take_control() { return false; }
+    virtual bool give_control() { return false; }
 //OWEND
 
     //

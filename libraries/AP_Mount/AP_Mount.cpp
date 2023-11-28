@@ -1158,6 +1158,26 @@ void AP_Mount::send_banner()
         }
     }
 }
+
+bool AP_Mount::take_control()
+{
+    auto *backend = get_primary();
+    if (backend == nullptr) {
+        return false;
+    }
+
+    return backend->take_control();
+}
+
+bool AP_Mount::give_control()
+{
+    auto *backend = get_primary();
+    if (backend == nullptr) {
+        return false;
+    }
+
+    return backend->give_control();
+}
 //OWEND
 
 #endif /* HAL_MOUNT_ENABLED */

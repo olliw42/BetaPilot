@@ -152,7 +152,7 @@ void BP_Mount_STorM32_MAVLink::init()
     _flags_from_manager = UINT32_MAX; // the UINT32_MAX is important!
     _flags_for_gimbal = 0;
     _current_angles = {0.0f, 0.0f, 0.0f, NAN}; // the NAN is important!
-    _script_control_angles = {};
+    _script_angles = {};
 
     _yaw_lock = false; // can't be currently supported, so we need to ensure this is false. This is important!
 
@@ -323,11 +323,6 @@ void BP_Mount_STorM32_MAVLink::send_target_angles()
 }
 
 
-enum MountModeScriptMagic {
-    MAV_MOUNT_MODE_SCRIPT_MAGIC = 83, // 'S'
-};
-
-
 // update_angle_target_from_rate() assumes a 50hz update rate!
 // TODO: one should allow angles outside of +-PI, to go shortest path in case of turn around
 void BP_Mount_STorM32_MAVLink::update_target_angles()
@@ -417,20 +412,20 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
             }
             break;
 
-        // point mount to where a script wants it to point
-        // -> ANGLE
-        case MAV_MOUNT_MODE_SCRIPT_MAGIC:
-            mnt_target.target_type = MountTargetType::ANGLE;
-            mnt_target.angle_rad.roll = _script_control_angles.roll;
-            mnt_target.angle_rad.pitch = _script_control_angles.pitch;
-            mnt_target.angle_rad.yaw = _script_control_angles.yaw_bf;
-            mnt_target.angle_rad.yaw_is_ef = false;
-            mnt_target_loc_valid = false;
-            break;
-
         default:
             // we do not know this mode so do nothing
             break;
+    }
+
+    if (_script_angles.control) {
+        // point mount to where a script wants it to point
+        // -> ANGLE
+        mnt_target.target_type = MountTargetType::ANGLE;
+        mnt_target.angle_rad.roll = _script_angles.roll;
+        mnt_target.angle_rad.pitch = _script_angles.pitch;
+        mnt_target.angle_rad.yaw = _script_angles.yaw_bf;
+        mnt_target.angle_rad.yaw_is_ef = false;
+        mnt_target_loc_valid = false;
     }
 
     // account for range limits
@@ -1319,7 +1314,7 @@ bool BP_Mount_STorM32_MAVLink::healthy() const
 
 
 //------------------------------------------------------
-// Scripting accessors
+// Scripting accessors & bindings
 //------------------------------------------------------
 
 // return target location if available
@@ -1337,9 +1332,23 @@ bool BP_Mount_STorM32_MAVLink::get_location_target(Location &_target_loc)
 // update mount's actual angles (to be called by script communicating with mount)
 void BP_Mount_STorM32_MAVLink::set_attitude_euler(float roll_deg, float pitch_deg, float yaw_bf_deg)
 {
-    _script_control_angles.roll = radians(roll_deg);
-    _script_control_angles.pitch = radians(pitch_deg);
-    _script_control_angles.yaw_bf = radians(yaw_bf_deg);
+    _script_angles.roll = radians(roll_deg);
+    _script_angles.pitch = radians(pitch_deg);
+    _script_angles.yaw_bf = radians(yaw_bf_deg);
+}
+
+
+bool BP_Mount_STorM32_MAVLink::take_control()
+{
+    _script_angles.control = true;
+    return true; //we assume only one script trying this, so KIS
+}
+
+
+bool BP_Mount_STorM32_MAVLink::give_control()
+{
+    _script_angles.control = false;
+    return true; //we assume only one script trying this, so KIS
 }
 
 
