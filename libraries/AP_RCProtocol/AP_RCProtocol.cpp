@@ -34,7 +34,7 @@
 #include "AP_RCProtocol_FPort2.h"
 #include "AP_RCProtocol_DroneCAN.h"
 //OW RADIOLINK
-#include "AP_RCProtocol_MavlinkRadio.h"
+#include "AP_RCProtocol_MAVLinkRadio.h"
 //OWEND
 #include <AP_Math/AP_Math.h>
 #include <RC_Channel/RC_Channel.h>
@@ -86,7 +86,9 @@ void AP_RCProtocol::init()
     backend[AP_RCProtocol::DRONECAN] = new AP_RCProtocol_DroneCAN(*this);
 #endif
 //OW RADIOLINK
-    backend[AP_RCProtocol::MAVLINK_RADIO] = new AP_RCProtocol_MavlinkRadio(*this);
+#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
+    backend[AP_RCProtocol::MAVLINK_RADIO] = new AP_RCProtocol_MAVLinkRadio(*this);
+#endif
 //OWEND
 }
 
@@ -512,8 +514,10 @@ const char *AP_RCProtocol::protocol_name_from_protocol(rcprotocol_t protocol)
         return "DroneCAN";
 #endif
 //OW RADIOLINK
+#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
     case MAVLINK_RADIO:
-        return "MavRadio";
+        return "MAVRadio";
+#endif
 //OWEND
     case NONE:
         break;
@@ -555,11 +559,9 @@ void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_t* 
     // receiving this message is also used to check if the receiver is present
     // so let's first do the receiver detection
     if (_detected_protocol == AP_RCProtocol::NONE) { // still searching
-//#ifndef IOMCU_FW
-//? we need this, but originally it is enclosed by an #ifndef IOMCU_FW
-// how does this work?
+#if AP_RC_CHANNEL_ENABLED
         rc_protocols_mask = rc().enabled_protocols();
-//#endif
+#endif
         if (!protocol_enabled(MAVLINK_RADIO)) return; // not our turn
         _detected_protocol = AP_RCProtocol::MAVLINK_RADIO;
     }

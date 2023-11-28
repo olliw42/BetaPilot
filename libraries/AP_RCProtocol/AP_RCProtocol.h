@@ -72,7 +72,9 @@ public:
         DRONECAN   = 13,
 #endif
 //OW RADIOLINK
+#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
         MAVLINK_RADIO = 14, // RC_PROTOCOLS +2^15 = 32768
+#endif
 //OWEND
         NONE    //last enum always is None
     };
@@ -154,7 +156,9 @@ public:
         case DRONECAN:
 #endif
 //OW RADIOLINK
+#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
         case MAVLINK_RADIO:
+#endif
 //OWEND
         case NONE:
             return false;
@@ -203,6 +207,7 @@ public:
     }
 
 //OW RADIOLINK
+    // handle mavlink radio
     void handle_radio_rc_channels(const mavlink_radio_rc_channels_t* packet);
     void handle_radio_link_stats(mavlink_radio_link_stats_t* packet);
 

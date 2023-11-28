@@ -4113,12 +4113,14 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
 //OW RADIOLINK
 // like with old RADIO_STATUS, the messages
 // MAVLINK_MSG_ID_RADIO_LINK_STATS, MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL are handled in the vehicle's GCS_Mavlink.cpp
+#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
     case MAVLINK_MSG_ID_RADIO_RC_CHANNELS:
         handle_radio_rc_channels(msg);
 #if HAL_MOUNT_ENABLED
         handle_mount_message(msg);
 #endif
         break;
+#endif
 //OWEND
 
 #if AP_OPTICALFLOW_ENABLED
@@ -6433,6 +6435,7 @@ bool GCS_MAVLINK::accept_packet(const mavlink_status_t &status,
     }
 
 //OW RADIOLINK
+#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
     // handle messages from a mavlink receiver
     // we currently narrow it down to "ours" to play it safe
     if ((msg.compid == MAV_COMP_ID_TELEMETRY_RADIO) &&
@@ -6440,6 +6443,7 @@ bool GCS_MAVLINK::accept_packet(const mavlink_status_t &status,
          msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL)) {
         return true;
     }
+#endif
 //OWEND
 
     if (!sysid_enforce()) {
@@ -6816,6 +6820,8 @@ MAV_RESULT GCS_MAVLINK::handle_control_high_latency(const mavlink_command_int_t 
 #endif // HAL_HIGH_LATENCY2_ENABLED
 
 //OW RADIOLINK
+#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
+
 void GCS_MAVLINK::handle_radio_link_stats(const mavlink_message_t &msg, bool log_radio)
 {
     mavlink_radio_link_stats_t packet;
@@ -6929,8 +6935,11 @@ void GCS_MAVLINK::handle_radio_rc_channels(const mavlink_message_t &msg)
     mavlink_radio_rc_channels_t packet;
     mavlink_msg_radio_rc_channels_decode(&msg, &packet);
 
+#if AP_RCPROTOCOL_ENABLED
     AP::RC().handle_radio_rc_channels(&packet);
+#endif
 }
+#endif
 //OWEND
 
 #endif  // HAL_GCS_ENABLED

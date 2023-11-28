@@ -4,17 +4,19 @@
 // for mLRS
 //*****************************************************
 
-#include "AP_RCProtocol_MavlinkRadio.h"
-#include <GCS_MAVLink/GCS_MAVLink.h>
+#include "AP_RCProtocol_config.h"
 
+#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
 
-AP_RCProtocol_MavlinkRadio::AP_RCProtocol_MavlinkRadio(AP_RCProtocol &_frontend) :
+#include "AP_RCProtocol_MAVLinkRadio.h"
+
+// constructor
+AP_RCProtocol_MAVLinkRadio::AP_RCProtocol_MAVLinkRadio(AP_RCProtocol &_frontend) :
     AP_RCProtocol_Backend(_frontend)
-{
-}
+{}
 
-
-void AP_RCProtocol_MavlinkRadio::update(void)
+// update function to populate input
+void AP_RCProtocol_MAVLinkRadio::update(void)
 {
     if (frontend.mavlink_radio.rc_channels_updated) {
         frontend.mavlink_radio.rc_channels_updated = false;
@@ -47,3 +49,6 @@ void AP_RCProtocol_MavlinkRadio::update(void)
         }
     }
 }
+
+#endif // AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
+
