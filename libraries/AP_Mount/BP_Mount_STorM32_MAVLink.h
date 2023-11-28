@@ -258,7 +258,7 @@ private:
         uint32_t received_tlast_ms; // time last GIMBAL_DEVICE_ATTITUDE_STATUS was received (used for health reporting)
     } _device_status;
 
-    uint32_t _flags_from_manager;   // flags received by gimbal manager
+    uint32_t _flags_from_manager = UINT32_MAX; // flags received by gimbal manager, the UINT32_MAX is important!
     uint16_t _flags_for_gimbal;     // flags to be send to gimbal device
 
     struct {
@@ -266,7 +266,7 @@ private:
         float pitch;
         float yaw_bf;
         float delta_yaw;
-    } _current_angles;              // current angles, obtained from either MOUNT_STATUS or GIMBAL_DEVICE_ATTITUDE_STATUS
+    } _current_angles = {0.0f, 0.0f, 0.0f, NAN}; // current angles, obtained from MOUNT_STATUS or GIMBAL_DEVICE_ATTITUDE_STATUS, the NAN is important!
     Vector3f _current_omega;        // current angular velocities, obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
 
     struct {
@@ -330,7 +330,6 @@ private:
 
     // logging
 
-    bool _should_log;
-
+    bool _should_log = true;
 };
 

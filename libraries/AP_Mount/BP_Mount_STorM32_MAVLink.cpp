@@ -131,33 +131,11 @@ void BP_Mount_STorM32_MAVLink::init()
 {
     AP_Mount_Backend::init();
 
-    _sysid = 0;
-    _compid = 0; // gimbal not yet discovered
-    _chan = MAVLINK_COMM_0; // this is a dummy, will be set correctly by find_gimbal()
-
-    _got_device_info = false;
-    _initialised = false;
-
-    _protocol = Protocol::UNDEFINED;
-
-    _gimbal_armed = false;
-    _gimbal_prearmchecks_ok = false;
-    _armingchecks_running = 0;
-    _prearmchecks_passed = false;
-
     _mode = MAV_MOUNT_MODE_RC_TARGETING; // irrelevant, will be later set to default in frontend init()
 
-    _mount_status = {};
-    _device_status = {};
     _flags_from_manager = UINT32_MAX; // the UINT32_MAX is important!
-    _flags_for_gimbal = 0;
+
     _current_angles = {0.0f, 0.0f, 0.0f, NAN}; // the NAN is important!
-    _script_angles = {};
-
-    _yaw_lock = false; // can't be currently supported, so we need to ensure this is false. This is important!
-
-    _got_radio_rc_channels = false; // disable sending rc channels when RADIO_RC_CHANNELS messages are detected
-    _camera_mode = CameraMode::UNDEFINED;
 
     _should_log = true; // for now do always log
 }
