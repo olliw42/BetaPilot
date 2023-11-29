@@ -683,6 +683,13 @@ protected:
     void handle_optical_flow(const mavlink_message_t &msg);
 
     void handle_manual_control(const mavlink_message_t &msg);
+//OW RADIOLINK
+    // called from vehicle class handler
+    void handle_radio_link_stats(const mavlink_message_t &msg, bool log_radio);
+    void handle_radio_link_flow_control(const mavlink_message_t &msg, bool log_radio);
+    // called from common handler
+    void handle_radio_rc_channels(const mavlink_message_t &msg);
+//OWEND
 
     // default empty handling of LANDING_TARGET
     virtual void handle_landing_target(const mavlink_landing_target_t &packet, uint32_t timestamp_ms) { }
@@ -745,6 +752,11 @@ private:
     // define the two objects used for parsing incoming messages:
     mavlink_message_t _channel_buffer;
     mavlink_status_t _channel_status;
+
+//OW RADIOLINK
+    // for mavlink radio
+    mavlink_radio_t _mavlink_radio_packet;
+//OWEND
 
     const AP_SerialManager::UARTState *uartstate;
 
@@ -1253,6 +1265,10 @@ public:
 #endif // HAL_HIGH_LATENCY2_ENABLED
 
     virtual uint8_t sysid_this_mav() const = 0;
+
+//OW
+    MAV_LANDED_STATE get_landed_state(void) const { return num_gcs() > 0 ? chan(0)->landed_state() : MAV_LANDED_STATE_UNDEFINED; }
+//OWEND
 
 protected:
 

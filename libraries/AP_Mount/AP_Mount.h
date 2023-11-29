@@ -47,6 +47,9 @@ class AP_Mount_Siyi;
 class AP_Mount_Scripting;
 class AP_Mount_Xacti;
 class AP_Mount_Viewpro;
+//OW
+class BP_Mount_STorM32_MAVLink;
+//OWEND
 
 /*
   This is a workaround to allow the MAVLink backend access to the
@@ -67,6 +70,9 @@ class AP_Mount
     friend class AP_Mount_Scripting;
     friend class AP_Mount_Xacti;
     friend class AP_Mount_Viewpro;
+//OW
+    friend class BP_Mount_STorM32_MAVLink;
+//OWEND
 
 public:
     AP_Mount();
@@ -115,6 +121,9 @@ public:
 #if HAL_MOUNT_VIEWPRO_ENABLED
         Viewpro = 11,        /// Viewpro gimbal using a custom serial protocol
 #endif
+//OW
+        STorM32_MAVLink = 83
+//OWEND
     };
 
     // init - detect and initialise all mounts
@@ -150,6 +159,13 @@ public:
     //      this operation requires 60us on a Pixhawk/PX4
     void set_mode_to_default() { set_mode_to_default(_primary); }
     void set_mode_to_default(uint8_t instance);
+
+//OW
+    // set_mode_3pos - sets the mount's retract or default mode from an aux switch
+    //  ch_flag 0 = LOW enters default mode, 1 = MIDDLE return to previous mode, 2 = HIGH enter retract mode
+    void set_mode_3pos(uint8_t ch_flag) { set_mode_3pos(_primary, ch_flag); }
+    void set_mode_3pos(uint8_t instance, uint8_t ch_flag);
+//OWEND    
 
     // set yaw_lock.  If true, the gimbal's yaw target is maintained in earth-frame meaning it will lock onto an earth-frame heading (e.g. North)
     // If false (aka "follow") the gimbal's yaw is maintained in body-frame meaning it will rotate with the vehicle
@@ -268,6 +284,24 @@ public:
 
     // parameter var table
     static const struct AP_Param::GroupInfo        var_info[];
+
+//OW
+    // momentary switch to set to photo or video mode (video_mode false: photo mode, true: video mode)
+    bool cam_set_mode(uint8_t instance, bool video_mode);
+
+    // momentary 3 pos switch to set to photo mode and take picture, set to video mode and start recording, or stop video recording
+    bool cam_do_photo_video_mode(uint8_t instance, PhotoVideoMode photo_video_mode);
+
+    // this links into handle_message() to catch all messages
+    void handle_message_extra(mavlink_channel_t chan, const mavlink_message_t &msg);
+
+    // send banner
+    void send_banner();
+
+    // used for scripting
+    bool take_control();
+    bool give_control();
+//OWEND
 
 protected:
 
