@@ -209,14 +209,7 @@ public:
 //OW RADIOLINK
     // handle mavlink radio
     void handle_radio_rc_channels(const mavlink_radio_rc_channels_t* packet);
-    void handle_radio_link_stats(mavlink_radio_link_stats_t* packet);
-
-    struct {
-        mavlink_radio_rc_channels_t rc_channels;
-        bool rc_channels_updated = false;
-        mavlink_radio_link_stats_t link_stats;
-        bool link_stats_updated = false;
-    } mavlink_radio;
+    void handle_radio_link_stats(const mavlink_radio_link_stats_t* packet);
 //OWEND
 
 private:

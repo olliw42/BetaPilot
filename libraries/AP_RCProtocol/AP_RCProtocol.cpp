@@ -572,12 +572,8 @@ void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_t* 
         return;
     }
 
-    // update the field, so that the backend can see it
-    memcpy(&(mavlink_radio.rc_channels), packet, sizeof(mavlink_radio_rc_channels_t));
-    mavlink_radio.rc_channels_updated = true;
-
     // now update the backend
-    backend[_detected_protocol]->update();
+    backend[_detected_protocol]->update_radio_rc_channels(packet);
 
     // now we can ask the backend if it got a new input
     if (backend[_detected_protocol]->new_input()) {
@@ -586,7 +582,7 @@ void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_t* 
     }
 };
 
-void AP_RCProtocol::handle_radio_link_stats(mavlink_radio_link_stats_t* packet)
+void AP_RCProtocol::handle_radio_link_stats(const mavlink_radio_link_stats_t* packet)
 {
 // can be handled like CRSF (= receiver) or like RADIO_STATUS (= telemetry)
 // the user does decide it via RssiType::RECEIVER or RssiType::TELEMETRY_RADIO_RSSI setting
@@ -597,12 +593,8 @@ void AP_RCProtocol::handle_radio_link_stats(mavlink_radio_link_stats_t* packet)
         return;
     }
 
-    // update the field, so that the backend can see it
-    memcpy(&(mavlink_radio.link_stats), packet, sizeof(mavlink_radio_link_stats_t));
-    mavlink_radio.link_stats_updated = true;
-
     // now update the backend
-    backend[_detected_protocol]->update();
+    backend[_detected_protocol]->update_radio_link_stats(packet);
 }
 //OWEND
 
