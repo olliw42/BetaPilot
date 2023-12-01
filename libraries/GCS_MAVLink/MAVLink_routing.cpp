@@ -144,8 +144,7 @@ bool MAVLink_routing::check_and_forward(GCS_MAVLINK &in_link, const mavlink_mess
     // handle messages from a mavlink receiver as if it had target_system = our system, target_component = 0
     // we currently narrow it down to "our" messages to play it safe
     if ((msg.compid == MAV_COMP_ID_TELEMETRY_RADIO) &&
-        (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS || msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_STATS ||
-         msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_FLOW_CONTROL)) {
+        (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS || msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_STATS)) {
         target_system = mavlink_system.sysid;
         target_component = 0;
     }

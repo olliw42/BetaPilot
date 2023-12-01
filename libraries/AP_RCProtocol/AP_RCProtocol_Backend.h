@@ -137,6 +137,9 @@ private:
 
     uint16_t _pwm_values[MAX_RCIN_CHANNELS];
     uint8_t  _num_channels;
+//OW RADIOLINK
+protected:
+//OWEND
     int16_t rssi = -1;
     int16_t rx_link_quality = -1;
 };

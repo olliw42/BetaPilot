@@ -29,19 +29,44 @@ void AP_RCProtocol_MAVLinkRadio::update_radio_rc_channels(const mavlink_radio_rc
 
     bool failsafe = (packet->flags & RADIO_RC_CHANNELS_FLAGS_FAILSAFE);
 
-    add_input(count, rc_chan, failsafe, rssi, link_quality);
+    add_input(count, rc_chan, failsafe);
 }
 
 void AP_RCProtocol_MAVLinkRadio::update_radio_link_stats(const mavlink_radio_link_stats_t* packet)
 {
-    link_quality = packet->rx_LQ;
+    // update the backend's fields
+
+    if (packet->rx_LQ != UINT8_MAX) rx_link_quality = packet->rx_LQ;
+
+    int32_t _rssi = -1;
+
     if (packet->rx_receive_antenna == UINT8_MAX || packet->rx_rssi2 == UINT8_MAX) {
-        rssi = packet->rx_rssi1;
+        // no diversity
+        if (packet->rx_rssi1 != UINT8_MAX) _rssi = packet->rx_rssi1;
     } else
     if (packet->rx_receive_antenna == 1) {
-        rssi = packet->rx_rssi2;
+        // diversity, receiving on antenna 1
+        if (packet->rx_rssi2 != UINT8_MAX) _rssi = packet->rx_rssi2; // UINT8_MAX should not happen, but play it safe
     } else {
-        rssi = packet->rx_rssi1;
+        // diversity, receiving on antenna 0
+        if (packet->rx_rssi1 != UINT8_MAX) _rssi = packet->rx_rssi1; // UINT8_MAX should not happen, but play it safe
+    }
+
+    if (_rssi == -1) return; // no rssi value set
+
+    if (packet->flags & RADIO_LINK_STATS_FLAGS_RSSI_DBM) {
+        // rssi is in dBm, convert to AP rssi using the same logic as in CRSF driver
+        // AP rssi: -1 for unknown, 0 for no link, 255 for maximum link
+        if (_rssi < 50) {
+            rssi = 255;
+        } else if (_rssi > 120) {
+            rssi = 0;
+        } else {
+            rssi = int16_t(roundf((1.0f - (_rssi - 50.0f) / 70.0f) * 255.0f));
+        }
+    } else {
+        // _rssi is 0..254, scale it to 0..255 with rounding
+        rssi = (_rssi * 255 + 127) / 254;
     }
 }
 

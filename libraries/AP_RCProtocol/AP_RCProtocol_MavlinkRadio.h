@@ -20,11 +20,6 @@ public:
     // update from mavlink messages
     void update_radio_rc_channels(const mavlink_radio_rc_channels_t* packet) override;
     void update_radio_link_stats(const mavlink_radio_link_stats_t* packet) override;
-
-private:
-
-    int16_t rssi = -1; // TODO: can't we just use the backend's fields???
-    int16_t link_quality = -1;
 };
 
 #endif // AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED

@@ -686,7 +686,6 @@ protected:
 //OW RADIOLINK
     // called from vehicle class handler
     void handle_radio_link_stats(const mavlink_message_t &msg, bool log_radio);
-    void handle_radio_link_flow_control(const mavlink_message_t &msg, bool log_radio);
     // called from common handler
     void handle_radio_rc_channels(const mavlink_message_t &msg);
 //OWEND
@@ -752,11 +751,6 @@ private:
     // define the two objects used for parsing incoming messages:
     mavlink_message_t _channel_buffer;
     mavlink_status_t _channel_status;
-
-//OW RADIOLINK
-    // for mavlink radio
-    mavlink_radio_t _mavlink_radio_packet;
-//OWEND
 
     const AP_SerialManager::UARTState *uartstate;
 
