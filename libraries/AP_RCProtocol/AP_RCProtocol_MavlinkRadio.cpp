@@ -36,7 +36,7 @@ void AP_RCProtocol_MAVLinkRadio::update_radio_link_stats(const mavlink_radio_lin
 {
     // update the backend's fields
 
-    if (packet->rx_LQ != UINT8_MAX) rx_link_quality = packet->rx_LQ;
+    rx_link_quality = (packet->rx_LQ != UINT8_MAX) ? packet->rx_LQ : -1;
 
     int32_t _rssi = -1;
 
@@ -52,7 +52,10 @@ void AP_RCProtocol_MAVLinkRadio::update_radio_link_stats(const mavlink_radio_lin
         if (packet->rx_rssi1 != UINT8_MAX) _rssi = packet->rx_rssi1; // UINT8_MAX should not happen, but play it safe
     }
 
-    if (_rssi == -1) return; // no rssi value set
+    if (_rssi == -1) { // no rssi value set
+        rssi = -1;
+        return;
+    }
 
     if (packet->flags & RADIO_LINK_STATS_FLAGS_RSSI_DBM) {
         // rssi is in dBm, convert to AP rssi using the same logic as in CRSF driver
