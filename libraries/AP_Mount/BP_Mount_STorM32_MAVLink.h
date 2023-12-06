@@ -5,9 +5,9 @@
 //*****************************************************
 #pragma once
 
-#include "AP_Mount.h"
 #include "AP_Mount_Backend.h"
-#include "AP_Camera/AP_Camera_shareddefs.h"
+
+#if HAL_MOUNT_BP_STORM32_MAVLINK_ENABLED
 
 
 class BP_Mount_STorM32_MAVLink : public AP_Mount_Backend
@@ -333,3 +333,5 @@ private:
     bool _should_log = true;
 };
 
+
+#endif // HAL_MOUNT_BP_STORM32_MAVLINK_ENABLED

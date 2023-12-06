@@ -4,6 +4,10 @@
 // STorM32 mount backend class
 //*****************************************************
 
+#include "BP_Mount_STorM32_MAVLink.h"
+
+#if HAL_MOUNT_BP_STORM32_MAVLINK_ENABLED
+
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
 #include <AP_Common/AP_Common.h>
@@ -15,7 +19,6 @@
 #include <RC_Channel/RC_Channel.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
 #include <GCS_MAVLink/GCS.h>
-#include "BP_Mount_STorM32_MAVLink.h"
 
 extern const AP_HAL::HAL& hal;
 
@@ -1484,6 +1487,9 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_attitude_status(mavlink_channe
 }
 
 
+#endif // HAL_MOUNT_BP_STORM32_MAVLINK_ENABLED
+
+
 
 /*
 STorM32-Link tests
@@ -1567,3 +1573,4 @@ from tests 2021-08-28, in loiter with takeoff/land button, I conclude
  with taking-off & landing in loiter with sticks, we get the same behavior at takeoff,
  but when landing the state MAV_LANDED_STATE_LANDING is not there, makes sense as we just drop to ground
 */
+

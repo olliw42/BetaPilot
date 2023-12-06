@@ -155,11 +155,13 @@ void AP_Mount::init()
 #endif // HAL_MOUNT_VIEWPRO_ENABLED
 
 //OW
+#if HAL_MOUNT_BP_STORM32_MAVLINK_ENABLED
         // check for STorM32_MAVLink mounts using MAVLink protocol
         case Type::STorM32_MAVLink:
             _backends[instance] = new BP_Mount_STorM32_MAVLink(*this, _params[instance], instance);
             _num_instances++;
             break;
+#endif // HAL_MOUNT_STORM32_MAVLINK_ENABLED
 //OWEND
         }
 
