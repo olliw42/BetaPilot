@@ -199,6 +199,7 @@ private:
 
     uint32_t _request_device_info_tlast_ms;
     mavlink_gimbal_device_information_t _device_info;
+    uint16_t _device_version_int;
 
     // request GIMBAL_DEVICE_INFORMATION, we can get this also if 'old' MOUNT messages are used
     void send_cmd_request_gimbal_device_information();

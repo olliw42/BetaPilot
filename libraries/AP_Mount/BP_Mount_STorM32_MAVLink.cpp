@@ -589,6 +589,10 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_information(const mavlink_me
         if (degrees(_device_info.yaw_max) < _params.yaw_angle_max) _params.yaw_angle_max.set(degrees(_device_info.yaw_max));
     }
 
+    // extract version int
+    // v2.68b <-> firmware_version 00 01(a) 68 2 <-> version int 268 (ignore char part)
+    _device_version_int = (_device_info.firmware_version & 0x000000FF) * 100 + ((_device_info.firmware_version & 0x0000FF00) >> 8);
+
     // mark it as having been found
     _got_device_info = true;
 
@@ -654,9 +658,11 @@ void BP_Mount_STorM32_MAVLink::handle_message_extra(const mavlink_message_t &msg
     }
 
     // listen to RADIO_RC_CHANNELS messages to stop sending RC_CHANNELS
+#ifdef MAVLINK_MSG_ID_RADIO_RC_CHANNELS
     if (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS) { // 60045
         _got_radio_rc_channels = true;
     }
+#endif
 
     // this msg is not from our gimbal
     if (msg.sysid != _sysid || msg.compid != _compid) {
@@ -777,14 +783,6 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude()
         (uint8_t)mnt_target.target_type, // TMode
         (uint8_t)0);                // QMode
 }
-
-
-// ensure that MAV_LANDED_STATE enum hasn't been extended
-static_assert((uint8_t)MAV_LANDED_STATE_ENUM_END == 5, "MAV_LANDED_STATE enum has changed");
-
-enum LandedStateThisWouldBeGreatToHave {
-    MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF = 5,
-};
 
 
 void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device()
@@ -922,13 +920,15 @@ landed state:
     uint8_t landed_state = (uint8_t)gcs().get_landed_state(); // AP::vehicle()->get_landed_state();
 
 #if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
-    // for copter the landed state is modified such as to reflect the 2 sec pre-take-off period.
+    // MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF: <= v2.69 5, >= v2.70 128
+    // For copter the landed state is modified such as to reflect the 2 sec pre-take-off period.
     // The code below leads to a PREPARING_FOR_TAKEOFF before takeoff, but also after landing!
-    // For the latter one would have to catch that it was flying, but no need to care as
-    // the gimbal will do inits when ON_GROUND, and refreshes them when transitioning to PREPARING_FOR_TAKEOFF.
+    // For the latter one would have to catch that it was flying, but no need to care as the gimbal
+    // will do its inits when ON_GROUND, and refreshes them when transitioning to PREPARING_FOR_TAKEOFF.
     // It won't do it for other transitions, so e.g. also not for plane.
+    // Could make sense for other vehicles too, like rover.
     if ((landed_state == MAV_LANDED_STATE_ON_GROUND) && AP::notify().flags.armed) {
-        landed_state = MAV_LANDED_STATE_PREPARING_FOR_TAKEOFF;
+        landed_state = (_device_version_int < 270) ? 5 : 128;
     }
 #endif
 
