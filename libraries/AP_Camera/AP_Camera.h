@@ -119,6 +119,16 @@ public:
     void cam_mode_toggle();
     void cam_mode_toggle(uint8_t instance);
 
+//OW
+    // momentary switch to set to photo or video mode (video_mode false: photo mode, true: video mode)
+    bool cam_set_mode(bool video_mode);
+    bool cam_set_mode(uint8_t instance, bool video_mode);
+
+    // momentary 3 pos switch to set to photo mode and take picture, set to video mode and start recording, or stop video recording
+    bool cam_do_photo_video_mode(PhotoVideoMode photo_video_mode);
+    bool cam_do_photo_video_mode(uint8_t instance, PhotoVideoMode photo_video_mode);
+//OWEND
+
     // take a picture.  If instance is not provided, all available cameras affected
     // returns true if at least one camera took a picture
     bool take_picture();

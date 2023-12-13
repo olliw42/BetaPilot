@@ -783,4 +783,52 @@ AP_Camera *camera()
 
 }
 
+//OW
+bool AP_Camera::cam_set_mode(bool video_mode)
+{
+    WITH_SEMAPHORE(_rsem);
+
+    if (primary == nullptr) {
+        return false;
+    }
+    return primary->cam_set_mode(video_mode);
+}
+
+bool AP_Camera::cam_set_mode(uint8_t instance, bool video_mode)
+{
+    WITH_SEMAPHORE(_rsem);
+
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return false;
+    }
+
+    // call backend
+    return backend->cam_set_mode(video_mode);
+}
+
+bool AP_Camera::cam_do_photo_video_mode(PhotoVideoMode photo_video_mode)
+{
+    WITH_SEMAPHORE(_rsem);
+
+    if (primary == nullptr) {
+        return false;
+    }
+    return primary->cam_do_photo_video_mode(photo_video_mode);
+}
+
+bool AP_Camera::cam_do_photo_video_mode(uint8_t instance, PhotoVideoMode photo_video_mode)
+{
+    WITH_SEMAPHORE(_rsem);
+
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return false;
+    }
+
+    // call backend
+    return backend->cam_do_photo_video_mode(photo_video_mode);
+}
+//OWEND
+
 #endif
