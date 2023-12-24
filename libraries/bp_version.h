@@ -28,7 +28,7 @@ on-top features:
 2023.01.16: v055
  aux functions
  AUTOPILOT_STATE_FOR_GIMBAL_DEVICE_EXT
- revise handling of RADIO_LINL_STATS a bit, add some comments
+ revise handling of RADIO_LINK_STATS a bit, add some comments
  do not send rc channels if RADIO_RC_CHANNELS is detected
  put mLRS/RADLIO_LINK_xxx messages under the hood of storm32.xml
  upgraded to Copter4.3.2
