@@ -50,6 +50,7 @@ ArduCopter specific
 - version.h:            1x
 
 ArduPlane specific
+- GCS_Mavlink.cpp:          1x RADIOLINK
 - ArduPlane.cpp:        1x
 - version.h:            1x
 

@@ -227,6 +227,12 @@ public:
     // return gimbal manager flags used by GIMBAL_MANAGER_STATUS message
     virtual uint32_t get_gimbal_manager_flags() const;
 
+    // return gimbal device id used by GIMBAL_MANAGER_STATUS message
+    virtual uint8_t get_gimbal_device_id() const;
+
+    // return true if source of gimbal manager message/command is in control
+    bool is_in_control(uint8_t sysid, uint8_t compid);
+
     // handle gimbal manager flags received from gimbal manager messages
     // GIMBAL_MANAGER_FLAGS_RETRACT, GIMBAL_MANAGER_FLAGS_NEUTRAL are handled in frontend
     // and sets mode accordingly. Not so nice but it's not my cup of tea.

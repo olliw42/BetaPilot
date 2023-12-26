@@ -338,10 +338,36 @@ MAV_RESULT AP_Mount::handle_command_do_mount_control(const mavlink_command_int_t
     return backend->handle_command_do_mount_control(packet);
 }
 
-MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet)
+//OW
+AP_Mount_Backend* AP_Mount::get_backend_from_gimbal_device_id(const uint8_t id)
+{
+    // check gimbal device id.
+    // 0 is primary, 1 or MAV_COMP_ID_GIMBAL is 1st gimbal, 2 or MAV_COMP_ID_GIMBAL2 is 2nd gimbal, etc
+    if (id == 0) {
+        return get_primary();
+    }
+    if (id == MAV_COMP_ID_GIMBAL) {
+        return get_instance(0);
+    }
+    if (id >= MAV_COMP_ID_GIMBAL2 && id <= MAV_COMP_ID_GIMBAL6) {
+        return get_instance(id - MAV_COMP_ID_GIMBAL2 + 1);
+    }
+    if (id <= 6) {
+        return get_instance(id - 1);
+    }
+
+    return nullptr;
+}
+//OWEND
+
+//OW
+//MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet)
+MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
+//OWEND
 {
     AP_Mount_Backend *backend;
-
+//OW
+/*
     // check gimbal device id.  0 is primary, 1 is 1st gimbal, 2 is
     // 2nd gimbal, etc
     const uint8_t instance = packet.z;
@@ -355,8 +381,6 @@ MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_pitchyaw(const mavlink_com
         return MAV_RESULT_FAILED;
     }
 
-//OW
-/*
     // check flags for change to RETRACT
     const uint32_t flags = packet.x;
     if ((flags & GIMBAL_MANAGER_FLAGS_RETRACT) > 0) {
@@ -369,6 +393,15 @@ MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_pitchyaw(const mavlink_com
         return MAV_RESULT_ACCEPTED;
     }
 */
+    backend = get_backend_from_gimbal_device_id(packet.z);
+
+//OW
+//    if (backend == nullptr) { //OW ARGH TODO: need to also check for !backend->is_in_control(msg.sysid, msg.compid) !!
+    if (backend == nullptr || !backend->is_in_control(msg.sysid, msg.compid)) {
+//OWEND
+        return MAV_RESULT_FAILED;
+    }
+
     const uint32_t flags = packet.x;
 
     if (!backend->handle_gimbal_manager_flags(flags)) {
@@ -401,7 +434,8 @@ MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_pitchyaw(const mavlink_com
 MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_configure(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
 {
     AP_Mount_Backend *backend;
-
+//OW
+/*
     // check gimbal device id.  0 is primary, 1 is 1st gimbal, 2 is 2nd gimbal, etc
     const uint8_t instance = packet.z;
     if (instance == 0) {
@@ -409,6 +443,9 @@ MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_configure(const mavlink_co
     } else {
         backend = get_instance(instance - 1);
     }
+*/
+    backend = get_backend_from_gimbal_device_id(packet.z);
+//OWEND
 
     if (backend == nullptr) {
         return MAV_RESULT_FAILED;
@@ -417,12 +454,14 @@ MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_configure(const mavlink_co
     return backend->handle_command_do_gimbal_manager_configure(packet, msg);
 }
 
-void AP_Mount::handle_gimbal_manager_set_attitude(const mavlink_message_t &msg) {
+void AP_Mount::handle_gimbal_manager_set_attitude(const mavlink_message_t &msg)
+{
     mavlink_gimbal_manager_set_attitude_t packet;
     mavlink_msg_gimbal_manager_set_attitude_decode(&msg,&packet);
 
     AP_Mount_Backend *backend;
-
+//OW
+/*
     // check gimbal device id.  0 is primary, 1 is 1st gimbal, 2 is
     // 2nd gimbal, etc
     const uint8_t instance = packet.gimbal_device_id;
@@ -436,8 +475,6 @@ void AP_Mount::handle_gimbal_manager_set_attitude(const mavlink_message_t &msg) 
         return;
     }
 
-//OW
-/*
     // check flags for change to RETRACT
     const uint32_t flags = packet.flags;
     if ((flags & GIMBAL_MANAGER_FLAGS_RETRACT) > 0) {
@@ -451,6 +488,12 @@ void AP_Mount::handle_gimbal_manager_set_attitude(const mavlink_message_t &msg) 
         return;
     }
 */
+    backend = get_backend_from_gimbal_device_id(packet.gimbal_device_id);
+
+    if (backend == nullptr || !backend->is_in_control(msg.sysid, msg.compid)) {
+        return;
+    }
+
     const uint32_t flags = packet.flags;
 
     if (!backend->handle_gimbal_manager_flags(flags)) {
@@ -497,7 +540,8 @@ void AP_Mount::handle_gimbal_manager_set_pitchyaw(const mavlink_message_t &msg)
     mavlink_msg_gimbal_manager_set_pitchyaw_decode(&msg,&packet);
 
     AP_Mount_Backend *backend;
-
+//OW
+/*
     // check gimbal device id.  0 is primary, 1 is 1st gimbal, 2 is
     // 2nd gimbal, etc
     const uint8_t instance = packet.gimbal_device_id;
@@ -511,8 +555,6 @@ void AP_Mount::handle_gimbal_manager_set_pitchyaw(const mavlink_message_t &msg)
         return;
     }
 
-//OW
-/*
     // check flags for change to RETRACT
     uint32_t flags = (uint32_t)packet.flags;
     if ((flags & GIMBAL_MANAGER_FLAGS_RETRACT) > 0) {
@@ -525,6 +567,18 @@ void AP_Mount::handle_gimbal_manager_set_pitchyaw(const mavlink_message_t &msg)
         return;
     }
 */
+    backend = get_backend_from_gimbal_device_id(packet.gimbal_device_id);
+
+    if (backend == nullptr || !backend->is_in_control(msg.sysid, msg.compid)) {
+        return;
+    }
+
+    // sanity check, should never be true
+    // it also checks if the gimbal is a MAVLink gimbal and jumps out if the gimbal is not yet found
+//    if ( packet.z > 6 && id != backend->get_gimbal_device_id()) {
+//        return;
+//    }
+
     const uint32_t flags = packet.flags;
 
     if (!backend->handle_gimbal_manager_flags(flags)) {
@@ -568,7 +622,10 @@ MAV_RESULT AP_Mount::handle_command(const mavlink_command_int_t &packet, const m
     case MAV_CMD_DO_MOUNT_CONTROL:
         return handle_command_do_mount_control(packet);
     case MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW:
-        return handle_command_do_gimbal_manager_pitchyaw(packet);
+//OW
+//        return handle_command_do_gimbal_manager_pitchyaw(packet);
+        return handle_command_do_gimbal_manager_pitchyaw(packet, msg);
+//OWEND
     case MAV_CMD_DO_GIMBAL_MANAGER_CONFIGURE:
         return handle_command_do_gimbal_manager_configure(packet, msg);
     case MAV_CMD_DO_SET_ROI_SYSID:

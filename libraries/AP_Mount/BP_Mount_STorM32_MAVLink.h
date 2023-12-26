@@ -104,6 +104,9 @@ public:
     // => we need to overwrite it
     uint32_t get_gimbal_manager_flags() const override;
 
+    // added: return gimbal device id used by GIMBAL_MANAGER_STATUS message
+    uint8_t get_gimbal_device_id() const override;
+
     // added: handle gimbal manager flags received from gimbal manager messages
     // AP nonsense: does it wrong, just good for its limits.
     // => we need to overwrite it
@@ -259,8 +262,8 @@ private:
         uint32_t received_tlast_ms; // time last GIMBAL_DEVICE_ATTITUDE_STATUS was received (used for health reporting)
     } _device_status;
 
-    uint32_t _flags_from_manager = UINT32_MAX; // flags received by gimbal manager, the UINT32_MAX is important!
-    uint16_t _flags_for_gimbal;     // flags to be send to gimbal device
+    uint32_t _flags_from_gimbal_client = UINT32_MAX; // flags received via gimbal manager messages/commands, the UINT32_MAX is important!
+    uint16_t _flags_for_gimbal_device;     // flags to be send to gimbal device
 
     struct {
         float roll;

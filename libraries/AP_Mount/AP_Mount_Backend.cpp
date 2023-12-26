@@ -243,6 +243,13 @@ uint32_t AP_Mount_Backend::get_gimbal_manager_flags() const
     return flags;
 }
 
+// return gimbal device id used by GIMBAL_MANAGER_STATUS message
+uint8_t AP_Mount_Backend::get_gimbal_device_id() const
+{
+    return _instance + 1;
+}
+
+
 // set gimbal manager flags, called from frontend's gimbal manager handlers
 bool AP_Mount_Backend::handle_gimbal_manager_flags(uint32_t flags)
 {
@@ -255,6 +262,17 @@ bool AP_Mount_Backend::handle_gimbal_manager_flags(uint32_t flags)
         set_mode(MAV_MOUNT_MODE_NEUTRAL);
     }
     return true;
+}
+
+bool AP_Mount_Backend::is_in_control(uint8_t sysid, uint8_t compid)
+{
+    if (mavlink_control_id.sysid == 0 && mavlink_control_id.compid == 0) {
+        mavlink_control_id.sysid = sysid;
+        mavlink_control_id.compid = compid;
+        return true;
+    }
+
+    return (mavlink_control_id.sysid == sysid && mavlink_control_id.compid == compid);
 }
 //OWEND
 
@@ -270,12 +288,16 @@ void AP_Mount_Backend::send_gimbal_manager_status(mavlink_channel_t chan)
         flags |= GIMBAL_MANAGER_FLAGS_YAW_LOCK;
     } */
     uint32_t flags = get_gimbal_manager_flags();
+    uint8_t gimbal_device_id = get_gimbal_device_id();
 //OWEND
 
     mavlink_msg_gimbal_manager_status_send(chan,
                                            AP_HAL::millis(),    // autopilot system time
                                            flags,               // bitmap of gimbal manager flags
-                                           _instance + 1,       // gimbal device id
+//OW
+//                                           _instance + 1,       // gimbal device id
+                                           gimbal_device_id,       // gimbal device id
+//OWEND
                                            mavlink_control_id.sysid,    // primary control system id
                                            mavlink_control_id.compid,   // primary control component id
                                            0,                           // secondary control system id
@@ -857,7 +879,7 @@ void AP_Mount_Backend::set_mode_3pos(uint8_t ch_flag)
         set_mode(MAV_MOUNT_MODE_RETRACT);
         break;
     case 1: // = MIDDLE
-        if (_mode_last > MAV_MOUNT_MODE_NEUTRAL) set_mode(_mode_last);
+        if ((get_mode() != _mode_last) && (_mode_last > MAV_MOUNT_MODE_NEUTRAL)) set_mode(_mode_last);
         break;
     case 0: // LOW:
         set_mode((MAV_MOUNT_MODE)_params.default_mode.get());

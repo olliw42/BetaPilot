@@ -136,7 +136,7 @@ void BP_Mount_STorM32_MAVLink::init()
 
     _mode = MAV_MOUNT_MODE_RC_TARGETING; // irrelevant, will be later set to default in frontend init()
 
-    _flags_from_manager = UINT32_MAX; // the UINT32_MAX is important!
+    _flags_from_gimbal_client = UINT32_MAX; // the UINT32_MAX is important!
 
     _current_angles = {0.0f, 0.0f, 0.0f, NAN}; // the NAN is important!
 
@@ -187,9 +187,13 @@ void BP_Mount_STorM32_MAVLink::update()
 
     uint32_t tnow_ms = AP_HAL::millis();
 
-    if ((tnow_ms - _checks_tlast_ms) >= 1000) {
+    if ((tnow_ms - _checks_tlast_ms) >= 1000) { // do every 1 sec
         _checks_tlast_ms = tnow_ms;
         update_checks();
+
+        if (_protocol == Protocol::GIMBAL_DEVICE) {
+            gcs().send_message(MSG_GIMBAL_MANAGER_STATUS);
+        }
     }
 
     if ((tnow_ms - _send_system_time_tlast_ms) >= 5000) { // every 5 sec is really plenty
@@ -221,9 +225,16 @@ bool BP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
         set_mode(MAV_MOUNT_MODE_NEUTRAL);
     }
 
-    _flags_from_manager = flags;
+    _flags_from_gimbal_client = flags;
 
     update_gimbal_device_flags();
+
+    // if not in mavlink targeting don't accept the angle/rate settings
+    // this is needed since backend's set_angle_target(), set_rate_target() set mode to mavlink targeting
+    // dirty, I think one should change backend's functions, but also makes sense somewhat
+    if (get_mode() != MAV_MOUNT_MODE_MAVLINK_TARGETING) {
+        return false;
+    }
 
     // driver currently does not support yaw LOCK
     // front-end is digesting GIMBAL_MANAGER_FLAGS_YAW_LOCK to determine yaw_is_earth_frame
@@ -232,7 +243,7 @@ bool BP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
         return false; // don't accept angle/rate setting
     }
 
-    // STorM32 expects one of them to be set, otherwise it rejects
+    // STorM32 expects that only one of them is set, otherwise it rejects
     if (!(flags & GIMBAL_MANAGER_FLAGS_YAW_IN_VEHICLE_FRAME) && !(flags & GIMBAL_MANAGER_FLAGS_YAW_IN_EARTH_FRAME)) {
         return false; // don't accept angle/rate setting
     }
@@ -248,37 +259,46 @@ bool BP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
 
 void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
 {
-    _flags_for_gimbal = 0;
+    _flags_for_gimbal_device = 0;
+
+    // map mode
 
     switch (get_mode()) {
         case MAV_MOUNT_MODE_RETRACT:
-            _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RETRACT;
+            _flags_for_gimbal_device |= GIMBAL_DEVICE_FLAGS_RETRACT;
             break;
         case MAV_MOUNT_MODE_NEUTRAL:
-            _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_NEUTRAL;
+            _flags_for_gimbal_device |= GIMBAL_DEVICE_FLAGS_NEUTRAL;
             break;
         default:
             break;
     }
 
     // account for gimbal manager flags
-    if (_flags_from_manager != UINT32_MAX) {
-        if (_flags_from_manager & GIMBAL_MANAGER_FLAGS_RC_EXCLUSIVE) _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RC_EXCLUSIVE;
-        if (_flags_from_manager & GIMBAL_MANAGER_FLAGS_RC_MIXED) _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RC_MIXED;
+
+    if (_flags_from_gimbal_client != UINT32_MAX) {
+        if (_flags_from_gimbal_client & GIMBAL_MANAGER_FLAGS_RC_EXCLUSIVE) { // exclusive overrules mixed
+            _flags_for_gimbal_device |= GIMBAL_DEVICE_FLAGS_RC_EXCLUSIVE;
+        } else
+        if (_flags_from_gimbal_client & GIMBAL_MANAGER_FLAGS_RC_MIXED) {
+            _flags_for_gimbal_device |= GIMBAL_DEVICE_FLAGS_RC_MIXED;
+        }
     } else {
         // for as long as no gimbal manager message has been sent to the fc, enable rc mixed.
         // Should avoid user confusion when choosing the gimbal device operation mode.
-        _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_RC_MIXED;
+        _flags_for_gimbal_device |= GIMBAL_DEVICE_FLAGS_RC_MIXED;
     }
 
     // driver currently does not support pitch,roll follow, only pitch,roll lock
-    _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
+    _flags_for_gimbal_device |= GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
 
     // driver currently does not support yaw lock, only yaw follow
 //    if (_is_yaw_lock) _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_LOCK;
 
+    // frame flags
+
     // set either YAW_IN_VEHICLE_FRAME or YAW_IN_EARTH_FRAME, to indicate new message format, STorM32 will reject otherwise
-    _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_IN_VEHICLE_FRAME;
+    _flags_for_gimbal_device |= GIMBAL_DEVICE_FLAGS_YAW_IN_VEHICLE_FRAME;
 }
 
 
@@ -371,17 +391,6 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
             }
             break;
 
-        // point mount to Home location
-        // ATTENTION: angle_rad.yaw_is_ef = true
-        // -> ANGLE
-        case MAV_MOUNT_MODE_HOME_LOCATION:
-            if (get_angle_target_to_home(mnt_target.angle_rad)) {
-                mnt_target.target_type = MountTargetType::ANGLE;
-                mnt_target_loc_valid = true;
-                mnt_target_loc = AP::ahrs().get_home();
-            }
-            break;
-
         // point mount to another vehicle
         // ATTENTION: angle_rad.yaw_is_ef = true
         // -> ANGLE
@@ -390,6 +399,17 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
                 mnt_target.target_type = MountTargetType::ANGLE;
                 mnt_target_loc_valid = true;
                 mnt_target_loc = _target_sysid_location;
+            }
+            break;
+
+        // point mount to Home location
+        // ATTENTION: angle_rad.yaw_is_ef = true
+        // -> ANGLE
+        case MAV_MOUNT_MODE_HOME_LOCATION:
+            if (get_angle_target_to_home(mnt_target.angle_rad)) {
+                mnt_target.target_type = MountTargetType::ANGLE;
+                mnt_target_loc_valid = true;
+                mnt_target_loc = AP::ahrs().get_home();
             }
             break;
 
@@ -770,7 +790,7 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude()
     mavlink_msg_gimbal_device_set_attitude_send(
         _chan,
         _sysid, _compid,
-        _flags_for_gimbal,          // gimbal device flags
+        _flags_for_gimbal_device,   // gimbal device flags
         qa,                         // attitude as a quaternion
         NAN, NAN, NAN               // angular velocities
         );
@@ -779,7 +799,7 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude()
     BP_LOG("MTC0", BP_LOG_MTC_GIMBALCONTROL_HEADER,
         (uint8_t)1,                 // Type, GIMBAL_DEVICE_SET_ATTITUDE
         degrees(mnt_target.angle_rad.roll), degrees(mnt_target.angle_rad.pitch), degrees(target_yaw_bf), // Roll, Pitch, Yaw
-        (uint16_t)_flags_for_gimbal, (uint16_t)0, // GDFlags, GMFlags
+        (uint16_t)_flags_for_gimbal_device, (uint16_t)0, // GDFlags, GMFlags
         (uint8_t)mnt_target.target_type, // TMode
         (uint8_t)0);                // QMode
 }
@@ -1121,6 +1141,13 @@ uint32_t BP_Mount_STorM32_MAVLink::get_gimbal_manager_flags() const
     // to the capability flags obtained from the gimbal manager !
 
     return _device_status.received_flags;
+}
+
+
+// return gimbal device id used by GIMBAL_MANAGER_STATUS message
+uint8_t BP_Mount_STorM32_MAVLink::get_gimbal_device_id() const
+{
+    return _compid;
 }
 
 
