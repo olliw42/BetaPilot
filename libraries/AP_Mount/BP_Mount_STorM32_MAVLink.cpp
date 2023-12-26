@@ -1144,13 +1144,6 @@ uint32_t BP_Mount_STorM32_MAVLink::get_gimbal_manager_flags() const
 }
 
 
-// return gimbal device id used by GIMBAL_MANAGER_STATUS message
-uint8_t BP_Mount_STorM32_MAVLink::get_gimbal_device_id() const
-{
-    return _compid;
-}
-
-
 //------------------------------------------------------
 // Prearm & healthy functions
 //------------------------------------------------------

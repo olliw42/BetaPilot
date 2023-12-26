@@ -104,8 +104,17 @@ public:
     // => we need to overwrite it
     uint32_t get_gimbal_manager_flags() const override;
 
-    // added: return gimbal device id used by GIMBAL_MANAGER_STATUS message
-    uint8_t get_gimbal_device_id() const override;
+    // return gimbal device id
+    uint8_t get_gimbal_device_id() const override
+    {
+        if (_instance == 0) {
+            return MAV_COMP_ID_GIMBAL;
+        } else
+        if (_instance <= 5) {
+            return MAV_COMP_ID_GIMBAL2 + _instance - 1;
+        }
+        return MAV_COMP_ID_GIMBAL; // should not happen
+    }
 
     // added: handle gimbal manager flags received from gimbal manager messages
     // AP nonsense: does it wrong, just good for its limits.

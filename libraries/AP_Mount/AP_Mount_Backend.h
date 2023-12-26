@@ -224,14 +224,14 @@ public:
     // send banner
     virtual void send_banner() {}
 
-    // return gimbal manager flags used by GIMBAL_MANAGER_STATUS message
-    virtual uint32_t get_gimbal_manager_flags() const;
-
-    // return gimbal device id used by GIMBAL_MANAGER_STATUS message
+    // return gimbal device id used by GIMBAL_MANAGER_STATUS message, and other places
     virtual uint8_t get_gimbal_device_id() const;
 
     // return true if source of gimbal manager message/command is in control
-    bool is_in_control(uint8_t sysid, uint8_t compid);
+    bool is_in_control(uint8_t sysid, uint8_t compid, uint8_t gimbal_device_id);
+
+    // return gimbal manager flags used by GIMBAL_MANAGER_STATUS message
+    virtual uint32_t get_gimbal_manager_flags() const;
 
     // handle gimbal manager flags received from gimbal manager messages
     // GIMBAL_MANAGER_FLAGS_RETRACT, GIMBAL_MANAGER_FLAGS_NEUTRAL are handled in frontend
@@ -239,6 +239,10 @@ public:
     // The function may modify the flags according to its capabilities.
     // Return false to abort angle/rate processing.
     virtual bool handle_gimbal_manager_flags(uint32_t flags);
+
+    void handle_gimbal_manager_set_pitchyaw(const mavlink_gimbal_manager_set_pitchyaw_t &packet);
+    void handle_gimbal_manager_set_attitude(const mavlink_gimbal_manager_set_attitude_t &packet);
+    MAV_RESULT handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet);
 
     // used for scripting
     virtual bool take_control() { return false; }

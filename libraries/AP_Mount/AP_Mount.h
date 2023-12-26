@@ -197,7 +197,9 @@ public:
     void set_target_sysid(uint8_t instance, uint8_t sysid);
 
     // handling of set_roi_sysid message
-    MAV_RESULT handle_command_do_set_roi_sysid(const mavlink_command_int_t &packet);
+//OW
+//    MAV_RESULT handle_command_do_set_roi_sysid(const mavlink_command_int_t &packet);
+//OWEND
 
     // mavlink message handling:
     MAV_RESULT handle_command(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
@@ -297,6 +299,9 @@ public:
     // this links into handle_message() to catch all messages
     void handle_message_extra(mavlink_channel_t chan, const mavlink_message_t &msg);
 
+    // returns the gimbal device id for this instance, or 0 if the instance is not available
+    uint8_t get_gimbal_device_id(uint8_t instance) const;
+
     // send banner
     void send_banner();
 
@@ -330,22 +335,22 @@ private:
     void handle_mount_control(const mavlink_message_t &msg);
 #endif
 
-    MAV_RESULT handle_command_do_mount_configure(const mavlink_command_int_t &packet);
-    MAV_RESULT handle_command_do_mount_control(const mavlink_command_int_t &packet);
 //OW
+//    MAV_RESULT handle_command_do_mount_configure(const mavlink_command_int_t &packet);
+//    MAV_RESULT handle_command_do_mount_control(const mavlink_command_int_t &packet);
 //    MAV_RESULT handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet);
+    MAV_RESULT handle_command_do_mount_configure(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
+    MAV_RESULT handle_command_do_mount_control(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
     MAV_RESULT handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
+    MAV_RESULT handle_command_do_set_roi_sysid(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
 //OWEND
     MAV_RESULT handle_command_do_gimbal_manager_configure(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
     void handle_gimbal_manager_set_attitude(const mavlink_message_t &msg);
     void handle_gimbal_manager_set_pitchyaw(const mavlink_message_t &msg);
+
     void handle_global_position_int(const mavlink_message_t &msg);
     void handle_gimbal_device_information(const mavlink_message_t &msg);
     void handle_gimbal_device_attitude_status(const mavlink_message_t &msg);
-
-//OW
-    AP_Mount_Backend* get_backend_from_gimbal_device_id(const uint8_t id);
-//OWEND
 
     // perform any required parameter conversion
     void convert_params();
