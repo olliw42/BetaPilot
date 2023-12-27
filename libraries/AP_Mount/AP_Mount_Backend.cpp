@@ -180,7 +180,10 @@ void AP_Mount_Backend::send_gimbal_device_attitude_status(mavlink_channel_t chan
                                                    0,                                           // failure flags (not supported)
                                                    std::numeric_limits<double>::quiet_NaN(),    // delta_yaw (NaN for unknonw)
                                                    std::numeric_limits<double>::quiet_NaN(),    // delta_yaw_velocity (NaN for unknonw)
-                                                   _instance + 1);  // gimbal_device_id
+//OW
+//                                                   _instance + 1);  // gimbal_device_id
+                                                   get_gimbal_device_id());  // gimbal_device_id
+//OWEND
 }
 #endif
 
