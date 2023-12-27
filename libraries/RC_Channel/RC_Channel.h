@@ -250,9 +250,8 @@ public:
         CAMERA_LENS =        175, // camera lens selection
         VFWD_THR_OVERRIDE =  176, // force enabled VTOL forward throttle method
 //OW
-        RETRACT_MOUNT1_3POS = 177, // Retract Mount1 3pos
-        CAMERA_SET_MODE =     178, // set camera mode, high = video mode, low = picture mode
-        CAMERA_TRIG_MODE =   179, // set camera mode and trigger/start/stop, high = start video, mid = stop video, low = take picture
+        CAMERA_SET_MODE =    177, // set camera mode, high = video mode, low = picture mode
+        CAMERA_TRIG_MODE =   178, // set camera mode and trigger/start/stop, high = start video, mid = stop video, low = take picture
 //OWEND
 
         // inputs from 200 will eventually used to replace RCMAP

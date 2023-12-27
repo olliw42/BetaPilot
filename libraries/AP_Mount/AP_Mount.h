@@ -162,13 +162,6 @@ public:
     void set_mode_to_default() { set_mode_to_default(_primary); }
     void set_mode_to_default(uint8_t instance);
 
-//OW
-    // set_mode_3pos - sets the mount's retract or default mode from an aux switch
-    //  ch_flag 0 = LOW enters default mode, 1 = MIDDLE return to previous mode, 2 = HIGH enter retract mode
-    void set_mode_3pos(uint8_t ch_flag) { set_mode_3pos(_primary, ch_flag); }
-    void set_mode_3pos(uint8_t instance, uint8_t ch_flag);
-//OWEND    
-
     // set yaw_lock.  If true, the gimbal's yaw target is maintained in earth-frame meaning it will lock onto an earth-frame heading (e.g. North)
     // If false (aka "follow") the gimbal's yaw is maintained in body-frame meaning it will rotate with the vehicle
     void set_yaw_lock(bool yaw_lock) { set_yaw_lock(_primary, yaw_lock); }

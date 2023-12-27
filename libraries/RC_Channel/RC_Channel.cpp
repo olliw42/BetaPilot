@@ -693,9 +693,6 @@ void RC_Channel::init_aux_function(const aux_func_t ch_option, const AuxSwitchPo
 #if HAL_MOUNT_ENABLED
     case AUX_FUNC::RETRACT_MOUNT1:
     case AUX_FUNC::MOUNT_LOCK:
-//OW
-    case AUX_FUNC::RETRACT_MOUNT1_3POS:
-//OWEND
 #endif
     case AUX_FUNC::LOG_PAUSE:
     case AUX_FUNC::ARM_EMERGENCY_STOP:
@@ -1555,7 +1552,6 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
 #endif
 
 #if HAL_MOUNT_ENABLED
-/*
     case AUX_FUNC::RETRACT_MOUNT1: {
         AP_Mount *mount = AP::mount();
         if (mount == nullptr) {
@@ -1573,7 +1569,7 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
             break;
         }
         break;
-    } */
+    }
 
     case AUX_FUNC::MOUNT_LOCK: {
         AP_Mount *mount = AP::mount();
@@ -1583,18 +1579,6 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
         mount->set_yaw_lock(ch_flag == AuxSwitchPos::HIGH);
         break;
     }
-
-//OW
-    case AUX_FUNC::RETRACT_MOUNT1:
-    case AUX_FUNC::RETRACT_MOUNT1_3POS: {
-        AP_Mount *mount = AP::mount();
-        if (mount == nullptr) {
-            break;
-        }
-        mount->set_mode_3pos(0, (uint8_t)ch_flag);
-        break;
-    }
-//OWEND
 #endif
 
     case AUX_FUNC::LOG_PAUSE: {
