@@ -1003,9 +1003,9 @@
       </entry>
       <entry value="115" name="MAV_CMD_CONDITION_YAW" hasLocation="false" isDestination="false">
         <description>Reach a certain target angle.</description>
-        <param index="1" label="Angle" units="deg">target angle, 0 is north</param>
-        <param index="2" label="Angular Speed" units="deg/s">angular speed</param>
-        <param index="3" label="Direction" minValue="-1" maxValue="1" increment="2">direction: -1: counter clockwise, 1: clockwise</param>
+        <param index="1" label="Angle" units="deg" minValue="0" maxValue="360">target angle [0-360]. Absolute angles: 0 is north. Relative angle: 0 is initial yaw. Direction set by param3.</param>
+        <param index="2" label="Angular Speed" units="deg/s" minValue="0">angular speed</param>
+        <param index="3" label="Direction" minValue="-1" maxValue="1" increment="1">direction: -1: counter clockwise, 0: shortest direction, 1: clockwise</param>
         <param index="4" label="Relative" minValue="0" maxValue="1" increment="1">0: absolute angle, 1: relative offset</param>
         <param index="5">Empty</param>
         <param index="6">Empty</param>
@@ -2277,6 +2277,12 @@
       </entry>
       <entry value="5" name="MAV_RESULT_IN_PROGRESS">
         <description>Command is valid and is being executed. This will be followed by further progress updates, i.e. the component may send further COMMAND_ACK messages with result MAV_RESULT_IN_PROGRESS (at a rate decided by the implementation), and must terminate by sending a COMMAND_ACK message with final result of the operation. The COMMAND_ACK.progress field can be used to indicate the progress of the operation. There is no need for the sender to retry the command, but if done during execution, the component will return MAV_RESULT_IN_PROGRESS with an updated progress.</description>
+      </entry>
+      <entry value="7" name="MAV_RESULT_COMMAND_LONG_ONLY">
+        <description>Command is only accepted when sent as a COMMAND_LONG.</description>
+      </entry>
+      <entry value="8" name="MAV_RESULT_COMMAND_INT_ONLY">
+        <description>Command is only accepted when sent as a COMMAND_INT.</description>
       </entry>
     </enum>
     <enum name="MAV_MISSION_RESULT">
@@ -4627,6 +4633,17 @@
       <field type="int16_t" name="z">Z-axis, normalized to the range [-1000,1000]. A value of INT16_MAX indicates that this axis is invalid. Generally corresponds to a separate slider movement with maximum being 1000 and minimum being -1000 on a joystick and the thrust of a vehicle. Positive values are positive thrust, negative values are negative thrust.</field>
       <field type="int16_t" name="r">R-axis, normalized to the range [-1000,1000]. A value of INT16_MAX indicates that this axis is invalid. Generally corresponds to a twisting of the joystick, with counter-clockwise being 1000 and clockwise being -1000, and the yaw of a vehicle.</field>
       <field type="uint16_t" name="buttons">A bitfield corresponding to the joystick buttons' current state, 1 for pressed, 0 for released. The lowest bit corresponds to Button 1.</field>
+      <extensions/>
+      <field type="uint16_t" name="buttons2">A bitfield corresponding to the joystick buttons' 16-31 current state, 1 for pressed, 0 for released. The lowest bit corresponds to Button 16.</field>
+      <field type="uint8_t" name="enabled_extensions">Set bits to 1 to indicate which of the following extension fields contain valid data: bit 0: pitch, bit 1: roll, bit 2: aux1, bit 3: aux2, bit 4: aux3, bit 5: aux4, bit 6: aux5, bit 7: aux6</field>
+      <field type="int16_t" name="s">Pitch-only-axis, normalized to the range [-1000,1000]. Generally corresponds to pitch on vehicles with additional degrees of freedom. Valid if bit 0 of enabled_extensions field is set. Set to 0 if invalid.</field>
+      <field type="int16_t" name="t">Roll-only-axis, normalized to the range [-1000,1000]. Generally corresponds to roll on vehicles with additional degrees of freedom. Valid if bit 1 of enabled_extensions field is set. Set to 0 if invalid.</field>
+      <field type="int16_t" name="aux1">Aux continuous input field 1. Normalized in the range [-1000,1000]. Purpose defined by recipient. Valid data if bit 2 of enabled_extensions field is set. 0 if bit 2 is unset.</field>
+      <field type="int16_t" name="aux2">Aux continuous input field 2. Normalized in the range [-1000,1000]. Purpose defined by recipient. Valid data if bit 3 of enabled_extensions field is set. 0 if bit 3 is unset.</field>
+      <field type="int16_t" name="aux3">Aux continuous input field 3. Normalized in the range [-1000,1000]. Purpose defined by recipient. Valid data if bit 4 of enabled_extensions field is set. 0 if bit 4 is unset.</field>
+      <field type="int16_t" name="aux4">Aux continuous input field 4. Normalized in the range [-1000,1000]. Purpose defined by recipient. Valid data if bit 5 of enabled_extensions field is set. 0 if bit 5 is unset.</field>
+      <field type="int16_t" name="aux5">Aux continuous input field 5. Normalized in the range [-1000,1000]. Purpose defined by recipient. Valid data if bit 6 of enabled_extensions field is set. 0 if bit 6 is unset.</field>
+      <field type="int16_t" name="aux6">Aux continuous input field 6. Normalized in the range [-1000,1000]. Purpose defined by recipient. Valid data if bit 7 of enabled_extensions field is set. 0 if bit 7 is unset.</field>
     </message>
     <message id="70" name="RC_CHANNELS_OVERRIDE">
       <description>The RAW values of the RC channels sent to the MAV to override info received from the RC radio. The standard PPM modulation is as follows: 1000 microseconds: 0%, 2000 microseconds: 100%. Individual receivers/transmitters might violate this specification.  Note carefully the semantic differences between the first 8 channels and the subsequent channels</description>
