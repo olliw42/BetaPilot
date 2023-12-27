@@ -328,6 +328,7 @@ MAV_RESULT AP_Mount::handle_command_do_mount_control(const mavlink_command_int_t
 MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet)
 {
     AP_Mount_Backend *backend;
+
     // check gimbal device id.  0 is primary, 1 is 1st gimbal, 2 is
     // 2nd gimbal, etc
     const uint8_t instance = packet.z;
@@ -378,6 +379,7 @@ MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_pitchyaw(const mavlink_com
 MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_configure(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
 {
     AP_Mount_Backend *backend;
+
     // check gimbal device id.  0 is primary, 1 is 1st gimbal, 2 is 2nd gimbal, etc
     const uint8_t instance = packet.z;
     if (instance == 0) {
@@ -399,6 +401,7 @@ void AP_Mount::handle_gimbal_manager_set_attitude(const mavlink_message_t &msg)
     mavlink_msg_gimbal_manager_set_attitude_decode(&msg,&packet);
 
     AP_Mount_Backend *backend;
+
     // check gimbal device id.  0 is primary, 1 is 1st gimbal, 2 is
     // 2nd gimbal, etc
     const uint8_t instance = packet.gimbal_device_id;
@@ -464,6 +467,7 @@ void AP_Mount::handle_gimbal_manager_set_pitchyaw(const mavlink_message_t &msg)
     mavlink_msg_gimbal_manager_set_pitchyaw_decode(&msg,&packet);
 
     AP_Mount_Backend *backend;
+
     // check gimbal device id.  0 is primary, 1 is 1st gimbal, 2 is
     // 2nd gimbal, etc
     const uint8_t instance = packet.gimbal_device_id;
