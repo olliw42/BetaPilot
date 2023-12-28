@@ -6462,17 +6462,6 @@ bool GCS_MAVLINK::accept_packet(const mavlink_status_t &status,
         return true;
     }
 
-//OW RADIOLINK
-#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
-    // handle messages from a mavlink receiver
-    // we currently narrow it down to "ours" to play it safe
-    if ((msg.compid == MAV_COMP_ID_TELEMETRY_RADIO) &&
-        (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS || msg.msgid == MAVLINK_MSG_ID_RADIO_LINK_STATS)) {
-        return true;
-    }
-#endif
-//OWEND
-
     if (!sysid_enforce()) {
         return true;
     }
