@@ -803,7 +803,7 @@ AP_Camera *camera()
 
 }
 
-//OW
+//OW CAMERA
 bool AP_Camera::cam_set_mode(bool video_mode)
 {
     WITH_SEMAPHORE(_rsem);

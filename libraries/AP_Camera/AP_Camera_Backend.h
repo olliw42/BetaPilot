@@ -53,7 +53,7 @@ public:
     // momentary switch to change camera between picture and video modes
     virtual void cam_mode_toggle() {}
 
-//OW
+//OW CAMERA
     // momentary switch to set to photo or video mode (video_mode false: photo mode, true: video mode)
     virtual bool cam_set_mode(bool video_mode) { return false; }
 

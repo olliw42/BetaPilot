@@ -701,7 +701,7 @@ void RC_Channel::init_aux_function(const aux_func_t ch_option, const AuxSwitchPo
     case AUX_FUNC::CAMERA_MANUAL_FOCUS:
     case AUX_FUNC::CAMERA_AUTO_FOCUS:
     case AUX_FUNC::CAMERA_LENS:
-//OW
+//OW CAMERA
     case AUX_FUNC::CAMERA_SET_MODE:
     case AUX_FUNC::CAMERA_TRIG_MODE:
 //OWEND
@@ -1518,7 +1518,7 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
     case AUX_FUNC::CAMERA_LENS:
         return do_aux_function_camera_lens(ch_flag);
 
-//OW
+//OW CAMERA
 //    case AUX_FUNC::CAM_MODE_TOGGLE: {
     case AUX_FUNC::CAMERA_SET_MODE: {
         AP_Camera *camera = AP_Camera::get_singleton();

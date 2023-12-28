@@ -32,7 +32,7 @@ public:
     /* Do not allow copies */
     CLASS_NO_COPY(AP_Camera_Mount);
 
-//OW
+//OW CAMERA
     // momentary switch to set to photo or video mode (video_mode false: photo mode, true: video mode)
     bool cam_set_mode(bool video_mode) override;
 

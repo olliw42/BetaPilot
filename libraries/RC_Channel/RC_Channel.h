@@ -249,7 +249,7 @@ public:
         CAMERA_IMAGE_TRACKING = 174, // camera image tracking
         CAMERA_LENS =        175, // camera lens selection
         VFWD_THR_OVERRIDE =  176, // force enabled VTOL forward throttle method
-//OW
+//OW CAMERA
         CAMERA_SET_MODE =    177, // set camera mode, high = video mode, low = picture mode
         CAMERA_TRIG_MODE =   178, // set camera mode and trigger/start/stop, high = start video, mid = stop video, low = take picture
 //OWEND

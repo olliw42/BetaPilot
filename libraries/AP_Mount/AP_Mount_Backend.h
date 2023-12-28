@@ -205,13 +205,14 @@ public:
     bool get_poi(uint8_t instance, Quaternion &quat, Location &loc, Location &poi_loc);
 #endif
 
-//OW
+//OW CAMERA
     // momentary switch to set to photo or video mode (video_mode false: photo mode, true: video mode)
     virtual bool cam_set_mode(bool video_mode) { return false; }
 
     // momentary 3 pos switch to set to photo mode and take picture, set to video mode and start recording, or stop video recording
     virtual bool cam_do_photo_video_mode(PhotoVideoMode photo_video_mode) { return false; }
-
+//OWEND
+//OW
     // handle msg - allows to process a msg from a gimbal
     virtual void handle_message_extra(const mavlink_message_t &msg) {}
 

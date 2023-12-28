@@ -282,13 +282,14 @@ public:
     // parameter var table
     static const struct AP_Param::GroupInfo        var_info[];
 
-//OW
+//OW CAMERA
     // momentary switch to set to photo or video mode (video_mode false: photo mode, true: video mode)
     bool cam_set_mode(uint8_t instance, bool video_mode);
 
     // momentary 3 pos switch to set to photo mode and take picture, set to video mode and start recording, or stop video recording
     bool cam_do_photo_video_mode(uint8_t instance, PhotoVideoMode photo_video_mode);
-
+//OWEND
+//OW
     // this links into handle_message() to catch all messages
     void handle_message_extra(mavlink_channel_t chan, const mavlink_message_t &msg);
 

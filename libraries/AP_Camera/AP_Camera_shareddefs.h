@@ -36,7 +36,7 @@ enum class TrackingType : uint8_t {
     TRK_RECTANGLE = 2   // tracking a rectangle
 };
 
-//OW
+//OW CAMERA
 // options for set_cam_photo_video_mode()
 enum class PhotoVideoMode : uint8_t {
     PHOTO_TAKE_PIC = 0, // set to photo mode and take picture

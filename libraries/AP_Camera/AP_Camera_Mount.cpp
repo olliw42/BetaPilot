@@ -5,7 +5,7 @@
 
 extern const AP_HAL::HAL& hal;
 
-//OW
+//OW CAMERA
 // momentary switch to set to photo or video mode (video_mode false: photo mode, true: video mode)
 bool AP_Camera_Mount::cam_set_mode(bool video_mode)
 {

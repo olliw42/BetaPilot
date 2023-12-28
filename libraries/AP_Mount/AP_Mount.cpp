@@ -1198,7 +1198,7 @@ AP_Mount *mount()
 
 };
 
-//OW
+//OW CAMERA
 bool AP_Mount::cam_set_mode(uint8_t instance, bool video_mode)
 {
     auto *backend = get_instance(instance);
@@ -1216,7 +1216,8 @@ bool AP_Mount::cam_do_photo_video_mode(uint8_t instance, PhotoVideoMode photo_vi
     }
     return backend->cam_do_photo_video_mode(photo_video_mode);
 }
-
+//OWEND
+//OW
 void AP_Mount::handle_message_extra(mavlink_channel_t chan, const mavlink_message_t &msg)
 {
     for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
