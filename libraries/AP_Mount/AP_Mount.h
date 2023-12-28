@@ -47,6 +47,9 @@ class AP_Mount_Siyi;
 class AP_Mount_Scripting;
 class AP_Mount_Xacti;
 class AP_Mount_Viewpro;
+//OW
+class BP_Mount_STorM32_MAVLink;
+//OWEND
 
 /*
   This is a workaround to allow the MAVLink backend access to the
@@ -67,6 +70,9 @@ class AP_Mount
     friend class AP_Mount_Scripting;
     friend class AP_Mount_Xacti;
     friend class AP_Mount_Viewpro;
+//OW
+    friend class BP_Mount_STorM32_MAVLink;
+//OWEND
 
 public:
     AP_Mount();
@@ -115,6 +121,11 @@ public:
 #if HAL_MOUNT_VIEWPRO_ENABLED
         Viewpro = 11,        /// Viewpro gimbal using a custom serial protocol
 #endif
+//OW
+#if HAL_MOUNT_BP_STORM32_MAVLINK_ENABLED
+        STorM32_MAVLink = 83
+#endif
+//OWEND
     };
 
     // init - detect and initialise all mounts
@@ -179,7 +190,9 @@ public:
     void set_target_sysid(uint8_t instance, uint8_t sysid);
 
     // handling of set_roi_sysid message
-    MAV_RESULT handle_command_do_set_roi_sysid(const mavlink_command_int_t &packet);
+//OW
+//    MAV_RESULT handle_command_do_set_roi_sysid(const mavlink_command_int_t &packet);
+//OWEND
 
     // mavlink message handling:
     MAV_RESULT handle_command(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
@@ -269,6 +282,28 @@ public:
     // parameter var table
     static const struct AP_Param::GroupInfo        var_info[];
 
+//OW CAMERA
+    // momentary switch to set to photo or video mode (video_mode false: photo mode, true: video mode)
+    bool cam_set_mode(uint8_t instance, bool video_mode);
+
+    // momentary 3 pos switch to set to photo mode and take picture, set to video mode and start recording, or stop video recording
+    bool cam_do_photo_video_mode(uint8_t instance, PhotoVideoMode photo_video_mode);
+//OWEND
+//OW
+    // this links into handle_message() to catch all messages
+    void handle_message_extra(mavlink_channel_t chan, const mavlink_message_t &msg);
+
+    // returns the gimbal device id for this instance, or 0 if the instance is not available
+    uint8_t get_gimbal_device_id(uint8_t instance) const;
+
+    // send banner
+    void send_banner();
+
+    // used for scripting
+    bool take_control();
+    bool give_control();
+//OWEND
+
 protected:
 
     static AP_Mount *_singleton;
@@ -294,9 +329,15 @@ private:
     void handle_mount_control(const mavlink_message_t &msg);
 #endif
 
-    MAV_RESULT handle_command_do_mount_configure(const mavlink_command_int_t &packet);
-    MAV_RESULT handle_command_do_mount_control(const mavlink_command_int_t &packet);
-    MAV_RESULT handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet);
+//OW
+//    MAV_RESULT handle_command_do_mount_configure(const mavlink_command_int_t &packet);
+//    MAV_RESULT handle_command_do_mount_control(const mavlink_command_int_t &packet);
+//    MAV_RESULT handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet);
+    MAV_RESULT handle_command_do_mount_configure(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
+    MAV_RESULT handle_command_do_mount_control(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
+    MAV_RESULT handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
+    MAV_RESULT handle_command_do_set_roi_sysid(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
+//OWEND
     MAV_RESULT handle_command_do_gimbal_manager_configure(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
     void handle_gimbal_manager_set_attitude(const mavlink_message_t &msg);
     void handle_gimbal_manager_set_pitchyaw(const mavlink_message_t &msg);

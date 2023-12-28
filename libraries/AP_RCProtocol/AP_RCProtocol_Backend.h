@@ -48,6 +48,12 @@ public:
         PARSE_TYPE_SERIAL
     };
 
+//OW RADIOLINK
+    // update from mavlink messages
+    virtual void update_radio_rc_channels(const mavlink_radio_rc_channels_t* packet) {}
+    virtual void update_radio_link_stats(const mavlink_radio_link_stats_t* packet) {}
+//OWEND
+
     // get number of frames, ignoring failsafe
     uint32_t get_rc_frame_count(void) const {
         return rc_frame_count;
@@ -131,6 +137,9 @@ private:
 
     uint16_t _pwm_values[MAX_RCIN_CHANNELS];
     uint8_t  _num_channels;
+//OW RADIOLINK
+protected:
+//OWEND
     int16_t rssi = -1;
     int16_t rx_link_quality = -1;
 };

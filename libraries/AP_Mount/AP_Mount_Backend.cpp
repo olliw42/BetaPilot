@@ -180,7 +180,10 @@ void AP_Mount_Backend::send_gimbal_device_attitude_status(mavlink_channel_t chan
                                                    0,                                           // failure flags (not supported)
                                                    std::numeric_limits<double>::quiet_NaN(),    // delta_yaw (NaN for unknonw)
                                                    std::numeric_limits<double>::quiet_NaN(),    // delta_yaw_velocity (NaN for unknonw)
-                                                   _instance + 1);  // gimbal_device_id
+//OW
+//                                                   _instance + 1);  // gimbal_device_id
+                                                   get_gimbal_device_id());  // gimbal_device_id
+//OWEND
 }
 #endif
 
@@ -223,7 +226,10 @@ void AP_Mount_Backend::send_gimbal_manager_information(mavlink_channel_t chan)
     mavlink_msg_gimbal_manager_information_send(chan,
                                                 AP_HAL::millis(),                       // autopilot system time
                                                 get_gimbal_manager_capability_flags(),  // bitmap of gimbal manager capability flags
-                                                _instance + 1,                          // gimbal device id
+//OW
+//                                                _instance + 1,                          // gimbal device id
+                                                get_gimbal_device_id(),                 // gimbal device id
+//OWEND
                                                 radians(_params.roll_angle_min),        // roll_min in radians
                                                 radians(_params.roll_angle_max),        // roll_max in radians
                                                 radians(_params.pitch_angle_min),       // pitch_min in radians
@@ -232,19 +238,174 @@ void AP_Mount_Backend::send_gimbal_manager_information(mavlink_channel_t chan)
                                                 radians(_params.yaw_angle_max));        // yaw_max in radians
 }
 
+//OW
+uint8_t AP_Mount_Backend::get_gimbal_device_id() const
+{
+    return _instance + 1;
+}
+
+bool AP_Mount_Backend::is_in_control(uint8_t sysid, uint8_t compid, uint8_t gimbal_device_id)
+{
+    if (gimbal_device_id != 0 && gimbal_device_id != get_gimbal_device_id()) {
+        return false;
+    }
+
+    // allow the source to claim control if nobody is in control
+    if (mavlink_control_id.sysid == 0 && mavlink_control_id.compid == 0) {
+        mavlink_control_id.sysid = sysid;
+        mavlink_control_id.compid = compid;
+        return true;
+    }
+
+    return (mavlink_control_id.sysid == sysid && mavlink_control_id.compid == compid);
+}
+
+// return gimbal manager flags used by GIMBAL_MANAGER_STATUS message
+uint32_t AP_Mount_Backend::get_gimbal_manager_flags() const
+{
+    uint32_t flags = GIMBAL_MANAGER_FLAGS_ROLL_LOCK | GIMBAL_MANAGER_FLAGS_PITCH_LOCK;
+    if (_yaw_lock) {
+        flags |= GIMBAL_MANAGER_FLAGS_YAW_LOCK;
+    }
+    return flags;
+}
+
+// set gimbal manager flags, called from frontend's gimbal manager handlers
+bool AP_Mount_Backend::handle_gimbal_manager_flags(uint32_t flags)
+{
+    // check flags for change to RETRACT
+    if ((flags & GIMBAL_MANAGER_FLAGS_RETRACT) > 0) {
+        set_mode(MAV_MOUNT_MODE_RETRACT);
+    } else
+    // check flags for change to NEUTRAL
+    if ((flags & GIMBAL_MANAGER_FLAGS_NEUTRAL) > 0) {
+        set_mode(MAV_MOUNT_MODE_NEUTRAL);
+    }
+    return true;
+}
+
+void AP_Mount_Backend::handle_gimbal_manager_set_pitchyaw(const mavlink_gimbal_manager_set_pitchyaw_t &packet)
+{
+    const uint32_t flags = packet.flags;
+
+    if (!handle_gimbal_manager_flags(flags)) {
+        return;
+    }
+
+    // Do not allow both angle and rate to be specified at the same time
+    if (!isnan(packet.pitch) && !isnan(packet.yaw) && !isnan(packet.pitch_rate) && !isnan(packet.yaw_rate)) {
+        return;
+    }
+
+    // pitch and yaw from packet are in radians
+    if (!isnan(packet.pitch) && !isnan(packet.yaw)) {
+        const float pitch_angle_deg = degrees(packet.pitch);
+        const float yaw_angle_deg = degrees(packet.yaw);
+        set_angle_target(0, pitch_angle_deg, yaw_angle_deg, flags & GIMBAL_MANAGER_FLAGS_YAW_LOCK);
+        return;
+    }
+
+    // pitch_rate and yaw_rate from packet are in rad/s
+    if (!isnan(packet.pitch_rate) && !isnan(packet.yaw_rate)) {
+        const float pitch_rate_degs = degrees(packet.pitch_rate);
+        const float yaw_rate_degs = degrees(packet.yaw_rate);
+        set_rate_target(0, pitch_rate_degs, yaw_rate_degs, flags & GIMBAL_MANAGER_FLAGS_YAW_LOCK);
+    }
+}
+
+void AP_Mount_Backend::handle_gimbal_manager_set_attitude(const mavlink_gimbal_manager_set_attitude_t &packet)
+{
+    const uint32_t flags = packet.flags;
+
+    if (!handle_gimbal_manager_flags(flags)) {
+        return;
+    }
+
+    const Quaternion att_quat{packet.q};
+    const Vector3f att_rate_degs {
+        packet.angular_velocity_x,
+        packet.angular_velocity_y,
+        packet.angular_velocity_y
+    };
+
+    // Do not allow both quaternion and angular velocity to be specified at the same time:
+    if (!att_quat.is_nan() && !att_rate_degs.is_nan()) {
+        return;
+    }
+
+    if (!att_quat.is_nan()) {
+        // convert quaternion to euler angles
+        Vector3f attitude;
+        att_quat.to_euler(attitude);  // attitude is in radians here
+        attitude *= RAD_TO_DEG;  // convert to degrees
+
+        set_angle_target(attitude.x, attitude.y, attitude.z, flags & GIMBAL_MANAGER_FLAGS_YAW_LOCK);
+        return;
+    }
+
+    if (!att_rate_degs.is_nan()) {
+        const float roll_rate_degs = degrees(packet.angular_velocity_x);
+        const float pitch_rate_degs = degrees(packet.angular_velocity_y);
+        const float yaw_rate_degs = degrees(packet.angular_velocity_z);
+        set_rate_target(roll_rate_degs, pitch_rate_degs, yaw_rate_degs, flags & GIMBAL_MANAGER_FLAGS_YAW_LOCK);
+    }
+}
+
+MAV_RESULT AP_Mount_Backend::handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet)
+{
+    const uint32_t flags = packet.x;
+
+    if (!handle_gimbal_manager_flags(flags)) {
+        return MAV_RESULT_FAILED;
+    }
+
+    // Do not allow both angle and rate to be specified at the same time
+    if (!isnan(packet.param1) && !isnan(packet.param2) && !isnan(packet.param3) && !isnan(packet.param4)) {
+        return MAV_RESULT_ACCEPTED;
+    }
+
+    // param1 : pitch_angle (in degrees)
+    // param2 : yaw angle (in degrees)
+    const float pitch_angle_deg = packet.param1;
+    const float yaw_angle_deg = packet.param2;
+    if (!isnan(pitch_angle_deg) && !isnan(yaw_angle_deg)) {
+        set_angle_target(0, pitch_angle_deg, yaw_angle_deg, flags & GIMBAL_MANAGER_FLAGS_YAW_LOCK);
+        return MAV_RESULT_ACCEPTED;
+    }
+
+    // param3 : pitch_rate (in deg/s)
+    // param4 : yaw rate (in deg/s)
+    const float pitch_rate_degs = packet.param3;
+    const float yaw_rate_degs = packet.param4;
+    if (!isnan(pitch_rate_degs) && !isnan(yaw_rate_degs)) {
+        set_rate_target(0, pitch_rate_degs, yaw_rate_degs, flags & GIMBAL_MANAGER_FLAGS_YAW_LOCK);
+        return MAV_RESULT_ACCEPTED;
+    }
+
+    return MAV_RESULT_ACCEPTED;
+}
+//OWEND
+
 // send a GIMBAL_MANAGER_STATUS message to GCS
 void AP_Mount_Backend::send_gimbal_manager_status(mavlink_channel_t chan)
 {
+//OW
+/*
     uint32_t flags = GIMBAL_MANAGER_FLAGS_ROLL_LOCK | GIMBAL_MANAGER_FLAGS_PITCH_LOCK;
 
     if (_yaw_lock) {
         flags |= GIMBAL_MANAGER_FLAGS_YAW_LOCK;
-    }
+    } */
+//OWEND
 
     mavlink_msg_gimbal_manager_status_send(chan,
                                            AP_HAL::millis(),    // autopilot system time
-                                           flags,               // bitmap of gimbal manager flags
-                                           _instance + 1,       // gimbal device id
+//OW
+//                                           flags,               // bitmap of gimbal manager flags
+//                                           _instance + 1,       // gimbal device id
+                                           get_gimbal_manager_flags(),  // bitmap of gimbal manager flags
+                                           get_gimbal_device_id(),      // gimbal device id
+//OWEND
                                            mavlink_control_id.sysid,    // primary control system id
                                            mavlink_control_id.compid,   // primary control component id
                                            0,                           // secondary control system id

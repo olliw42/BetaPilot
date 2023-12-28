@@ -701,6 +701,10 @@ void RC_Channel::init_aux_function(const aux_func_t ch_option, const AuxSwitchPo
     case AUX_FUNC::CAMERA_MANUAL_FOCUS:
     case AUX_FUNC::CAMERA_AUTO_FOCUS:
     case AUX_FUNC::CAMERA_LENS:
+//OW CAMERA
+    case AUX_FUNC::CAMERA_SET_MODE:
+    case AUX_FUNC::CAMERA_TRIG_MODE:
+//OWEND
     case AUX_FUNC::AHRS_TYPE:
         run_aux_function(ch_option, ch_flag, AuxFuncTriggerSource::INIT);
         break;
@@ -1475,7 +1479,7 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
     case AUX_FUNC::CAMERA_TRIGGER:
         do_aux_function_camera_trigger(ch_flag);
         break;
-
+/*
     case AUX_FUNC::CAM_MODE_TOGGLE: {
         // Momentary switch to for cycling camera modes
         AP_Camera *camera = AP_Camera::get_singleton();
@@ -1495,6 +1499,7 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
         }
         break;
     }
+*/
     case AUX_FUNC::CAMERA_REC_VIDEO:
         return do_aux_function_record_video(ch_flag);
 
@@ -1512,6 +1517,38 @@ bool RC_Channel::do_aux_function(const aux_func_t ch_option, const AuxSwitchPos 
 
     case AUX_FUNC::CAMERA_LENS:
         return do_aux_function_camera_lens(ch_flag);
+
+//OW CAMERA
+//    case AUX_FUNC::CAM_MODE_TOGGLE: {
+    case AUX_FUNC::CAMERA_SET_MODE: {
+        AP_Camera *camera = AP_Camera::get_singleton();
+        if (camera == nullptr) {
+            break;
+        }
+        camera->cam_set_mode(ch_flag == AuxSwitchPos::HIGH);
+        break;
+    }
+
+    case AUX_FUNC::CAM_MODE_TOGGLE: {
+//    case AUX_FUNC::CAMERA_TRIG_MODE: {
+        AP_Camera *camera = AP_Camera::get_singleton();
+        if (camera == nullptr) {
+            break;
+        }
+        switch (ch_flag) {
+        case AuxSwitchPos::HIGH:
+            camera->cam_do_photo_video_mode(PhotoVideoMode::VIDEO_START);
+            break;
+        case AuxSwitchPos::MIDDLE:
+            camera->cam_do_photo_video_mode(PhotoVideoMode::VIDEO_STOP);
+            break;
+        case AuxSwitchPos::LOW:
+            camera->cam_do_photo_video_mode(PhotoVideoMode::PHOTO_TAKE_PIC);
+            break;
+        }
+        break;
+    }
+//OWEND
 #endif
 
 #if HAL_MOUNT_ENABLED
