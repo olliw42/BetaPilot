@@ -276,10 +276,12 @@ bool AP_Mount_Backend::handle_gimbal_manager_flags(uint32_t flags)
     // check flags for change to RETRACT
     if ((flags & GIMBAL_MANAGER_FLAGS_RETRACT) > 0) {
         set_mode(MAV_MOUNT_MODE_RETRACT);
+        return false;
     } else
     // check flags for change to NEUTRAL
     if ((flags & GIMBAL_MANAGER_FLAGS_NEUTRAL) > 0) {
         set_mode(MAV_MOUNT_MODE_NEUTRAL);
+        return false;
     }
     return true;
 }

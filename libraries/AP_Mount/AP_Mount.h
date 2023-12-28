@@ -122,7 +122,7 @@ public:
         Viewpro = 11,        /// Viewpro gimbal using a custom serial protocol
 #endif
 //OW
-#if HAL_MOUNT_BP_STORM32_MAVLINK_ENABLED
+#if HAL_MOUNT_STORM32_MAVLINK_V2_ENABLED
         STorM32_MAVLink = 83
 #endif
 //OWEND

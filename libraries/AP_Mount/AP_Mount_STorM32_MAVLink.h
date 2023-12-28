@@ -7,10 +7,10 @@
 
 #include "AP_Mount_Backend.h"
 
-#if HAL_MOUNT_BP_STORM32_MAVLINK_ENABLED
+#if HAL_MOUNT_STORM32_MAVLINK_V2_ENABLED
 
 
-class BP_Mount_STorM32_MAVLink : public AP_Mount_Backend
+class AP_Mount_STorM32_MAVLink : public AP_Mount_Backend
 {
 
 public:
@@ -347,4 +347,4 @@ private:
 };
 
 
-#endif // HAL_MOUNT_BP_STORM32_MAVLINK_ENABLED
+#endif // HAL_MOUNT_STORM32_MAVLINK_V2_ENABLED

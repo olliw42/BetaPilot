@@ -4,9 +4,9 @@
 // STorM32 mount backend class
 //*****************************************************
 
-#include "BP_Mount_STorM32_MAVLink.h"
+#include "AP_Mount_STorM32_MAVLink.h"
 
-#if HAL_MOUNT_BP_STORM32_MAVLINK_ENABLED
+#if HAL_MOUNT_STORM32_MAVLINK_V2_ENABLED
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
@@ -72,7 +72,7 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
 
 
 //******************************************************
-// BP_Mount_STorM32_MAVLink, main class
+// AP_Mount_STorM32_MAVLink, main class
 //******************************************************
 
 // for reasons I really don't understand, calling them as log methods didn't work
@@ -127,10 +127,10 @@ void GimbalQuaternion::to_gimbal_euler(float &roll, float &pitch, float &yaw) co
 
 
 //******************************************************
-// BP_Mount_STorM32_MAVLink, main class
+// AP_Mount_STorM32_MAVLink, main class
 //******************************************************
 
-void BP_Mount_STorM32_MAVLink::init()
+void AP_Mount_STorM32_MAVLink::init()
 {
     AP_Mount_Backend::init();
 
@@ -148,7 +148,7 @@ void BP_Mount_STorM32_MAVLink::init()
 // several vehicles do not support fast_update(), so let's go with this
 // priority of update() not very high, so no idea how reliable that is, may be not so good
 // STorM32-Link wants 25 Hz, so we update at 25 Hz and 12.5 Hz respectively
-void BP_Mount_STorM32_MAVLink::update()
+void AP_Mount_STorM32_MAVLink::update()
 {
     update_target_angles(); // update at 50 Hz (RC_TARGETING handling assumes this)
 
@@ -214,7 +214,7 @@ void BP_Mount_STorM32_MAVLink::update()
 // Return false to skip this angle/rate processing.
 // AP's gimbal manager should never ask to do things which the gimbal device
 // can't do. Isn't so but we know well our gimbal device.
-bool BP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
+bool AP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
 {
     // check flags for change to RETRACT
     if (flags & GIMBAL_MANAGER_FLAGS_RETRACT) {
@@ -257,7 +257,7 @@ bool BP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
 }
 
 
-void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
+void AP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
 {
     _flags_for_gimbal_device = 0;
 
@@ -302,7 +302,7 @@ void BP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
 }
 
 
-void BP_Mount_STorM32_MAVLink::send_target_angles()
+void AP_Mount_STorM32_MAVLink::send_target_angles()
 {
     // just send stupidly at 12.5 Hz, no check if get_target_angles() made a change
 
@@ -326,7 +326,7 @@ void BP_Mount_STorM32_MAVLink::send_target_angles()
 
 // update_angle_target_from_rate() assumes a 50hz update rate!
 // TODO: one should allow angles outside of +-PI, to go shortest path in case of turn around
-void BP_Mount_STorM32_MAVLink::update_target_angles()
+void AP_Mount_STorM32_MAVLink::update_target_angles()
 {
     // update based on mount mode
     switch ((uint8_t)get_mode()) {
@@ -448,7 +448,7 @@ void BP_Mount_STorM32_MAVLink::update_target_angles()
 // Gimbal and protocol discovery
 //------------------------------------------------------
 
-void BP_Mount_STorM32_MAVLink::find_gimbal()
+void AP_Mount_STorM32_MAVLink::find_gimbal()
 {
     // search for gimbal only until vehicle is armed
     if (hal.util->get_soft_armed()) {
@@ -490,7 +490,7 @@ void BP_Mount_STorM32_MAVLink::find_gimbal()
 }
 
 
-void BP_Mount_STorM32_MAVLink::determine_protocol(const mavlink_message_t &msg)
+void AP_Mount_STorM32_MAVLink::determine_protocol(const mavlink_message_t &msg)
 {
     if (msg.sysid != _sysid || msg.compid != _compid) { // this msg is not from our gimbal
         return;
@@ -511,7 +511,7 @@ void BP_Mount_STorM32_MAVLink::determine_protocol(const mavlink_message_t &msg)
 // Gimbal control flags
 //------------------------------------------------------
 
-bool BP_Mount_STorM32_MAVLink::has_roll_control() const
+bool AP_Mount_STorM32_MAVLink::has_roll_control() const
 {
     if (_protocol == Protocol::GIMBAL_DEVICE) {
         return (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_HAS_ROLL_AXIS);
@@ -523,7 +523,7 @@ bool BP_Mount_STorM32_MAVLink::has_roll_control() const
 }
 
 
-bool BP_Mount_STorM32_MAVLink::has_pitch_control() const
+bool AP_Mount_STorM32_MAVLink::has_pitch_control() const
 {
     if (_protocol == Protocol::GIMBAL_DEVICE) {
         return (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_HAS_PITCH_AXIS);
@@ -535,7 +535,7 @@ bool BP_Mount_STorM32_MAVLink::has_pitch_control() const
 }
 
 
-bool BP_Mount_STorM32_MAVLink::has_pan_control() const
+bool AP_Mount_STorM32_MAVLink::has_pan_control() const
 {
     if (_protocol == Protocol::GIMBAL_DEVICE) {
         return (_device_info.cap_flags & GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_AXIS);
@@ -551,7 +551,7 @@ bool BP_Mount_STorM32_MAVLink::has_pan_control() const
 // Gimbal attitude and rate
 //------------------------------------------------------
 
-bool BP_Mount_STorM32_MAVLink::get_attitude_quaternion(Quaternion &att_quat)
+bool AP_Mount_STorM32_MAVLink::get_attitude_quaternion(Quaternion &att_quat)
 {
     if (!_initialised) {
         return false;
@@ -564,7 +564,7 @@ bool BP_Mount_STorM32_MAVLink::get_attitude_quaternion(Quaternion &att_quat)
 }
 
 
-bool BP_Mount_STorM32_MAVLink::get_angular_velocity(Vector3f& rates)
+bool AP_Mount_STorM32_MAVLink::get_angular_velocity(Vector3f& rates)
 {
     if (!_initialised) {
         return false;
@@ -584,7 +584,7 @@ bool BP_Mount_STorM32_MAVLink::get_angular_velocity(Vector3f& rates)
 // MAVLink handle functions
 //------------------------------------------------------
 
-void BP_Mount_STorM32_MAVLink::handle_gimbal_device_information(const mavlink_message_t &msg)
+void AP_Mount_STorM32_MAVLink::handle_gimbal_device_information(const mavlink_message_t &msg)
 {
     // this msg is not from our gimbal
     if (msg.sysid != _sysid || msg.compid != _compid) {
@@ -621,7 +621,7 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_information(const mavlink_me
 }
 
 
-void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlink_message_t &msg)
+void AP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlink_message_t &msg)
 {
     if (_protocol != Protocol::GIMBAL_DEVICE) {
         return;
@@ -670,7 +670,7 @@ void BP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
 }
 
 
-void BP_Mount_STorM32_MAVLink::handle_message_extra(const mavlink_message_t &msg)
+void AP_Mount_STorM32_MAVLink::handle_message_extra(const mavlink_message_t &msg)
 {
     if (_protocol == Protocol::UNDEFINED) { // implies !_initialised && _compid
         determine_protocol(msg);
@@ -720,7 +720,7 @@ void BP_Mount_STorM32_MAVLink::handle_message_extra(const mavlink_message_t &msg
 // MAVLink send functions
 //------------------------------------------------------
 
-void BP_Mount_STorM32_MAVLink::send_cmd_request_gimbal_device_information()
+void AP_Mount_STorM32_MAVLink::send_cmd_request_gimbal_device_information()
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
         return;
@@ -738,7 +738,7 @@ void BP_Mount_STorM32_MAVLink::send_cmd_request_gimbal_device_information()
 
 
 // called by send_target_angles()
-void BP_Mount_STorM32_MAVLink::send_cmd_do_mount_control()
+void AP_Mount_STorM32_MAVLink::send_cmd_do_mount_control()
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
         return;
@@ -763,7 +763,7 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_mount_control()
 
 // called by send_target_angles()
 // _flags_for_gimbal were just updated, so are correct for sure
-void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude()
+void AP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude()
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, GIMBAL_DEVICE_SET_ATTITUDE)) {
         return;
@@ -805,7 +805,7 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude()
 }
 
 
-void BP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device()
+void AP_Mount_STorM32_MAVLink::send_autopilot_state_for_gimbal_device()
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, AUTOPILOT_STATE_FOR_GIMBAL_DEVICE)) {
         return;
@@ -986,7 +986,7 @@ landed state:
 }
 
 
-void BP_Mount_STorM32_MAVLink::send_system_time()
+void AP_Mount_STorM32_MAVLink::send_system_time()
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, SYSTEM_TIME)) {
         return;
@@ -1005,7 +1005,7 @@ void BP_Mount_STorM32_MAVLink::send_system_time()
 }
 
 
-void BP_Mount_STorM32_MAVLink::send_rc_channels()
+void AP_Mount_STorM32_MAVLink::send_rc_channels()
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, RC_CHANNELS)) {
         return;
@@ -1029,14 +1029,14 @@ void BP_Mount_STorM32_MAVLink::send_rc_channels()
 }
 
 
-void BP_Mount_STorM32_MAVLink::send_banner()
+void AP_Mount_STorM32_MAVLink::send_banner()
 {
     // postpone sending by few seconds, to avoid multiple sends
     _request_send_banner_ms = AP_HAL::millis();
 }
 
 
-void BP_Mount_STorM32_MAVLink::update_send_banner()
+void AP_Mount_STorM32_MAVLink::update_send_banner()
 {
     if (!_request_send_banner_ms) return; // no request
 
@@ -1082,7 +1082,7 @@ void BP_Mount_STorM32_MAVLink::update_send_banner()
 //------------------------------------------------------
 
 // send a GIMBAL_MANAGER_INFORMATION message to GCS
-void BP_Mount_STorM32_MAVLink::send_gimbal_manager_information(mavlink_channel_t chan)
+void AP_Mount_STorM32_MAVLink::send_gimbal_manager_information(mavlink_channel_t chan)
 {
     // space already checked by streamer
 
@@ -1131,7 +1131,7 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_manager_information(mavlink_channel_t
 
 
 // return gimbal manager flags. Used by GIMBAL_MANAGER_STATUS message.
-uint32_t BP_Mount_STorM32_MAVLink::get_gimbal_manager_flags() const
+uint32_t AP_Mount_STorM32_MAVLink::get_gimbal_manager_flags() const
 {
     // There are currently no specific gimbal manager flags. So one simply
     // can carry forward the _flags received from the gimbal.
@@ -1156,7 +1156,7 @@ const uint32_t FAILURE_FLAGS =
         GIMBAL_DEVICE_ERROR_FLAGS_COMMS_ERROR;
 
 
-bool BP_Mount_STorM32_MAVLink::has_failures(char* s)
+bool AP_Mount_STorM32_MAVLink::has_failures(char* s)
 {
     uint32_t failure_flags = (_protocol == Protocol::GIMBAL_DEVICE) ? _device_status.received_failure_flags : _gimbal_error_flags;
 
@@ -1176,7 +1176,7 @@ bool BP_Mount_STorM32_MAVLink::has_failures(char* s)
 }
 
 
-bool BP_Mount_STorM32_MAVLink::is_healthy()
+bool AP_Mount_STorM32_MAVLink::is_healthy()
 {
     if (_protocol == Protocol::GIMBAL_DEVICE) {
         // unhealthy if attitude status is not received within the last second
@@ -1208,7 +1208,7 @@ bool BP_Mount_STorM32_MAVLink::is_healthy()
 
 
 // is called with 1 Hz from update loop
-void BP_Mount_STorM32_MAVLink::update_checks()
+void AP_Mount_STorM32_MAVLink::update_checks()
 {
 char txt[255];
 
@@ -1306,7 +1306,7 @@ char txt[255];
 // return true if healthy
 // this is called when ARMING_CHECK_ALL or ARMING_CHECK_CAMERA is set, and if not armed, else not
 // is called with 1 Hz
-bool BP_Mount_STorM32_MAVLink::healthy() const
+bool AP_Mount_STorM32_MAVLink::healthy() const
 {
     _armingchecks_running = 2; // to signal that ArduPilot arming check mechanism is active
 
@@ -1320,7 +1320,7 @@ bool BP_Mount_STorM32_MAVLink::healthy() const
 
 // return target location if available
 // returns true if a target location is available and fills in target_loc argument
-bool BP_Mount_STorM32_MAVLink::get_location_target(Location &_target_loc)
+bool AP_Mount_STorM32_MAVLink::get_location_target(Location &_target_loc)
 {
     if (mnt_target_loc_valid) {
         _target_loc = mnt_target_loc;
@@ -1331,7 +1331,7 @@ bool BP_Mount_STorM32_MAVLink::get_location_target(Location &_target_loc)
 
 
 // update mount's actual angles (to be called by script communicating with mount)
-void BP_Mount_STorM32_MAVLink::set_attitude_euler(float roll_deg, float pitch_deg, float yaw_bf_deg)
+void AP_Mount_STorM32_MAVLink::set_attitude_euler(float roll_deg, float pitch_deg, float yaw_bf_deg)
 {
     _script_angles.roll = radians(roll_deg);
     _script_angles.pitch = radians(pitch_deg);
@@ -1339,14 +1339,14 @@ void BP_Mount_STorM32_MAVLink::set_attitude_euler(float roll_deg, float pitch_de
 }
 
 
-bool BP_Mount_STorM32_MAVLink::take_control()
+bool AP_Mount_STorM32_MAVLink::take_control()
 {
     _script_angles.control = true;
     return true; //we assume only one script trying this, so KIS
 }
 
 
-bool BP_Mount_STorM32_MAVLink::give_control()
+bool AP_Mount_STorM32_MAVLink::give_control()
 {
     _script_angles.control = false;
     return true; //we assume only one script trying this, so KIS
@@ -1357,7 +1357,7 @@ bool BP_Mount_STorM32_MAVLink::give_control()
 // Camera
 //------------------------------------------------------
 
-bool BP_Mount_STorM32_MAVLink::take_picture()
+bool AP_Mount_STorM32_MAVLink::take_picture()
 {
     if (_camera_mode == CameraMode::UNDEFINED) {
         _camera_mode = CameraMode::PHOTO;
@@ -1374,7 +1374,7 @@ bool BP_Mount_STorM32_MAVLink::take_picture()
 }
 
 
-bool BP_Mount_STorM32_MAVLink::record_video(bool start_recording)
+bool AP_Mount_STorM32_MAVLink::record_video(bool start_recording)
 {
     if (_camera_mode == CameraMode::UNDEFINED) {
         _camera_mode = CameraMode::VIDEO;
@@ -1391,7 +1391,7 @@ bool BP_Mount_STorM32_MAVLink::record_video(bool start_recording)
 }
 
 
-bool BP_Mount_STorM32_MAVLink::cam_set_mode(bool video_mode)
+bool AP_Mount_STorM32_MAVLink::cam_set_mode(bool video_mode)
 {
     _camera_mode = (video_mode) ? CameraMode::VIDEO : CameraMode::PHOTO;
     send_cmd_do_digicam_configure(video_mode);
@@ -1402,7 +1402,7 @@ bool BP_Mount_STorM32_MAVLink::cam_set_mode(bool video_mode)
 }
 
 
-bool BP_Mount_STorM32_MAVLink::cam_do_photo_video_mode(PhotoVideoMode photo_video_mode)
+bool AP_Mount_STorM32_MAVLink::cam_do_photo_video_mode(PhotoVideoMode photo_video_mode)
 {
     if (photo_video_mode == PhotoVideoMode::VIDEO_START) {
 
@@ -1441,7 +1441,7 @@ bool BP_Mount_STorM32_MAVLink::cam_do_photo_video_mode(PhotoVideoMode photo_vide
 }
 
 
-void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_configure(bool video_mode)
+void AP_Mount_STorM32_MAVLink::send_cmd_do_digicam_configure(bool video_mode)
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
         return;
@@ -1461,7 +1461,7 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_configure(bool video_mode)
 }
 
 
-void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_control(bool shoot)
+void AP_Mount_STorM32_MAVLink::send_cmd_do_digicam_control(bool shoot)
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
         return;
@@ -1486,7 +1486,7 @@ void BP_Mount_STorM32_MAVLink::send_cmd_do_digicam_control(bool shoot)
 //------------------------------------------------------
 
 // send a MOUNT_STATUS message to GCS, this is only to make MissionPlanner and alike happy
-void BP_Mount_STorM32_MAVLink::send_gimbal_device_attitude_status(mavlink_channel_t chan)
+void AP_Mount_STorM32_MAVLink::send_gimbal_device_attitude_status(mavlink_channel_t chan)
 {
     // space already checked by streamer
     // has checked for space of GIMBAL_DEVICE_ATTITUDE_STATUS, but MOUNT_STATUS is (much) smaller, so no issue
@@ -1507,7 +1507,7 @@ void BP_Mount_STorM32_MAVLink::send_gimbal_device_attitude_status(mavlink_channe
 }
 
 
-#endif // HAL_MOUNT_BP_STORM32_MAVLINK_ENABLED
+#endif // HAL_MOUNT_STORM32_MAVLINK_V2_ENABLED
 
 
 
