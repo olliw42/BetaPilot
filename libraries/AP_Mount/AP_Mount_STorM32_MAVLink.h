@@ -99,22 +99,13 @@ public:
     // => we need to overwrite it
     void send_gimbal_manager_information(mavlink_channel_t chan) override;
 
+    // added: return gimbal device id
+    uint8_t get_gimbal_device_id() const override;
+
     // added: return gimbal manager flags used by GIMBAL_MANAGER_STATUS message
     // AP nonsense: does it wrong, just good for its own limits.
     // => we need to overwrite it
     uint32_t get_gimbal_manager_flags() const override;
-
-    // return gimbal device id
-    uint8_t get_gimbal_device_id() const override
-    {
-        if (_instance == 0) {
-            return MAV_COMP_ID_GIMBAL;
-        } else
-        if (_instance <= 5) {
-            return MAV_COMP_ID_GIMBAL2 + _instance - 1;
-        }
-        return MAV_COMP_ID_GIMBAL; // should not happen
-    }
 
     // added: handle gimbal manager flags received from gimbal manager messages
     // AP nonsense: does it wrong, just good for its limits.
@@ -267,7 +258,7 @@ private:
 
     struct {
         uint16_t received_flags;    // obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
-        uint32_t received_failure_flags; // obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
+        uint32_t received_failure_flags;   // obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
         uint32_t received_tlast_ms; // time last GIMBAL_DEVICE_ATTITUDE_STATUS was received (used for health reporting)
     } _device_status;
 

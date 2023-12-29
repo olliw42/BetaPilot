@@ -192,7 +192,7 @@ void AP_Mount_STorM32_MAVLink::update()
         update_checks();
 
         if (_protocol == Protocol::GIMBAL_DEVICE) {
-            gcs().send_message(MSG_GIMBAL_MANAGER_STATUS);
+            gcs().send_message(MSG_GIMBAL_MANAGER_STATUS); // send it voluntarily
         }
     }
 
@@ -230,20 +230,20 @@ bool AP_Mount_STorM32_MAVLink::handle_gimbal_manager_flags(uint32_t flags)
     update_gimbal_device_flags();
 
     // if not in mavlink targeting don't accept the angle/rate settings
-    // this is needed since backend's set_angle_target(), set_rate_target() set mode to mavlink targeting
-    // dirty, I think one should change backend's functions, but also makes sense somewhat
+    // this is needed since backend's set_angle_target(), set_rate_target() do set mode to mavlink targeting
+    // I think one should change backend's functions, but also somewhat makes sense
     if (get_mode() != MAV_MOUNT_MODE_MAVLINK_TARGETING) {
-        return false;
+        return false; // don't accept angle/rate setting
     }
 
     // driver currently does not support yaw LOCK
     // front-end is digesting GIMBAL_MANAGER_FLAGS_YAW_LOCK to determine yaw_is_earth_frame
-    // we could make it to modify the flag, but for moment let's be happy.
+    // we could make it to modify the flag, but for moment let's be happy
     if (flags & GIMBAL_MANAGER_FLAGS_YAW_LOCK) {
         return false; // don't accept angle/rate setting
     }
 
-    // STorM32 expects that only one of them is set, otherwise it rejects
+    // STorM32 expects the "new" format, i.e. that only one of them is set, otherwise it rejects
     if (!(flags & GIMBAL_MANAGER_FLAGS_YAW_IN_VEHICLE_FRAME) && !(flags & GIMBAL_MANAGER_FLAGS_YAW_IN_EARTH_FRAME)) {
         return false; // don't accept angle/rate setting
     }
@@ -293,7 +293,7 @@ void AP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
     _flags_for_gimbal_device |= GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
 
     // driver currently does not support yaw lock, only yaw follow
-//    if (_is_yaw_lock) _flags_for_gimbal |= GIMBAL_DEVICE_FLAGS_YAW_LOCK;
+    // -> _flags_for_gimbal_device &=~ GIMBAL_DEVICE_FLAGS_YAW_LOCK;
 
     // frame flags
 
@@ -304,12 +304,12 @@ void AP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
 
 void AP_Mount_STorM32_MAVLink::send_target_angles()
 {
-    // just send stupidly at 12.5 Hz, no check if get_target_angles() made a change
+    // just send stubbornly at 12.5 Hz, no check if get_target_angles() made a change
 
     update_gimbal_device_flags();
 
     if (mnt_target.target_type == MountTargetType::RATE) {
-        // we ignore it. We may think to just send angle_rad, but if yaw is earth frame
+        // we ignore it. One may think to just send angle_rad, but if yaw is earth frame
         // this could result in pretty strange behavior. So better ignore.
         // Should happen only in MAV_MOUNT_MODE_RC_TARGETING, so no need to test for this
         // explicitly.
@@ -324,7 +324,7 @@ void AP_Mount_STorM32_MAVLink::send_target_angles()
 }
 
 
-// update_angle_target_from_rate() assumes a 50hz update rate!
+// update_angle_target_from_rate() assumes a 50 Hz update rate!
 // TODO: one should allow angles outside of +-PI, to go shortest path in case of turn around
 void AP_Mount_STorM32_MAVLink::update_target_angles()
 {
@@ -472,7 +472,7 @@ void AP_Mount_STorM32_MAVLink::find_gimbal()
     }
 
     // request GIMBAL_DEVICE_INFORMATION
-    // STorM32 gives this also for mount mode
+    // STorM32 provides this also for mount mode
     if (!_got_device_info) {
         if (tnow_ms - _request_device_info_tlast_ms > 1000) {
             _request_device_info_tlast_ms = tnow_ms;
@@ -746,7 +746,7 @@ void AP_Mount_STorM32_MAVLink::send_cmd_do_mount_control()
 
     // send command_long command containing a do_mount_control command
     // Note: pitch and yaw are reversed
-    // ATTENTION: uses get_bf_yaw() to ensure body frame, which uses ahrs.yaw, not delta_yaw!!!
+    // ATTENTION: uses get_bf_yaw() to ensure body frame, which uses ahrs.yaw, not delta_yaw!
     mavlink_msg_command_long_send(
         _chan,
         _sysid, _compid,
@@ -762,7 +762,7 @@ void AP_Mount_STorM32_MAVLink::send_cmd_do_mount_control()
 
 
 // called by send_target_angles()
-// _flags_for_gimbal were just updated, so are correct for sure
+// _flags_for_gimbal_device were just updated, so are correct for sure
 void AP_Mount_STorM32_MAVLink::send_gimbal_device_set_attitude()
 {
     if (!HAVE_PAYLOAD_SPACE(_chan, GIMBAL_DEVICE_SET_ATTITUDE)) {
@@ -918,6 +918,7 @@ estimator status:
         _tahrs_healthy_ms = AP_HAL::millis();
     }
 
+    // delay by 3 sec to get past "quaternion flip"
     if (ahrs_healthy && (nav_estimator_status & ESTIMATOR_ATTITUDE) && ((AP_HAL::millis() - _tahrs_healthy_ms) > 3000)) {
         estimator_status |= ESTIMATOR_ATTITUDE; // -> QFix
         if (ahrs.initialised() && (nav_estimator_status & ESTIMATOR_VELOCITY_VERT) && (AP::gps().status() >= AP_GPS::GPS_OK_FIX_2D)) {
@@ -1089,12 +1090,12 @@ void AP_Mount_STorM32_MAVLink::send_gimbal_manager_information(mavlink_channel_t
     // The request to send this message should be NACKed for as long as
     // the gimbal device was not found or its device info was not received.
     // Not done currently, so as workaround don't send if not yet available.
-    // Should make third parties to repeat requests.
+    // Should make third parties to repeat request.
 
     if (!_got_device_info) return;
 
     // There are few specific gimbal manager capability flags, which are not used.
-    // So one simply can carry forward the cap_flags received from the gimbal.
+    // So we simply can carry forward the cap_flags received from the gimbal.
     // The STorM32 gimbal has these capabilities:
     // - GIMBAL_DEVICE_CAP_FLAGS_HAS_RETRACT | GIMBAL_DEVICE_CAP_FLAGS_HAS_NEUTRAL
     // - GIMBAL_DEVICE_CAP_FLAGS_HAS_xx_AXIS | GIMBAL_DEVICE_CAP_FLAGS_HAS_xx_FOLLOW |
@@ -1106,9 +1107,9 @@ void AP_Mount_STorM32_MAVLink::send_gimbal_manager_information(mavlink_channel_t
     uint32_t cap_flags = _device_info.cap_flags;
 
     // This driver does not support all capabilities, so we erase them.
-    // ATTENTION: This can mean that the gimbal device and gimbal manager capability flags
+    // Note: This can mean that the gimbal device and gimbal manager capability flags
     // may be different, and any third party which mistakenly thinks it can use those from
-    // the gimbal device messages may get confused !
+    // the gimbal device messages may get confused. Their fault.
 
     cap_flags &=~ (GIMBAL_MANAGER_CAP_FLAGS_HAS_ROLL_FOLLOW |
                    GIMBAL_MANAGER_CAP_FLAGS_HAS_PITCH_FOLLOW |
@@ -1129,6 +1130,17 @@ void AP_Mount_STorM32_MAVLink::send_gimbal_manager_information(mavlink_channel_t
         );
 }
 
+// return gimbal device id
+uint8_t AP_Mount_STorM32_MAVLink::get_gimbal_device_id() const
+{
+    if (_instance == 0) {
+        return MAV_COMP_ID_GIMBAL;
+    } else
+    if (_instance <= 5) {
+        return MAV_COMP_ID_GIMBAL2 + _instance - 1;
+    }
+    return MAV_COMP_ID_GIMBAL; // should not happen
+}
 
 // return gimbal manager flags. Used by GIMBAL_MANAGER_STATUS message.
 uint32_t AP_Mount_STorM32_MAVLink::get_gimbal_manager_flags() const
@@ -1136,9 +1148,9 @@ uint32_t AP_Mount_STorM32_MAVLink::get_gimbal_manager_flags() const
     // There are currently no specific gimbal manager flags. So one simply
     // can carry forward the _flags received from the gimbal.
 
-    // ATTENTION: This driver does not support all capabilities, but this
+    // Note: This driver does not support all capabilities, but this
     // should never be a problem since any third party should strictly adhere
-    // to the capability flags obtained from the gimbal manager !
+    // to the capability flags obtained from the gimbal manager.
 
     return _device_status.received_flags;
 }
@@ -1342,14 +1354,14 @@ void AP_Mount_STorM32_MAVLink::set_attitude_euler(float roll_deg, float pitch_de
 bool AP_Mount_STorM32_MAVLink::take_control()
 {
     _script_angles.control = true;
-    return true; //we assume only one script trying this, so KIS
+    return true; // we assume only one script trying this, so KIS
 }
 
 
 bool AP_Mount_STorM32_MAVLink::give_control()
 {
     _script_angles.control = false;
-    return true; //we assume only one script trying this, so KIS
+    return true; // we assume only one script trying this, so KIS
 }
 
 
@@ -1485,11 +1497,12 @@ void AP_Mount_STorM32_MAVLink::send_cmd_do_digicam_control(bool shoot)
 // MAVLink mount status forwarding
 //------------------------------------------------------
 
-// send a MOUNT_STATUS message to GCS, this is only to make MissionPlanner and alike happy
+// send a MOUNT_STATUS message to GCS
+// make MissionPlanner and alike happy and gives parties a chance to know the mode
 void AP_Mount_STorM32_MAVLink::send_gimbal_device_attitude_status(mavlink_channel_t chan)
 {
     // space already checked by streamer
-    // has checked for space of GIMBAL_DEVICE_ATTITUDE_STATUS, but MOUNT_STATUS is (much) smaller, so no issue
+    // did check for space of GIMBAL_DEVICE_ATTITUDE_STATUS, but MOUNT_STATUS is (much) smaller, so no issue
 
     if (_compid != MAV_COMP_ID_GIMBAL) { // do it only for the 1st gimbal
         return;
