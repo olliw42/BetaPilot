@@ -250,6 +250,15 @@ private:
     uint32_t _request_send_banner_ms;
     void update_send_banner();
 
+    struct {
+        uint8_t fast;               // counter to determine faster responses
+        uint32_t tlast_ms;          // time last GIMBAL_MANAGER_STATUS was send
+        uint32_t flags_last;        // to detect changes
+        uint8_t primary_sysid_last;
+        uint8_t primary_compid_last;
+    } _manager_status;
+    void update_manager_status();
+
     // gimbal target & control
 
     struct {

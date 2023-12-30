@@ -185,15 +185,13 @@ void AP_Mount_STorM32_MAVLink::update()
         return;
     }
 
+    update_manager_status();
+
     uint32_t tnow_ms = AP_HAL::millis();
 
     if ((tnow_ms - _checks_tlast_ms) >= 1000) { // do every 1 sec
         _checks_tlast_ms = tnow_ms;
         update_checks();
-
-        if (_protocol == Protocol::GIMBAL_DEVICE) {
-            gcs().send_message(MSG_GIMBAL_MANAGER_STATUS); // send it voluntarily
-        }
     }
 
     if ((tnow_ms - _send_system_time_tlast_ms) >= 5000) { // every 5 sec is really plenty
@@ -1323,6 +1321,49 @@ bool AP_Mount_STorM32_MAVLink::healthy() const
     _armingchecks_running = 2; // to signal that ArduPilot arming check mechanism is active
 
     return _healthy;
+}
+
+
+//------------------------------------------------------
+// Gimbal manager status function
+//------------------------------------------------------
+
+void AP_Mount_STorM32_MAVLink::update_manager_status()
+{
+    // check if status has changed
+    if (_manager_status.flags_last != get_gimbal_manager_flags() ||
+        _manager_status.primary_sysid_last != mavlink_control_id.sysid ||
+        _manager_status.primary_compid_last != mavlink_control_id.compid) {
+
+        _manager_status.flags_last = get_gimbal_manager_flags();
+        _manager_status.primary_sysid_last = mavlink_control_id.sysid;
+        _manager_status.primary_compid_last = mavlink_control_id.compid;
+
+        _manager_status.fast = 3;
+    }
+
+    uint32_t tnow_ms = AP_HAL::millis();
+
+    if (!_manager_status.fast) {
+        if ((tnow_ms - _manager_status.tlast_ms) >= 2000) { // do every 2 sec
+            _manager_status.tlast_ms = tnow_ms;
+            gcs().send_message(MSG_GIMBAL_MANAGER_STATUS);
+        }
+        return;
+    }
+
+    // we are in fast response
+
+    if (_manager_status.fast >= 3) { // status has just changed, so react immediately
+        _manager_status.fast = 2;
+        _manager_status.tlast_ms = tnow_ms;
+        gcs().send_message(MSG_GIMBAL_MANAGER_STATUS);
+    } else
+    if ((tnow_ms - _manager_status.tlast_ms) >= 250) { // do every 250 ms
+        _manager_status.fast--;
+        _manager_status.tlast_ms = tnow_ms;
+        gcs().send_message(MSG_GIMBAL_MANAGER_STATUS);
+    }
 }
 
 
