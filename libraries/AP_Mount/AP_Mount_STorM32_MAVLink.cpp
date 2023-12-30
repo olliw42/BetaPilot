@@ -1222,6 +1222,17 @@ void AP_Mount_STorM32_MAVLink::update_checks()
 {
 char txt[255];
 
+    if (!(AP::arming().get_enabled_checks() & AP_Arming::ArmingChecks::ARMING_CHECK_ALL ||
+          AP::arming().get_enabled_checks() & AP_Arming::ArmingChecks::ARMING_CHECK_CAMERA)) {
+        if (_initialised && _gimbal_prearmchecks_ok) {
+            if (!_prearmchecks_passed && !_request_send_banner_ms) { // state changed and not going to send soon anyways
+                GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks passed", _instance+1);
+            }
+            _prearmchecks_passed = true;
+        }
+        return;
+    }
+
     if (_armingchecks_running) _armingchecks_running--; // count down
 
     if (_prearmchecks_passed && AP::notify().flags.armed &&

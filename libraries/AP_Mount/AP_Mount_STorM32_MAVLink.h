@@ -235,7 +235,7 @@ private:
     uint32_t _gimbal_error_flags;   // error flags in custom_mode field of the HEARTBEAT message (restricted to 16 bits)
     bool _gimbal_prearmchecks_ok;   // true when the gimbal stops reporting prearm fail in the HEARTBEAT message
 
-    mutable uint8_t _armingchecks_running;     // true when ARMING_CHECK_ALL or ARMING_CHECK_CAMERA set, we know from healty()
+    mutable uint8_t _armingchecks_running; // true when ARMING_CHECK_ALL,ARMING_CHECK_CAMERA set and running, we know from healthy()
     bool _healthy;
 
     bool _prearmchecks_passed;      // becomes true when all checks were passed once at startup
@@ -267,7 +267,7 @@ private:
 
     struct {
         uint16_t received_flags;    // obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
-        uint32_t received_failure_flags;   // obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
+        uint32_t received_failure_flags; // obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
         uint32_t received_tlast_ms; // time last GIMBAL_DEVICE_ATTITUDE_STATUS was received (used for health reporting)
     } _device_status;
 
