@@ -49,9 +49,6 @@ public:
 
     // return true if rssi reading is enabled
     bool enabled() const { return RssiType(rssi_type.get()) != RssiType::TYPE_DISABLED; }
-//OW RADIOLINK
-    bool enabled(RssiType type) const { return RssiType(rssi_type.get()) == type; }
-//OWEND
 
     // Read the receiver RSSI value as a float 0.0f - 1.0f.
     // 0.0 represents weakest signal, 1.0 represents maximum signal.

@@ -58,17 +58,20 @@ void AP_RCProtocol_MAVLinkRadio::update_radio_link_stats(const mavlink_radio_lin
     }
 
     if (packet->flags & RADIO_LINK_STATS_FLAGS_RSSI_DBM) {
-        // rssi is in dBm, convert to AP rssi using the same logic as in CRSF driver
-        // AP rssi: -1 for unknown, 0 for no link, 255 for maximum link
-        if (_rssi < 50) {
+        // rssi is in negative dBm, 255 = unknown, 254 = no link connection, 0...253 = 0...-253 dBm
+        // convert to AP rssi using the same logic as in CRSF driver
+        // AP rssi: -1 for unknown, 0 for no link connection, 255 for maximum link
+        if (_rssi == 254) {
+            rssi = 0; // no connection
+        } else if (_rssi < 50) {
             rssi = 255;
         } else if (_rssi > 120) {
-            rssi = 0;
+            rssi = 1; // connection, but very low rssi
         } else {
-            rssi = int16_t(roundf((1.0f - (_rssi - 50.0f) / 70.0f) * 255.0f));
+            rssi = int16_t(roundf((1.0f - ((float)_rssi - 50.0f) / 70.0f) * 255.0f));
         }
     } else {
-        // _rssi is 0..254, scale it to 0..255 with rounding
+        // _rssi is in mavlink scale 0..254, scale it to 0..255 with rounding
         rssi = (_rssi * 255 + 127) / 254;
     }
 }
