@@ -398,35 +398,43 @@ void AP_Logger::Write_Radio(const mavlink_radio_t &packet)
 }
 
 //OW RADIOLINK
-void AP_Logger::Write_RadioLinkStats(const mavlink_radio_link_stats_t &packet)
+void AP_Logger::Write_RadioLinkStats(const mavlink_radio_link_stats_dev_t &packet)
 {
-    const struct log_RadioLinkStats pktrx{
+    const struct log_RadioLinkStatsRx pktrx{
         LOG_PACKET_HEADER_INIT(LOG_RADIO_LINK_STATS_MSG_RX),
-        time_us      : AP_HAL::micros64(),
-        LQ                  : packet.rx_LQ,
+        time_us             : AP_HAL::micros64(),
+        LQrc                : packet.rx_LQ_rc,
+        LQser               : packet.rx_LQ_ser,
         rssi1               : packet.rx_rssi1,
         snr1                : packet.rx_snr1,
         rssi2               : packet.rx_rssi2,
         snr2                : packet.rx_snr2,
         receive_antenna     : packet.rx_receive_antenna,
         transmit_antenna    : packet.rx_transmit_antenna,
-        flags               : packet.flags
     };
     WriteBlock(&pktrx, sizeof(pktrx));
 
-    const struct log_RadioLinkStats pkttx{
+    const struct log_RadioLinkStatsTx pkttx{
         LOG_PACKET_HEADER_INIT(LOG_RADIO_LINK_STATS_MSG_TX),
-        time_us      : AP_HAL::micros64(),
-        LQ                  : packet.tx_LQ,
+        time_us             : AP_HAL::micros64(),
+        LQser               : packet.tx_LQ_ser,
         rssi1               : packet.tx_rssi1,
         snr1                : packet.tx_snr1,
         rssi2               : packet.tx_rssi2,
         snr2                : packet.tx_snr2,
         receive_antenna     : packet.tx_receive_antenna,
         transmit_antenna    : packet.tx_transmit_antenna,
-        flags               : packet.flags
     };
     WriteBlock(&pkttx, sizeof(pkttx));
+
+    const struct log_RadioLinkStatsExt pktext{
+        LOG_PACKET_HEADER_INIT(LOG_RADIO_LINK_STATS_MSG_EXT),
+        time_us              : AP_HAL::micros64(),
+        tx_power             : packet.tx_power,
+        rx_power             : packet.rx_power,
+        flags                : packet.flags
+    };
+    WriteBlock(&pktext, sizeof(pktext));
 }
 //OWEND
 

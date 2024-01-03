@@ -252,7 +252,7 @@ public:
     void Write_Power(void);
     void Write_Radio(const mavlink_radio_t &packet);
 //OW RADIOLINK
-    void Write_RadioLinkStats(const mavlink_radio_link_stats_t &packet);
+    void Write_RadioLinkStats(const mavlink_radio_link_stats_dev_t &packet);
 //OWEND
     void Write_Message(const char *message);
     void Write_MessageF(const char *fmt, ...);

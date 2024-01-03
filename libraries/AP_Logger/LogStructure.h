@@ -396,16 +396,36 @@ struct PACKED log_Radio {
 };
 
 //OW RADIOLINK
-struct PACKED log_RadioLinkStats {
+struct PACKED log_RadioLinkStatsRx {
     LOG_PACKET_HEADER;
     uint64_t time_us;
-    uint8_t LQ;
+    uint8_t LQrc;
+    uint8_t LQser;
     uint8_t rssi1;
     int8_t snr1;
     uint8_t rssi2;
     int8_t snr2;
     uint8_t receive_antenna;
     uint8_t transmit_antenna;
+};
+
+struct PACKED log_RadioLinkStatsTx {
+    LOG_PACKET_HEADER;
+    uint64_t time_us;
+    uint8_t LQser;
+    uint8_t rssi1;
+    int8_t snr1;
+    uint8_t rssi2;
+    int8_t snr2;
+    uint8_t receive_antenna;
+    uint8_t transmit_antenna;
+};
+
+struct PACKED log_RadioLinkStatsExt {
+    LOG_PACKET_HEADER;
+    uint64_t time_us;
+    int8_t tx_power;
+    int8_t rx_power;
     uint8_t flags;
 };
 //OWEND
@@ -1252,10 +1272,12 @@ LOG_STRUCTURE_FROM_PRECLAND \
       "MAVC", "QBBBBBHffffiifBB","TimeUS,TS,TC,SS,SC,Fr,Cmd,P1,P2,P3,P4,X,Y,Z,Res,WL", "s---------------", "F---------------" }, \
     { LOG_RADIO_MSG, sizeof(log_Radio), \
       "RAD", "QBBBBBHH", "TimeUS,RSSI,RemRSSI,TxBuf,Noise,RemNoise,RxErrors,Fixed", "s-------", "F-------", true }, \
-    { LOG_RADIO_LINK_STATS_MSG_RX, sizeof(log_RadioLinkStats), \
-      "RDRX", "QBBbBbBBB", "TimeUS,rxLQ,rxRssi1,rxSnr1,rxRssi2,rxSnr2,rxRAnt,rxTAnt,flags", "s--------", "F--------", true }, \
-    { LOG_RADIO_LINK_STATS_MSG_TX, sizeof(log_RadioLinkStats), \
-      "RDTX", "QBBbBbBBB", "TimeUS,txLQ,txRssi1,txSnr1,txRssi2,txSnr2,txRAnt,txTAnt,flags", "s--------", "F--------", true }, \
+    { LOG_RADIO_LINK_STATS_MSG_RX, sizeof(log_RadioLinkStatsRx), \
+      "RDRX", "QBBBbBbBB", "TimeUS,rxLQrc,rxLQser,rxRssi1,rxSnr1,rxRssi2,rxSnr2,rxRAnt,rxTAnt", "s%%------", "F--------", true }, \
+    { LOG_RADIO_LINK_STATS_MSG_TX, sizeof(log_RadioLinkStatsTx), \
+      "RDTX", "QBBbBbBB", "TimeUS,txLQser,txRssi1,txSnr1,txRssi2,txSnr2,txRAnt,txTAnt", "s%------", "F-------", true }, \
+    { LOG_RADIO_LINK_STATS_MSG_EXT, sizeof(log_RadioLinkStatsExt), \
+      "RDTR", "QbbB", "TimeUS,txPwr,rxPwr,flags", "s---", "F---", true }, \
 LOG_STRUCTURE_FROM_CAMERA \
 LOG_STRUCTURE_FROM_MOUNT \
     { LOG_ARSP_MSG, sizeof(log_ARSP), "ARSP",  "QBffcffBBffB", "TimeUS,I,Airspeed,DiffPress,Temp,RawPress,Offset,U,H,Hp,TR,Pri", "s#nPOPP-----", "F-00B00-----", true }, \
@@ -1435,6 +1457,7 @@ enum LogMessages : uint8_t {
 //OW RADIOLINK
     LOG_RADIO_LINK_STATS_MSG_RX,
     LOG_RADIO_LINK_STATS_MSG_TX,
+    LOG_RADIO_LINK_STATS_MSG_EXT,
 //OWEND
 
     _LOG_LAST_MSG_

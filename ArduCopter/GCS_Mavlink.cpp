@@ -1492,7 +1492,7 @@ void GCS_MAVLINK_Copter::handleMessage(const mavlink_message_t &msg)
         break;
     }
 //OW RADIOLINK
-    case MAVLINK_MSG_ID_RADIO_LINK_STATS:
+    case MAVLINK_MSG_ID_RADIO_LINK_STATS_DEV:
         handle_radio_link_stats(msg, copter.should_log(MASK_LOG_PM));
         break;
 //OWEND

@@ -554,7 +554,7 @@ bool AP_RCProtocol::protocol_enabled(rcprotocol_t protocol) const
 }
 
 //OW RADIOLINK
-void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_t* packet)
+void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_dev_t* packet)
 {
     // receiving this message is also used to check if the receiver is present
     // so let's first do the receiver detection
@@ -582,7 +582,7 @@ void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_t* 
     }
 };
 
-void AP_RCProtocol::handle_radio_link_stats(const mavlink_radio_link_stats_t* packet)
+void AP_RCProtocol::handle_radio_link_stats(const mavlink_radio_link_stats_dev_t* packet)
 {
 // can be handled like CRSF (= receiver) or like RADIO_STATUS (= telemetry)
 // the user does decide it via RssiType::RECEIVER or RssiType::TELEMETRY_RADIO_RSSI setting

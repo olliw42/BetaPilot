@@ -1234,7 +1234,7 @@ void GCS_MAVLINK_Plane::handleMessage(const mavlink_message_t &msg)
         break;
     }
 //OW RADIOLINK
-    case MAVLINK_MSG_ID_RADIO_LINK_STATS:
+    case MAVLINK_MSG_ID_RADIO_LINK_STATS_DEV:
         handle_radio_link_stats(msg, plane.should_log(MASK_LOG_PM));
         break;
 //OWEND

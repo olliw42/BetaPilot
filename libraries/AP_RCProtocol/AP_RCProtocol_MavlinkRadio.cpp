@@ -15,7 +15,7 @@ AP_RCProtocol_MAVLinkRadio::AP_RCProtocol_MAVLinkRadio(AP_RCProtocol &_frontend)
     AP_RCProtocol_Backend(_frontend)
 {}
 
-void AP_RCProtocol_MAVLinkRadio::update_radio_rc_channels(const mavlink_radio_rc_channels_t* packet)
+void AP_RCProtocol_MAVLinkRadio::update_radio_rc_channels(const mavlink_radio_rc_channels_dev_t* packet)
 {
     uint8_t count = packet->count;
     if (count >= MAX_RCIN_CHANNELS) count = MAX_RCIN_CHANNELS;
@@ -32,23 +32,33 @@ void AP_RCProtocol_MAVLinkRadio::update_radio_rc_channels(const mavlink_radio_rc
     add_input(count, rc_chan, failsafe);
 }
 
-void AP_RCProtocol_MAVLinkRadio::update_radio_link_stats(const mavlink_radio_link_stats_t* packet)
+void AP_RCProtocol_MAVLinkRadio::update_radio_link_stats(const mavlink_radio_link_stats_dev_t* packet)
 {
     // update the backend's fields
 
-    rx_link_quality = (packet->rx_LQ != UINT8_MAX) ? packet->rx_LQ : -1;
+    if (packet->rx_LQ_rc != UINT8_MAX) {
+        rx_link_quality = packet->rx_LQ_rc;
+    } else
+    if (packet->rx_LQ_ser != UINT8_MAX) {
+        rx_link_quality = packet->rx_LQ_ser;
+    } else {
+        rx_link_quality = -1;
+    }
 
     int32_t _rssi = -1;
 
-    if (packet->rx_receive_antenna == UINT8_MAX || packet->rx_rssi2 == UINT8_MAX) {
-        // no diversity
+    // comment: according to standard, receive_antenna = UINT8_MAX indicates no diversity
+    // but the code also catches the case that it's indicated by receive_antenna = 0 & rssi2 = UINT8_MAX
+
+    if (packet->rx_receive_antenna == UINT8_MAX) {
+        // no receive diversity, receiving on antenna 0
         if (packet->rx_rssi1 != UINT8_MAX) _rssi = packet->rx_rssi1;
     } else
     if (packet->rx_receive_antenna == 1) {
-        // diversity, receiving on antenna 1
+        // receive diversity, receiving on antenna 1
         if (packet->rx_rssi2 != UINT8_MAX) _rssi = packet->rx_rssi2; // UINT8_MAX should not happen, but play it safe
     } else {
-        // diversity, receiving on antenna 0
+        // receive diversity, receiving on antenna 0
         if (packet->rx_rssi1 != UINT8_MAX) _rssi = packet->rx_rssi1; // UINT8_MAX should not happen, but play it safe
     }
 

@@ -208,8 +208,8 @@ public:
 
 //OW RADIOLINK
     // handle mavlink radio
-    void handle_radio_rc_channels(const mavlink_radio_rc_channels_t* packet);
-    void handle_radio_link_stats(const mavlink_radio_link_stats_t* packet);
+    void handle_radio_rc_channels(const mavlink_radio_rc_channels_dev_t* packet);
+    void handle_radio_link_stats(const mavlink_radio_link_stats_dev_t* packet);
 //OWEND
 
 private:
