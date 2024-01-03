@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION "v059f"
+#define BETAPILOTVERSION "v060a"
 #define DATEOFBASEBRANCH "20231230"
 
 /*
@@ -65,7 +65,6 @@ Libraries:
 - AP_Mount.h:           7x
 - AP_RCProtocol.cpp:        4x RADIOLINK
 - AP_RCProtocol.h:          4x RADIOLINK
-- AP_RSSI.h:                1x RADIOLINK
 - GCS_Common.cpp:       2x  3x RADIOLINK
 - GCS_MAVLink.h:        2x
 - GCS.h:                1x  1x RADIOLINK
