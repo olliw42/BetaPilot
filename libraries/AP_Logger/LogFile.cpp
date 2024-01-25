@@ -410,7 +410,7 @@ void AP_Logger::Write_RadioLinkStats(const mavlink_radio_link_stats_dev_t &packe
         rssi2               : packet.rx_rssi2,
         snr2                : packet.rx_snr2,
         receive_antenna     : packet.rx_receive_antenna,
-        transmit_antenna    : packet.rx_transmit_antenna,
+        transmit_antenna    : packet.rx_transmit_antenna
     };
     WriteBlock(&pktrx, sizeof(pktrx));
 
@@ -424,17 +424,9 @@ void AP_Logger::Write_RadioLinkStats(const mavlink_radio_link_stats_dev_t &packe
         snr2                : packet.tx_snr2,
         receive_antenna     : packet.tx_receive_antenna,
         transmit_antenna    : packet.tx_transmit_antenna,
+        flags               : packet.flags
     };
     WriteBlock(&pkttx, sizeof(pkttx));
-
-    const struct log_RadioLinkStatsExt pktext{
-        LOG_PACKET_HEADER_INIT(LOG_RADIO_LINK_STATS_MSG_EXT),
-        time_us              : AP_HAL::micros64(),
-        tx_power             : packet.tx_power,
-        rx_power             : packet.rx_power,
-        flags                : packet.flags
-    };
-    WriteBlock(&pktext, sizeof(pktext));
 }
 //OWEND
 

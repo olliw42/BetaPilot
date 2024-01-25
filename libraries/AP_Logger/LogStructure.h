@@ -419,13 +419,6 @@ struct PACKED log_RadioLinkStatsTx {
     int8_t snr2;
     uint8_t receive_antenna;
     uint8_t transmit_antenna;
-};
-
-struct PACKED log_RadioLinkStatsExt {
-    LOG_PACKET_HEADER;
-    uint64_t time_us;
-    int8_t tx_power;
-    int8_t rx_power;
     uint8_t flags;
 };
 //OWEND
@@ -1273,11 +1266,9 @@ LOG_STRUCTURE_FROM_PRECLAND \
     { LOG_RADIO_MSG, sizeof(log_Radio), \
       "RAD", "QBBBBBHH", "TimeUS,RSSI,RemRSSI,TxBuf,Noise,RemNoise,RxErrors,Fixed", "s-------", "F-------", true }, \
     { LOG_RADIO_LINK_STATS_MSG_RX, sizeof(log_RadioLinkStatsRx), \
-      "RDRX", "QBBBbBbBB", "TimeUS,rxLQrc,rxLQser,rxRssi1,rxSnr1,rxRssi2,rxSnr2,rxRAnt,rxTAnt", "s%%------", "F--------", true }, \
+      "RDRX", "QBBBbBbBB", "TimeUS,rxLQrc,rxLQser,rxRssi1,rxSnr1,rxRssi2,rxSnr2,rxRAn,rxTAn", "s%%------", "F--------", true }, \
     { LOG_RADIO_LINK_STATS_MSG_TX, sizeof(log_RadioLinkStatsTx), \
-      "RDTX", "QBBbBbBB", "TimeUS,txLQser,txRssi1,txSnr1,txRssi2,txSnr2,txRAnt,txTAnt", "s%------", "F-------", true }, \
-    { LOG_RADIO_LINK_STATS_MSG_EXT, sizeof(log_RadioLinkStatsExt), \
-      "RDTR", "QbbB", "TimeUS,txPwr,rxPwr,flags", "s---", "F---", true }, \
+      "RDTX", "QBBbBbBBB", "TimeUS,txLQser,txRssi1,txSnr1,txRssi2,txSnr2,txRAn,txTAn,flags", "s%-------", "F--------", true }, \
 LOG_STRUCTURE_FROM_CAMERA \
 LOG_STRUCTURE_FROM_MOUNT \
     { LOG_ARSP_MSG, sizeof(log_ARSP), "ARSP",  "QBffcffBBffB", "TimeUS,I,Airspeed,DiffPress,Temp,RawPress,Offset,U,H,Hp,TR,Pri", "s#nPOPP-----", "F-00B00-----", true }, \

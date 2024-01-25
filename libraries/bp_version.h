@@ -1,10 +1,10 @@
 #pragma once
 
-#define BETAPILOTVERSION "v060a"
+#define BETAPILOTVERSION "v060c"
 #define DATEOFBASEBRANCH "20231230"
 
 /*
-search for //OW to find all changes
+search for //OW to find all changes  THR_MINSPD THR_SLEW SUPP_MAN
 
 on-top features:
 - RADIO_LINK (OW RADIOLINK)
