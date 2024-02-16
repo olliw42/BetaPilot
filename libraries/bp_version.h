@@ -1,10 +1,10 @@
 #pragma once
 
-#define BETAPILOTVERSION "v060d"
+#define BETAPILOTVERSION "v060e"
 #define DATEOFBASEBRANCH "20240125"
 
 /*
-search for //OW to find all changes  THR_MINSPD THR_SLEW SUPP_MAN
+search for //OW to find all changes  THR_MINSPD THR_SLEW SUPP_MAN waiting for rudder release
 
 on-top features:
 - RADIO_LINK (OW RADIOLINK)
