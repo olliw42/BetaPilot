@@ -15,10 +15,10 @@
 class AP_RCProtocol_MAVLinkRadio : public AP_RCProtocol_Backend {
 public:
 
-    AP_RCProtocol_MAVLinkRadio(AP_RCProtocol &_frontend);
+    using AP_RCProtocol_Backend::AP_RCProtocol_Backend;
 
     // update from mavlink messages
-    void update_radio_rc_channels(const mavlink_radio_rc_channels_dev_t* packet) override;
+    void update_radio_rc_channels(const mavlink_radio_rc_channels_t* packet) override;
     void update_radio_link_stats(const mavlink_radio_link_stats_dev_t* packet) override;
 };
 

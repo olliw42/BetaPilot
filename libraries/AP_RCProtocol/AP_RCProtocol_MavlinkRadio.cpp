@@ -10,15 +10,9 @@
 
 #include "AP_RCProtocol_MAVLinkRadio.h"
 
-// constructor
-AP_RCProtocol_MAVLinkRadio::AP_RCProtocol_MAVLinkRadio(AP_RCProtocol &_frontend) :
-    AP_RCProtocol_Backend(_frontend)
-{}
-
-void AP_RCProtocol_MAVLinkRadio::update_radio_rc_channels(const mavlink_radio_rc_channels_dev_t* packet)
+void AP_RCProtocol_MAVLinkRadio::update_radio_rc_channels(const mavlink_radio_rc_channels_t* packet)
 {
-    uint8_t count = packet->count;
-    if (count >= MAX_RCIN_CHANNELS) count = MAX_RCIN_CHANNELS;
+    const uint8_t count = MIN(packet->count, MAX_RCIN_CHANNELS);
 
     uint16_t rc_chan[MAX_RCIN_CHANNELS];
     for (uint8_t i = 0; i < count; i++) {
@@ -67,7 +61,7 @@ void AP_RCProtocol_MAVLinkRadio::update_radio_link_stats(const mavlink_radio_lin
         return;
     }
 
-    if (packet->flags & RADIO_LINK_STATS_FLAGS_RSSI_DBM) {
+    if (packet->flags & RADIO_LINK_STATS_FLAGS_RSSI_DBM_DEV) {
         // rssi is in negative dBm, 255 = unknown, 254 = no link connection, 0...253 = 0...-253 dBm
         // convert to AP rssi using the same logic as in CRSF driver
         // AP rssi: -1 for unknown, 0 for no link connection, 255 for maximum link

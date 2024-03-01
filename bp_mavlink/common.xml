@@ -1919,6 +1919,16 @@
         <param index="7">Reserved (set to 0)</param>
       </entry>
       <!-- END of UAVCAN range -->
+      <entry value="5300" name="MAV_CMD_DO_SET_SAFETY_SWITCH_STATE" hasLocation="false" isDestination="false">
+        <description>Change state of safety switch.</description>
+        <param index="1" label="Desired State" enum="SAFETY_SWITCH_STATE">New safety switch state.</param>
+        <param index="2">Empty.</param>
+        <param index="3">Empty.</param>
+        <param index="4">Empty</param>
+        <param index="5">Empty.</param>
+        <param index="6">Empty.</param>
+        <param index="7">Empty.</param>
+      </entry>
       <entry value="10001" name="MAV_CMD_DO_ADSB_OUT_IDENT" hasLocation="false" isDestination="false">
         <description>Trigger the start of an ADSB-out IDENT. This should only be used when requested to do so by an Air Traffic Controller in controlled airspace. This starts the IDENT which is then typically held for 18 seconds by the hardware per the Mode A, C, and S transponder spec.</description>
         <param index="1">Reserved (set to 0)</param>
@@ -4123,6 +4133,17 @@
         <description>Mission has executed all mission items.</description>
       </entry>
     </enum>
+    <enum name="SAFETY_SWITCH_STATE">
+      <description>
+	Possible safety switch states.
+      </description>
+      <entry value="0" name="SAFETY_SWITCH_STATE_SAFE">
+        <description>Safety switch is engaged and vehicle should be safe to approach.</description>
+      </entry>
+      <entry value="1" name="SAFETY_SWITCH_STATE_DANGEROUS">
+        <description>Safety switch is NOT engaged and motors, propellers and other actuators should be considered active.</description>
+      </entry>
+    </enum>
   </enums>
   <messages>
     <message id="1" name="SYS_STATUS">
@@ -4914,8 +4935,8 @@
       <description>Optical flow from a flow sensor (e.g. optical mouse sensor)</description>
       <field type="uint64_t" name="time_usec" units="us">Timestamp (UNIX Epoch time or time since system boot). The receiving end can infer timestamp format (since 1.1.1970 or since system boot) by checking for the magnitude of the number.</field>
       <field type="uint8_t" name="sensor_id">Sensor ID</field>
-      <field type="int16_t" name="flow_x" units="dpix">Flow in x-sensor direction</field>
-      <field type="int16_t" name="flow_y" units="dpix">Flow in y-sensor direction</field>
+      <field type="int16_t" name="flow_x" units="rad/s">Flow rate around X-axis (deprecated; use flow_rate_x)</field>
+      <field type="int16_t" name="flow_y" units="rad/s">Flow rate around Y-axis (deprecated; use flow_rate_y)</field>
       <field type="float" name="flow_comp_m_x" units="m/s">Flow in x-sensor direction, angular-speed compensated</field>
       <field type="float" name="flow_comp_m_y" units="m/s">Flow in y-sensor direction, angular-speed compensated</field>
       <field type="uint8_t" name="quality">Optical flow quality / confidence. 0: bad, 255: maximum quality</field>

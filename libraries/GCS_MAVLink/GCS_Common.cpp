@@ -4204,7 +4204,7 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
         break;
 //OW RADIOLINK
 #if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
-    case MAVLINK_MSG_ID_RADIO_RC_CHANNELS_DEV:
+    case MAVLINK_MSG_ID_RADIO_RC_CHANNELS:
         handle_radio_rc_channels(msg);
 #if HAL_MOUNT_ENABLED
         handle_mount_message(msg);
@@ -7002,15 +7002,12 @@ MAV_RESULT GCS_MAVLINK::handle_control_high_latency(const mavlink_command_int_t 
 
 //OW RADIOLINK
 #if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
-
 void GCS_MAVLINK::handle_radio_rc_channels(const mavlink_message_t &msg)
 {
-    mavlink_radio_rc_channels_dev_t packet;
-    mavlink_msg_radio_rc_channels_dev_decode(&msg, &packet);
+    mavlink_radio_rc_channels_t packet;
+    mavlink_msg_radio_rc_channels_decode(&msg, &packet);
 
-#if AP_RCPROTOCOL_ENABLED
     AP::RC().handle_radio_rc_channels(&packet);
-#endif
 }
 
 // AP_RSSI::RssiType::TELEMETRY_RADIO_RSSI -> rssi is taken from RADIO_STATUS
@@ -7020,9 +7017,7 @@ void GCS_MAVLINK::handle_radio_link_stats(const mavlink_message_t &msg)
     mavlink_radio_link_stats_dev_t packet;
     mavlink_msg_radio_link_stats_dev_decode(&msg, &packet);
 
-#if AP_RCPROTOCOL_ENABLED
     AP::RC().handle_radio_link_stats(&packet);
-#endif
 
 #if HAL_LOGGING_ENABLED
     // log link stats if logging Performance monitoring data
@@ -7031,7 +7026,6 @@ void GCS_MAVLINK::handle_radio_link_stats(const mavlink_message_t &msg)
     }
 #endif
 }
-
 #endif // AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
 //OWEND
 

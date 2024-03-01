@@ -609,7 +609,8 @@ bool AP_RCProtocol::protocol_enabled(rcprotocol_t protocol) const
 }
 
 //OW RADIOLINK
-void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_dev_t* packet)
+#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
+void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_t* packet)
 {
     // take a shortcut if protocol is known to be MAVLINK_RADIO
     if (_detected_protocol == AP_RCProtocol::MAVLINK_RADIO) {
@@ -638,6 +639,7 @@ void AP_RCProtocol::handle_radio_link_stats(const mavlink_radio_link_stats_dev_t
     // now update the backend
     backend[_detected_protocol]->update_radio_link_stats(packet);
 }
+#endif // AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
 //OWEND
 
 namespace AP {
