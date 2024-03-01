@@ -34,6 +34,9 @@
 #include "AP_RCProtocol_FPort2.h"
 #include "AP_RCProtocol_DroneCAN.h"
 #include "AP_RCProtocol_GHST.h"
+//OW RADIOLINK
+#include "AP_RCProtocol_MAVLinkRadio.h"
+//OWEND
 #include <AP_Math/AP_Math.h>
 #include <RC_Channel/RC_Channel.h>
 
@@ -88,6 +91,11 @@ void AP_RCProtocol::init()
 #if AP_RCPROTOCOL_GHST_ENABLED
     backend[AP_RCProtocol::GHST] = new AP_RCProtocol_GHST(*this);
 #endif
+//OW RADIOLINK
+#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
+    backend[AP_RCProtocol::MAVLINK_RADIO] = new AP_RCProtocol_MAVLinkRadio(*this);
+#endif
+//OWEND
 }
 
 AP_RCProtocol::~AP_RCProtocol()
@@ -423,6 +431,11 @@ bool AP_RCProtocol::new_input()
 #if AP_RCPROTOCOL_DRONECAN_ENABLED
         AP_RCProtocol::DRONECAN,
 #endif
+//OW RADIOLINK
+#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
+        AP_RCProtocol::MAVLINK_RADIO,
+#endif
+//OWEND
     };
     for (const auto protocol : pollable) {
         if (!detect_async_protocol(protocol)) {
@@ -555,6 +568,12 @@ const char *AP_RCProtocol::protocol_name_from_protocol(rcprotocol_t protocol)
     case GHST:
         return "GHST";
 #endif
+//OW RADIOLINK
+#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
+    case MAVLINK_RADIO:
+        return "MAVRadio";
+#endif
+//OWEND
     case NONE:
         break;
     }
@@ -588,6 +607,38 @@ bool AP_RCProtocol::protocol_enabled(rcprotocol_t protocol) const
     }
     return ((1U<<(uint8_t(protocol)+1)) & rc_protocols_mask) != 0;
 }
+
+//OW RADIOLINK
+void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_dev_t* packet)
+{
+    // take a shortcut if protocol is known to be MAVLINK_RADIO
+    if (_detected_protocol == AP_RCProtocol::MAVLINK_RADIO) {
+        backend[_detected_protocol]->update_radio_rc_channels(packet);
+        return;
+    }
+
+    for (uint8_t i = 0; i < ARRAY_SIZE(backend); i++) {
+        if (backend[i] != nullptr) {
+            backend[i]->update_radio_rc_channels(packet);
+        }
+    }
+};
+
+void AP_RCProtocol::handle_radio_link_stats(const mavlink_radio_link_stats_dev_t* packet)
+{
+// can be handled like CRSF (= receiver) or like RADIO_STATUS (= telemetry)
+// the user does decide it via RssiType::RECEIVER or RssiType::TELEMETRY_RADIO_RSSI setting
+// so isn't decided here, but is decide somewhere higher up in the outside
+// this here is needed only in case the user wants RssiType::RECEIVER
+
+    if (_detected_protocol != AP_RCProtocol::MAVLINK_RADIO) {
+        return;
+    }
+
+    // now update the backend
+    backend[_detected_protocol]->update_radio_link_stats(packet);
+}
+//OWEND
 
 namespace AP {
     AP_RCProtocol &RC()
