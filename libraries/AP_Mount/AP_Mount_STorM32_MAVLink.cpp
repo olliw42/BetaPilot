@@ -676,16 +676,9 @@ void AP_Mount_STorM32_MAVLink::handle_message_extra(const mavlink_message_t &msg
     }
 
     // listen to RADIO_RC_CHANNELS messages to stop sending RC_CHANNELS
-#ifdef MAVLINK_MSG_ID_RADIO_RC_CHANNELS
-    if (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS) { // 60045
+    if (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS) {
         _got_radio_rc_channels = true;
     }
-#endif
-#ifdef MAVLINK_MSG_ID_RADIO_RC_CHANNELS_DEV
-    if (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS_DEV) {
-        _got_radio_rc_channels = true;
-    }
-#endif
 
     // this msg is not from our gimbal
     if (msg.sysid != _sysid || msg.compid != _compid) {

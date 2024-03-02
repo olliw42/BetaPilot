@@ -46,8 +46,10 @@ public:
 
 //OW RADIOLINK
     // update from mavlink messages
+#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
     virtual void update_radio_rc_channels(const mavlink_radio_rc_channels_t* packet) {}
     virtual void update_radio_link_stats(const mavlink_radio_link_stats_dev_t* packet) {}
+#endif
 //OWEND
 
     // get number of frames, ignoring failsafe

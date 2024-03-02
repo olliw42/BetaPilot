@@ -41,19 +41,19 @@ void AP_RCProtocol_MAVLinkRadio::update_radio_link_stats(const mavlink_radio_lin
 
     int32_t _rssi = -1;
 
-    // comment: according to standard, receive_antenna = UINT8_MAX indicates no diversity
-    // but the code also catches the case that it's indicated by receive_antenna = 0 & rssi2 = UINT8_MAX
-
-    if (packet->rx_receive_antenna == UINT8_MAX) {
-        // no receive diversity, receiving on antenna 0
-        if (packet->rx_rssi1 != UINT8_MAX) _rssi = packet->rx_rssi1;
-    } else
-    if (packet->rx_receive_antenna == 1) {
-        // receive diversity, receiving on antenna 1
-        if (packet->rx_rssi2 != UINT8_MAX) _rssi = packet->rx_rssi2; // UINT8_MAX should not happen, but play it safe
+    if (packet->rx_receive_antenna > 0) { // should be 1, but just always assume antenna1 is meant
+        // receiving on antenna 1
+        if (packet->rx_rssi2 != UINT8_MAX) {
+            _rssi = packet->rx_rssi2;
+        } else
+        if (packet->rx_rssi1 != UINT8_MAX) { // value is stored in rx_rssi1
+            _rssi = packet->rx_rssi1;
+        }
     } else {
-        // receive diversity, receiving on antenna 0
-        if (packet->rx_rssi1 != UINT8_MAX) _rssi = packet->rx_rssi1; // UINT8_MAX should not happen, but play it safe
+        // receiving on antenna 0
+        if (packet->rx_rssi1 != UINT8_MAX) {
+            _rssi = packet->rx_rssi1;
+        }
     }
 
     if (_rssi == -1) { // no rssi value set

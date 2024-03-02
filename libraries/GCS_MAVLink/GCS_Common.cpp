@@ -4099,11 +4099,6 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
     case MAVLINK_MSG_ID_RADIO_STATUS:
         handle_radio_status(msg);
         break;
-//OW RADIOLINK
-    case MAVLINK_MSG_ID_RADIO_LINK_STATS_DEV:
-        handle_radio_link_stats(msg);
-        break;
-//OWEND
 
 #if AP_MAVLINK_MSG_SERIAL_CONTROL_ENABLED
     case MAVLINK_MSG_ID_SERIAL_CONTROL:
@@ -4209,6 +4204,9 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
 #if HAL_MOUNT_ENABLED
         handle_mount_message(msg);
 #endif
+        break;
+    case MAVLINK_MSG_ID_RADIO_LINK_STATS_DEV:
+        handle_radio_link_stats(msg);
         break;
 #endif
 //OWEND

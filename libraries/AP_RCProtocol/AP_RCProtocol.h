@@ -20,7 +20,9 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Common/AP_Common.h>
+#if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
 #include <GCS_MAVLink/GCS_MAVLink.h>
+#endif
 
 #define MAX_RCIN_CHANNELS 18
 #define MIN_RCIN_CHANNELS  5
