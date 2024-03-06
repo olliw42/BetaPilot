@@ -1,7 +1,7 @@
 #pragma once
 
 #define BETAPILOTVERSION "v060f"
-#define DATEOFBASEBRANCH "20240301"
+#define DATEOFBASEBRANCH "20240306"
 
 /*
 search for //OW to find all changes  THR_MINSPD THR_SLEW SUPP_MAN waiting for rudder release
