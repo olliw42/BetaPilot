@@ -386,6 +386,10 @@ bool AP_RCProtocol::detect_async_protocol(rcprotocol_t protocol)
         return false;
     }
 
+    if (!protocol_enabled(protocol)) {
+        return false;
+    }
+
     if (_detected_protocol == protocol) {
         // we are using this protocol already, see if there is new
         // data.  Caller will handle the case where we stop presenting
@@ -612,17 +616,11 @@ bool AP_RCProtocol::protocol_enabled(rcprotocol_t protocol) const
 #if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
 void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_t* packet)
 {
-    // take a shortcut if protocol is known to be MAVLINK_RADIO
-    if (_detected_protocol == AP_RCProtocol::MAVLINK_RADIO) {
-        backend[_detected_protocol]->update_radio_rc_channels(packet);
+    if (backend[AP_RCProtocol::MAVLINK_RADIO] == nullptr) {
         return;
     }
 
-    for (uint8_t i = 0; i < ARRAY_SIZE(backend); i++) {
-        if (backend[i] != nullptr) {
-            backend[i]->update_radio_rc_channels(packet);
-        }
-    }
+    backend[AP_RCProtocol::MAVLINK_RADIO]->update_radio_rc_channels(packet);
 };
 
 void AP_RCProtocol::handle_radio_link_stats(const mavlink_radio_link_stats_dev_t* packet)
@@ -637,7 +635,7 @@ void AP_RCProtocol::handle_radio_link_stats(const mavlink_radio_link_stats_dev_t
     }
 
     // now update the backend
-    backend[_detected_protocol]->update_radio_link_stats(packet);
+    backend[AP_RCProtocol::MAVLINK_RADIO]->update_radio_link_stats(packet);
 }
 #endif // AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
 //OWEND
