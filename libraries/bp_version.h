@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION "v060f"
+#define BETAPILOTVERSION "v060g"
 #define DATEOFBASEBRANCH "20240309"
 
 /*
