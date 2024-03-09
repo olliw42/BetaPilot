@@ -3961,6 +3961,11 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
 
     case MAVLINK_MSG_ID_HEARTBEAT: {
         handle_heartbeat(msg);
+//OW
+#if HAL_MOUNT_ENABLED
+        handle_mount_message(msg);
+#endif
+//OWEND
         break;
     }
 
@@ -4078,6 +4083,9 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
         handle_mount_message(msg);
         break;
 #endif
+//OW
+    case MAVLINK_MSG_ID_MOUNT_STATUS:
+//OWEND
     case MAVLINK_MSG_ID_GIMBAL_REPORT:
     case MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION:
     case MAVLINK_MSG_ID_GIMBAL_DEVICE_ATTITUDE_STATUS:
@@ -4196,7 +4204,17 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
 #if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
     case MAVLINK_MSG_ID_RADIO_RC_CHANNELS:
         handle_radio_rc_channels(msg);
+//OW
+#if HAL_MOUNT_ENABLED
+        handle_mount_message(msg);
+#endif
+//OWEND
         break;
+//OW RADIOLINK
+    case MAVLINK_MSG_ID_RADIO_LINK_STATS_DEV:
+        handle_radio_link_stats(msg);
+        break;
+//OWEND
 #endif
 #endif
 
@@ -4408,6 +4426,13 @@ void GCS_MAVLINK::send_banner()
         }
     }
 #endif
+
+//OW
+#if HAL_MOUNT_ENABLED
+    AP_Mount *mount = AP::mount();
+    if (mount != nullptr) mount->send_banner();
+#endif
+//OWEND
 }
 
 
@@ -6989,6 +7014,25 @@ void GCS_MAVLINK::handle_radio_rc_channels(const mavlink_message_t &msg)
 
     AP::RC().handle_radio_rc_channels(&packet);
 }
+
+//OW RADIOLINK
+// AP_RSSI::RssiType::TELEMETRY_RADIO_RSSI -> rssi is taken from RADIO_STATUS
+// AP_RSSI::RssiType::RECEIVER -> rssi is taken from RADIO_LINK_STATS
+void GCS_MAVLINK::handle_radio_link_stats(const mavlink_message_t &msg)
+{
+    mavlink_radio_link_stats_dev_t packet;
+    mavlink_msg_radio_link_stats_dev_decode(&msg, &packet);
+
+    AP::RC().handle_radio_link_stats(&packet);
+
+#if HAL_LOGGING_ENABLED
+    // log link stats if logging Performance monitoring data
+    if (AP::logger().should_log(log_radio_bit())) {
+        AP::logger().Write_RadioLinkStats(packet);
+    }
+#endif
+}
+//OWEND
 #endif // AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
 
 #endif  // HAL_GCS_ENABLED
