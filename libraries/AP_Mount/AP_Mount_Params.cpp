@@ -172,6 +172,10 @@ const AP_Param::GroupInfo AP_Mount_Params::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("_OPTIONS", 16, AP_Mount_Params, options, 0),
 
+//OW
+    AP_GROUPINFO("_ZFLAGS", 20, AP_Mount_Params, zflags, 0),
+//OWEND
+
     AP_GROUPEND
 };
 
