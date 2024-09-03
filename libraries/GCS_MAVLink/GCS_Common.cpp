@@ -6702,9 +6702,6 @@ void GCS::update_passthru(void)
     WITH_SEMAPHORE(_passthru.sem);
     uint32_t now = AP_HAL::millis();
     uint32_t baud1, baud2;
-//BRAD
-    uint8_t parity1 = 0, parity2 = 0;
-//BRADEND
     bool enabled = AP::serialmanager().get_passthru(_passthru.port1, _passthru.port2, _passthru.timeout_s,
                                                     baud1, baud2);
     if (enabled && !_passthru.enabled) {
@@ -6714,10 +6711,6 @@ void GCS::update_passthru(void)
         _passthru.last_port1_data_ms = now;
         _passthru.baud1 = baud1;
         _passthru.baud2 = baud2;
-//BRAD
-        _passthru.parity1 = parity1 = _passthru.port1->get_parity();
-        _passthru.parity2 = parity2 = _passthru.port2->get_parity();
-//BRADEND
         gcs().send_text(MAV_SEVERITY_INFO, "Passthru enabled");
         if (!_passthru.timer_installed) {
             _passthru.timer_installed = true;
@@ -6736,15 +6729,6 @@ void GCS::update_passthru(void)
             _passthru.port2->end();
             _passthru.port2->begin(baud2);
         }
-//BRAD
-        // Restore original parity
-        if (_passthru.parity1 != parity1) {
-            _passthru.port1->configure_parity(parity1);
-        }
-        if (_passthru.parity2 != parity2) {
-            _passthru.port2->configure_parity(parity2);
-        }
-//BRADEND
         gcs().send_text(MAV_SEVERITY_INFO, "Passthru disabled");
     } else if (enabled &&
                _passthru.timeout_s &&
@@ -6763,15 +6747,6 @@ void GCS::update_passthru(void)
             _passthru.port2->end();
             _passthru.port2->begin(baud2);
         }
-//BRAD
-        // Restore original parity
-        if (_passthru.parity1 != parity1) {
-            _passthru.port1->configure_parity(parity1);
-        }
-        if (_passthru.parity2 != parity2) {
-            _passthru.port2->configure_parity(parity2);
-        }
-//BRAD
         gcs().send_text(MAV_SEVERITY_INFO, "Passthru timed out");
     }
 }
@@ -6806,48 +6781,8 @@ void GCS::passthru_timer(void)
 
     // Check for requested Baud rates over USB
     uint32_t baud = _passthru.port1->get_usb_baud();
-//BRAD
-/*
-    if (_passthru.baud2 != baud && baud != 0) {
-        _passthru.baud2 = baud;
-        _passthru.port2->end();
-        _passthru.port2->begin_locked(baud, 0, 0, lock_key);
-    } */
-    uint8_t parity = _passthru.port1->get_usb_parity();
-    if (baud != 0) { // port1 is USB
-        if (_passthru.baud2 != baud) {
-            _passthru.baud2 = baud;
-            _passthru.port2->end();
-            _passthru.port2->begin_locked(baud, 0, 0, lock_key);
-        }
-        if (_passthru.parity2 != parity) {
-            _passthru.parity2 = parity;
-            _passthru.port2->configure_parity(parity);
-        }
-    }
-//BRADEND
 
     baud = _passthru.port2->get_usb_baud();
-//BRAD
-/*    
-    if (_passthru.baud1 != baud && baud != 0) {
-        _passthru.baud1 = baud;
-        _passthru.port1->end();
-        _passthru.port1->begin_locked(baud, 0, 0, lock_key);
-    } */
-    parity = _passthru.port2->get_usb_parity();
-    if (baud != 0) { // port2 is USB
-        if (_passthru.baud1 != baud) {
-            _passthru.baud1 = baud;
-            _passthru.port1->end();
-            _passthru.port1->begin_locked(baud, 0, 0, lock_key);
-        }
-        if (_passthru.parity1 != parity) {
-            _passthru.parity1 = parity;
-            _passthru.port1->configure_parity(parity);
-        }
-    }
-//BRADEND
 
     uint8_t buf[64];
 

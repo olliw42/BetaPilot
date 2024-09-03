@@ -38,9 +38,6 @@ public:
     bool is_initialized() override;
     bool tx_pending() override;
     uint32_t get_usb_baud() const override;
-//BRAD
-    uint8_t get_usb_parity() const override;
-//BRADEND
 
     // disable TX/RX pins for unusued uart
     void disable_rxtx(void) const override;
@@ -91,9 +88,6 @@ public:
     bool set_unbuffered_writes(bool on) override;
 
     void configure_parity(uint8_t v) override;
-//BRAD
-    uint8_t get_parity(void) override;
-//BRADEND
     void set_stop_bits(int n) override;
 
     /*
@@ -221,9 +215,6 @@ private:
     uint32_t _cr2_options;
     uint32_t _cr3_options;
     uint16_t _last_options;
-//BRAD
-    uint8_t parity;
-//BRADEND
 
     // half duplex control. After writing we throw away bytes for 4 byte widths to
     // prevent reading our own bytes back

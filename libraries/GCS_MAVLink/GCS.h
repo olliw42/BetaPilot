@@ -1340,10 +1340,6 @@ private:
         uint32_t last_port1_data_ms;
         uint32_t baud1;
         uint32_t baud2;
-//BRAD
-        uint8_t parity1;
-        uint8_t parity2;
-//BRADEND
         uint8_t timeout_s;
         HAL_Semaphore sem;
     } _passthru;

@@ -108,9 +108,6 @@ public:
     virtual enum flow_control get_flow_control(void) { return FLOW_CONTROL_DISABLE; }
 
     virtual void configure_parity(uint8_t v){};
-//BRAD    
-    virtual uint8_t get_parity(void){ return 0; }
-//BRADEND    
     virtual void set_stop_bits(int n){};
 
     /* unbuffered writes bypass the ringbuffer and go straight to the
@@ -187,10 +184,6 @@ public:
 
     // return true requested baud on USB port
     virtual uint32_t get_usb_baud(void) const { return 0; }
-//BRAD    
-    // return requested parity on USB port
-    virtual uint8_t get_usb_parity(void) const { return 0; }
-//BRADend
     // disable TX/RX pins for unusued uart
     virtual void disable_rxtx(void) const {}
 
