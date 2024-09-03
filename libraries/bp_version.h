@@ -1,19 +1,19 @@
 #pragma once
 
-#define BETAPILOTVERSION "v060h"
-#define DATEOFBASEBRANCH "20240525"
+#define BETAPILOTVERSION "v060i"
+#define DATEOFBASEBRANCH "20240903"
 
 /*
 search for //OW to find all changes  THR_MINSPD THR_SLEW SUPP_MAN waiting for rudder release
 
 on-top features:
 - RADIO_LINK (OW RADIOLINK)
-- GCS_serial_control: SERIAL_CONTROL 8E1 (OW SERIALCONTROL)
 - RC_Channel, AUX_FUNC: CAMERA_SET_MODE, CAMERA_TRIG_MODE (eq CAM_MODE_TOGGLE) (OW CAMERA)
 - Plane THR (OW THR_SUPP)
 
  remove zflags, not used, could use now options
-2024.05.25: v060
+ remove GCS_serial_control: SERIAL_CONTROL 8E1
+2024.09.03: v060
  upgraded to ArduPilot master 4.6.0-dev
 2023.11.06: v059
  upgraded to ArduPilot master 4.5.0-dev, mount revised significantly
