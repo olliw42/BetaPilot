@@ -359,6 +359,9 @@ public:
         k_param_autotune_options,
         k_param_takeoff_throttle_min,
         k_param_takeoff_options,
+//OW THR_SUPP
+        k_param_takeoff_throttle_suppress,
+//OWEND
     };
 
     AP_Int16 format_version;
@@ -469,6 +472,9 @@ public:
     AP_Int8 override_channel;
 #endif
     AP_Int16 gcs_pid_mask;
+//OW THR_SUPP
+    AP_Int8 takeoff_throttle_suppress;
+//OWEND
 };
 
 /*

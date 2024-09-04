@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<mavlink>
+  <include>all.xml</include>
+  <include>betapilot_missing_common.xml</include>
+  <include>olliw_dev.xml</include>
+  <messages/>
+</mavlink>
