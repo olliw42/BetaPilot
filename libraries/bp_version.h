@@ -1,7 +1,7 @@
 #pragma once
 
-#define BETAPILOTVERSION "v060i"
-#define DATEOFBASEBRANCH "20240903"
+#define BETAPILOTVERSION "v060j"
+#define DATEOFBASEBRANCH "20240921"
 
 /*
 search for //OW to find all changes  THR_MINSPD THR_SLEW SUPP_MAN waiting for rudder release
@@ -10,6 +10,11 @@ on-top features:
 - RADIO_LINK (OW RADIOLINK)
 - RC_Channel, AUX_FUNC: CAMERA_SET_MODE, CAMERA_TRIG_MODE (eq CAM_MODE_TOGGLE) (OW CAMERA)
 - Plane THR (OW THR_SUPP)
+
+includes
+- https://github.com/ArduPilot/ardupilot/pull/28182
+- https://github.com/ArduPilot/ardupilot/pull/28157
+
 
  remove zflags, not used, could use now options
  remove GCS_serial_control: SERIAL_CONTROL 8E1
