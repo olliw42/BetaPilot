@@ -248,6 +248,9 @@ public:
     // handle mavlink radio
 #if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
     void handle_radio_rc_channels(const mavlink_radio_rc_channels_t* packet);
+//OW RADIOLINK
+    void handle_radio_link_stats(const mavlink_radio_link_stats_dev_t* packet);
+//OWEND
 #endif
 
 private:

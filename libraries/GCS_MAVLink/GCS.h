@@ -703,6 +703,9 @@ protected:
 
     void handle_manual_control(const mavlink_message_t &msg);
     void handle_radio_rc_channels(const mavlink_message_t &msg);
+//OW RADIOLINK
+    void handle_radio_link_stats(const mavlink_message_t &msg);
+//OWEND
 
     // default empty handling of LANDING_TARGET
     virtual void handle_landing_target(const mavlink_landing_target_t &packet, uint32_t timestamp_ms) { }
@@ -1283,6 +1286,10 @@ public:
     // lua access to command_int
     MAV_RESULT lua_command_int_packet(const mavlink_command_int_t &packet);
 #endif
+
+//OW
+    MAV_LANDED_STATE get_landed_state(void) const { return num_gcs() > 0 ? chan(0)->landed_state() : MAV_LANDED_STATE_UNDEFINED; }
+//OWEND
 
 protected:
 
