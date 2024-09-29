@@ -15,6 +15,9 @@ public:
 
     // update from mavlink messages
     void update_radio_rc_channels(const mavlink_radio_rc_channels_t* packet) override;
+//OW RADIOLINK
+    void update_radio_link_stats(const mavlink_radio_link_stats_dev_t* packet) override;
+//OWEND
 };
 
 #endif // AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
