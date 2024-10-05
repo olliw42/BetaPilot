@@ -3094,6 +3094,10 @@ void GCS_MAVLINK::send_heartbeat() const
         base_mode(),
         gcs().custom_mode(),
         system_status());
+//OW
+//    int link_bw = _port->bw_in_bytes_per_second();
+//    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "chan %u port bps %i", chan, link_bw);
+//OWEND
 }
 
 #if AP_RC_CHANNEL_ENABLED
