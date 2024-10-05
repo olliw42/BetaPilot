@@ -177,10 +177,6 @@ public:
     public:
         RegisteredPort *next;
         UARTState state;
-//OW
-        uint32_t bw_in_bytes_per_second() const override { return state.baudrate()/10; }
-        uint32_t get_baud_rate() const override { return state.baudrate(); }
-//OWEND
     };
     RegisteredPort *registered_ports;
     HAL_Semaphore port_sem;

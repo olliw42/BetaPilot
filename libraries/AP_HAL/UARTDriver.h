@@ -148,11 +148,9 @@ public:
      */
     virtual uint64_t receive_time_constraint_us(uint16_t nbytes);
 
-    virtual uint32_t bw_in_bytes_per_second() const {
-        return 5760;
-    }
+    virtual uint32_t bw_in_bytes_per_second() const { return (baudrate >= 10) ? baudrate/10 : 5760; }
 
-    virtual uint32_t get_baud_rate() const { return 0; }
+    virtual uint32_t get_baud_rate() const { return baudrate; }
 
     /*
       return true if this UART has DMA enabled on both RX and TX
@@ -219,6 +217,7 @@ protected:
     uint32_t lock_write_key;
     uint32_t lock_read_key;
 
+    uint32_t baudrate;
     uint8_t parity;
 
     /*
