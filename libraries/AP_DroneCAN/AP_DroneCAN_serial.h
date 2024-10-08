@@ -52,6 +52,7 @@ public:
 
         ByteBuffer *readbuffer;
         ByteBuffer *writebuffer;
+        uint32_t baudrate;
         uint32_t last_send_ms;
         uint32_t last_size_tx;
         uint32_t last_size_rx;
