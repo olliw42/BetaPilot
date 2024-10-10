@@ -90,12 +90,38 @@ void AP_RCProtocol_DroneCAN::update()
         }
         last_receive_ms = rcin.last_sample_time_ms;
 
+        if (rcin.bits.QUALITY_VALID) {
+            frontend._rc_link_status.rssi = rcin.quality;
+        } else
+        if (rcin.bits.QUALITY_LQ) {
+            frontend._rc_link_status.link_quality = rcin.quality;
+        } else
+        if (rcin.bits.QUALITY_RSSI_DBM) {
+            frontend._rc_link_status.rssi_dbm = rcin.quality;
+            // AP rssi: -1 for unknown, 0 for no link, 255 for maximum link
+            if ( rcin.quality < 50) {
+                frontend._rc_link_status.rssi = 255;
+            } else if ( rcin.quality > 120) {
+                frontend._rc_link_status.rssi = 0;
+            } else {
+                frontend._rc_link_status.rssi = int16_t(roundf((120.0f - rcin.quality) * (255.0f / 70.0f) ));
+            }
+        } else
+        if (rcin.bits.QUALITY_SNR) {
+            frontend._rc_link_status.snr = rcin.quality;
+        } else {
+            frontend._rc_link_status.rssi = -1;
+            frontend._rc_link_status.link_quality = -1;
+            frontend._rc_link_status.rssi_dbm = -1;
+            frontend._rc_link_status.snr = INT8_MIN;
+        }
+
         add_input(
             rcin.num_channels,
             rcin.channels,
             rcin.bits.FAILSAFE,
-            rcin.bits.QUALITY_VALID ? rcin.quality : 0,  // CHECK ME
-            0  // link quality
+            frontend._rc_link_status.rssi,
+            frontend._rc_link_status.link_quality
             );
     }
 }
