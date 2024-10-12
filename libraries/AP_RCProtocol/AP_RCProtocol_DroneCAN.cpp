@@ -108,7 +108,7 @@ void AP_RCProtocol_DroneCAN::update()
             }
         } else
         if (rcin.bits.QUALITY_SNR) {
-            frontend._rc_link_status.snr = rcin.quality;
+            frontend._rc_link_status.snr = (int8_t)rcin.quality - 128;
         } else {
             frontend._rc_link_status.rssi = -1;
             frontend._rc_link_status.link_quality = -1;
