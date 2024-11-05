@@ -99,7 +99,7 @@ void AP_RCProtocol_DroneCAN::update()
         if (rcin.bits.QUALITY_RSSI_DBM) {
             frontend._rc_link_status.rssi_dbm = rcin.quality;
             // AP rssi: -1 for unknown, 0 for no link, 255 for maximum link
-            if ( rcin.quality < 50) {
+            if (rcin.quality < 50) {
                 frontend._rc_link_status.rssi = 255;
             } else if ( rcin.quality > 120) {
                 frontend._rc_link_status.rssi = 0;
