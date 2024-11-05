@@ -37,7 +37,10 @@
 #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 #endif
 
-#include "include/mavlink/v2.0/all/version.h"
+//OW
+//#include "include/mavlink/v2.0/all/version.h"
+#include "include/mavlink/v2.0/betapilot/version.h"
+//OWEND
 
 #define MAVLINK_MAX_PAYLOAD_LEN 255
 
@@ -73,7 +76,10 @@ void comm_send_buffer(mavlink_channel_t chan, const uint8_t *buf, uint8_t len);
 uint16_t comm_get_txspace(mavlink_channel_t chan);
 
 #define MAVLINK_USE_CONVENIENCE_FUNCTIONS
-#include "include/mavlink/v2.0/all/mavlink.h"
+//OW
+//#include "include/mavlink/v2.0/all/mavlink.h"
+#include "include/mavlink/v2.0/betapilot/mavlink.h"
+//OWEND
 
 // lock and unlock a channel, for multi-threaded mavlink send
 void comm_send_lock(mavlink_channel_t chan, uint16_t size);
