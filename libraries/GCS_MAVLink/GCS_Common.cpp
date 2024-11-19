@@ -112,6 +112,10 @@ extern AP_IOMCU iomcu;
 
 #include <ctype.h>
 
+//OW
+#include "../bp_version.h"
+//OWEND
+
 extern const AP_HAL::HAL& hal;
 
 struct GCS_MAVLINK::LastRadioStatus GCS_MAVLINK::last_radio_status;
@@ -2943,6 +2947,10 @@ void GCS_MAVLINK::send_autopilot_version() const
     if (version.os_hash_str) {
         strncpy_noterm(os_custom_version, version.os_hash_str, ARRAY_SIZE(os_custom_version));
     }
+
+//OW
+    middleware_sw_version = atoi(BETAPILOTVERSION);
+//OWEND
 
     mavlink_msg_autopilot_version_send(
         chan,
