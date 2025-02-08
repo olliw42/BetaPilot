@@ -12,6 +12,7 @@ on-top features:
 - Plane THR (OW THR_SUPP)
 
 2025.02.08:
+ change to "new" radio link stats/info messages, compiles, needs testing
  upgraded to ArduPilot master 4.7.0-dev
  few changes needed, got it to compile, but needs testing if it works
 

@@ -707,7 +707,8 @@ protected:
     void handle_manual_control(const mavlink_message_t &msg);
     void handle_radio_rc_channels(const mavlink_message_t &msg);
 //OW RADIOLINK
-    void handle_radio_link_stats(const mavlink_message_t &msg);
+    void handle_mlrs_radio_link_stats(const mavlink_message_t &msg);
+    void handle_mlrs_radio_link_info(const mavlink_message_t &msg);
 //OWEND
 
     // default empty handling of LANDING_TARGET

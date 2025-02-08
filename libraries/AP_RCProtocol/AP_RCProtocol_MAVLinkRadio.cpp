@@ -22,7 +22,7 @@ void AP_RCProtocol_MAVLinkRadio::update_radio_rc_channels(const mavlink_radio_rc
 }
 
 //OW RADIOLINK
-void AP_RCProtocol_MAVLinkRadio::update_radio_link_stats(const mavlink_radio_link_stats_dev_t* packet)
+void AP_RCProtocol_MAVLinkRadio::update_mlrs_radio_link_stats(const mavlink_mlrs_radio_link_stats_t* packet)
 {
     // update the backend's fields
 
@@ -37,8 +37,8 @@ void AP_RCProtocol_MAVLinkRadio::update_radio_link_stats(const mavlink_radio_lin
 
     int32_t _rssi = -1;
 
-    if (packet->rx_receive_antenna > 0) { // should be 1, but just always assume antenna1 is meant
-        // receiving on antenna 1
+    if (packet->flags & MLRS_RADIO_LINK_STATS_FLAGS_RX_RECEIVE_ANTENNA2) {
+        // receiving on antenna 2
         if (packet->rx_rssi2 != UINT8_MAX) {
             _rssi = packet->rx_rssi2;
         } else
@@ -46,7 +46,7 @@ void AP_RCProtocol_MAVLinkRadio::update_radio_link_stats(const mavlink_radio_lin
             _rssi = packet->rx_rssi1;
         }
     } else {
-        // receiving on antenna 0
+        // receiving on antenna 1
         if (packet->rx_rssi1 != UINT8_MAX) {
             _rssi = packet->rx_rssi1;
         }
@@ -57,11 +57,11 @@ void AP_RCProtocol_MAVLinkRadio::update_radio_link_stats(const mavlink_radio_lin
         return;
     }
 
-    if (packet->flags & RADIO_LINK_STATS_FLAGS_RSSI_DBM_DEV) {
-        // rssi is in negative dBm, 255 = unknown, 254 = no link connection, 0...253 = 0...-253 dBm
+    if (packet->flags & MLRS_RADIO_LINK_STATS_FLAGS_RSSI_DBM) {
+        // Rssi values are in negative dBm. Values 1..254 corresponds to -1..-254 dBm. 0: no reception, UINT8_MAX: unknown.
         // convert to AP rssi using the same logic as in CRSF driver
         // AP rssi: -1 for unknown, 0 for no link connection, 255 for maximum link
-        if (_rssi == 254) {
+        if (_rssi == 0) {
             rssi = 0; // no connection
         } else if (_rssi < 50) {
             rssi = 255;
@@ -74,6 +74,10 @@ void AP_RCProtocol_MAVLinkRadio::update_radio_link_stats(const mavlink_radio_lin
         // _rssi is in mavlink scale 0..254, scale it to 0..255 with rounding
         rssi = (_rssi * 255 + 127) / 254;
     }
+}
+
+void AP_RCProtocol_MAVLinkRadio::update_mlrs_radio_link_info(const mavlink_mlrs_radio_link_information_t* packet)
+{
 }
 //OWEND
 
