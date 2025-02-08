@@ -766,6 +766,10 @@ const AP_Param::Info Plane::var_info[] = {
     // @User: Advanced
     ASCALAR(crash_detection_enable,         "CRASH_DETECT",   0),
 
+//OW THR_SUPP
+    GSCALAR(takeoff_throttle_suppress, "TKOFF_THR_SUPP", 0),
+//OWEND
+
     // @Group: BARO
     // @Path: ../libraries/AP_Baro/AP_Baro.cpp
     GOBJECT(barometer, "BARO", AP_Baro),

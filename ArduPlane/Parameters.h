@@ -360,6 +360,9 @@ public:
         k_param_takeoff_throttle_min,
         k_param_takeoff_options,
         k_param_takeoff_throttle_idle,
+//OW THR_SUPP
+        k_param_takeoff_throttle_suppress,
+//OWEND
 
         k_param_pullup = 270,
         k_param_quicktune,
@@ -475,6 +478,9 @@ public:
     AP_Int8 override_channel;
 #endif
     AP_Int16 gcs_pid_mask;
+//OW THR_SUPP
+    AP_Int8 takeoff_throttle_suppress;
+//OWEND
 };
 
 /*

@@ -82,7 +82,7 @@ public:
     void       set_override(const uint16_t v, const uint32_t timestamp_ms);
     bool       has_override() const;
 
-    float    stick_mixing(const float servo_in);
+    float      stick_mixing(const float servo_in);
 
     // get control input with zero deadzone
     int16_t    get_control_in_zero_dz(void) const;
@@ -217,7 +217,7 @@ public:
         EKF_YAW_RESET =      104, // trigger yaw reset attempt
         GPS_DISABLE_YAW =    105, // disable GPS yaw for testing
         DISABLE_AIRSPEED_USE = 106, // equivalent to AIRSPEED_USE 0
-        FW_AUTOTUNE =          107, // fixed wing auto tune
+        FW_AUTOTUNE =        107, // fixed wing auto tune
         QRTL =               108, // QRTL mode
         CUSTOM_CONTROLLER =  109,  // use Custom Controller
         KILL_IMU3 =          110, // disable third IMU (for IMU failure testing)
@@ -262,6 +262,11 @@ public:
         AUTOTUNE_TEST_GAINS = 180, // auto tune tuning switch to test or revert gains
         QUICKTUNE =          181,  //quicktune 3 position switch
         AHRS_AUTO_TRIM =     182,  // in-flight trim Copter AHRS using manual levelling
+
+//OW CAMERA
+        CAMERA_SET_MODE =    198, // set camera mode, high = video mode, low = picture mode
+        CAMERA_TRIG_MODE =   199, // set camera mode and trigger/start/stop, high = start video, mid = stop video, low = take picture
+//OWEND
 
         // inputs from 200 will eventually used to replace RCMAP
         ROLL =               201, // roll input
@@ -498,7 +503,7 @@ public:
     // this function is implemented in the child class in the vehicle
     // code
     virtual RC_Channel *channel(uint8_t chan) = 0;
-    // helper used by scripting to convert the above function from 0 to 1 indexeing
+    // helper used by scripting to convert the above function from 0 to 1 indexing
     // range is checked correctly by the underlying channel function
     RC_Channel *lua_rc_channel(const uint8_t chan) {
         return channel(chan -1);
@@ -509,7 +514,7 @@ public:
 
     static uint8_t get_valid_channel_count(void);                      // returns the number of valid channels in the last read
     static int16_t get_receiver_rssi(void);                            // returns [0, 255] for receiver RSSI (0 is no link) if present, otherwise -1
-    static int16_t get_receiver_link_quality(void);                         // returns 0-100 % of last 100 packets received at receiver are valid
+    static int16_t get_receiver_link_quality(void);                    // returns 0-100 % of last 100 packets received at receiver are valid
     bool read_input(void);                                             // returns true if new input has been read in
     static void clear_overrides(void);                                 // clears any active overrides
     static bool receiver_bind(const int dsmMode);                      // puts the receiver in bind mode if present, returns true if success
