@@ -1074,3 +1074,14 @@ userdata AP_Servo_Telem::TelemetryData field motor_temperature_cdeg int16_t'skip
 userdata AP_Servo_Telem::TelemetryData field pcb_temperature_cdeg int16_t'skip_check read valid_mask present_types AP_Servo_Telem::TelemetryData::Types::PCB_TEMP
 userdata AP_Servo_Telem::TelemetryData field status_flags uint8_t'skip_check read valid_mask present_types AP_Servo_Telem::TelemetryData::Types::STATUS
 userdata AP_Servo_Telem::TelemetryData field last_update_ms uint32_t'skip_check read
+
+-- //OW
+include AP_OSD/AP_OSD.h depends OSD_ENABLED
+include AP_OSD/AP_OSD_config.h
+singleton AP_OSD depends (OSD_ENABLED && AP_OSD_LINK_STATS_EXTENSIONS_ENABLED)
+singleton AP_OSD rename osd
+singleton AP_OSD method set_rc_tx_power void int16_t'skip_check
+singleton AP_OSD method set_rc_rssi_dbm void int8_t'skip_check
+singleton AP_OSD method set_rc_snr void int8_t'skip_check
+singleton AP_OSD method set_rc_active_antenna void int8_t'skip_check
+-- //OWEND

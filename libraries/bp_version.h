@@ -7,11 +7,13 @@
 search for //OW to find all changes  THR_MINSPD THR_SLEW SUPP_MAN waiting for rudder release
 
 on-top features:
+- OSD (OW OSD)
 - RADIO_LINK (OW RADIOLINK)
 - RC_Channel, AUX_FUNC: CAMERA_SET_MODE, CAMERA_TRIG_MODE (eq CAM_MODE_TOGGLE) (OW CAMERA)
 - Plane THR (OW THR_SUPP)
 
 2025.02.08:
+ attempt at adding OSD lua script
  change to "new" radio link stats/info messages, compiles, needs testing
  upgraded to ArduPilot master 4.7.0-dev
  few changes needed, got it to compile, but needs testing if it works
