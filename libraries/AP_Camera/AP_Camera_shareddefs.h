@@ -42,3 +42,13 @@ enum class CameraSetting {
     THERMAL_GAIN = 1,       // set thermal gain, value of 0:low gain, 1:high gain
     THERMAL_RAW_DATA = 2,   // enable/disable thermal raw data
 };
+
+//OW CAMERA
+// options for set_cam_photo_video_mode()
+enum class PhotoVideoMode : uint8_t {
+    PHOTO_TAKE_PIC = 0, // set to photo mode and take picture
+    VIDEO_START = 1,    // set to video mode and start recording
+    VIDEO_STOP = 2      // stop video recording
+};
+//OWEND
+

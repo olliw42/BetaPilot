@@ -267,7 +267,24 @@ public:
     // handle mavlink radio
 #if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
     void handle_radio_rc_channels(const mavlink_radio_rc_channels_t* packet);
+//OW RADIOLINK
+    void handle_mlrs_radio_link_stats(const mavlink_mlrs_radio_link_stats_t* packet);
+    void handle_mlrs_radio_link_info(const mavlink_mlrs_radio_link_information_t* packet);
+//OWEND
 #endif
+
+//OW
+    // some backends have a struct LinkStatus and a field _link_status, avoid name clash
+    struct RcLinkStatus {
+        int16_t rssi = -1;
+        int16_t link_quality = -1;
+        int8_t rssi_dbm = -1;
+        int8_t snr = INT8_MIN;
+    };
+    volatile struct RcLinkStatus _rc_link_status;
+
+    const volatile RcLinkStatus& get_link_status() const { return _rc_link_status; }
+//OWEND
 
 private:
     void check_added_uart(void);

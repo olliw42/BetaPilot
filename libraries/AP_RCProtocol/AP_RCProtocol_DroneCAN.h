@@ -37,6 +37,9 @@ private:
             struct {
                 uint8_t QUALITY_VALID : 1;
                 uint8_t FAILSAFE : 1;
+                uint8_t QUALITY_LQ : 1;
+                uint8_t QUALITY_RSSI_DBM : 1;
+                uint8_t QUALITY_SNR : 1;
             } bits;
         };
         uint8_t num_channels;
