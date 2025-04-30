@@ -1,7 +1,7 @@
 #pragma once
 
-#define BETAPILOTVERSION "v060q"
-#define DATEOFBASEBRANCH "20250208"
+#define BETAPILOTVERSION "v061a"
+#define DATEOFBASEBRANCH "20250430"
 
 /*
 search for //OW to find all changes  THR_MINSPD THR_SLEW SUPP_MAN waiting for rudder release
@@ -17,6 +17,9 @@ on-top features:
  change to "new" radio link stats/info messages, compiles, needs testing
  upgraded to ArduPilot master 4.7.0-dev
  few changes needed, got it to compile, but needs testing if it works
+
+2025.04.30: v061
+ upgraded to ArduPilot master 4.7.0-dev
 
  remove zflags, not used, could use now options
  remove GCS_serial_control: SERIAL_CONTROL 8E1
