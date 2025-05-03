@@ -400,6 +400,11 @@ void AP_OSD::osd_thread()
     while (true) {
         hal.scheduler->delay(100);
         if (!_disable) {
+//OW OSD
+#if AP_OSD_EXTENDED_LNK_STATS
+            update_radio_link_stats();
+#endif
+//OWEND
             update_stats();
             update_current_screen();
         }

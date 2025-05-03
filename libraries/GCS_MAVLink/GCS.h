@@ -691,6 +691,10 @@ protected:
 
     void handle_manual_control(const mavlink_message_t &msg);
     void handle_radio_rc_channels(const mavlink_message_t &msg);
+//OW RADIOLINK
+    void handle_mlrs_radio_link_stats(const mavlink_message_t &msg);
+    void handle_mlrs_radio_link_info(const mavlink_message_t &msg);
+//OWEND
 
     // default empty handling of LANDING_TARGET
     virtual void handle_landing_target(const mavlink_landing_target_t &packet, uint32_t timestamp_ms) { }
@@ -1303,6 +1307,10 @@ public:
     // Sent in AVAILABLE_MODES_MONITOR msg
     uint8_t get_available_modes_sequence() const { return available_modes_sequence; }
     void available_modes_changed() { available_modes_sequence += 1; }
+
+//OW
+    MAV_LANDED_STATE get_landed_state(void) const { return num_gcs() > 0 ? chan(0)->landed_state() : MAV_LANDED_STATE_UNDEFINED; }
+//OWEND
 
 protected:
 

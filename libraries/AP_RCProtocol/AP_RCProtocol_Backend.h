@@ -47,6 +47,10 @@ public:
     // update from mavlink messages
 #if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
     virtual void update_radio_rc_channels(const mavlink_radio_rc_channels_t* packet) {}
+//OW RADIOLINK
+    virtual void update_mlrs_radio_link_stats(const mavlink_mlrs_radio_link_stats_t* packet) {}
+    virtual void update_mlrs_radio_link_info(const mavlink_mlrs_radio_link_information_t* packet) {}
+//OWEND
 #endif
 
     // get number of frames, ignoring failsafe
@@ -140,6 +144,9 @@ private:
 
     uint16_t _pwm_values[MAX_RCIN_CHANNELS];
     uint8_t  _num_channels;
+//OW RADIOLINK
+protected:
+//OWEND
     int16_t rssi = -1;
     int16_t rx_link_quality = -1;
 };
