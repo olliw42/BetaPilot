@@ -843,6 +843,10 @@ singleton AP_Mount method get_rate_target boolean uint8_t'skip_check float'Null 
 singleton AP_Mount method get_angle_target boolean uint8_t'skip_check float'Null float'Null float'Null boolean'Null
 singleton AP_Mount method get_location_target boolean uint8_t'skip_check Location'Null
 singleton AP_Mount method set_attitude_euler void uint8_t'skip_check float'skip_check float'skip_check float'skip_check
+-- //OW
+singleton AP_Mount method take_control boolean
+singleton AP_Mount method give_control boolean
+-- //OWEND
 
 userdata mavlink_camera_information_t depends AP_CAMERA_INFO_FROM_SCRIPT_ENABLED
 userdata mavlink_camera_information_t field time_boot_ms uint32_t'skip_check read write
@@ -1123,4 +1127,15 @@ userdata DroneCAN_Handle manual request DroneCAN_Handle::request 2 1
 userdata DroneCAN_Handle method subscribe boolean
 userdata DroneCAN_Handle manual check_message DroneCAN_Handle::check_message 0 4
 userdata DroneCAN_Handle manual_operator __gc DroneCAN_Handle::__gc
+
+-- //OW
+include AP_OSD/AP_OSD.h depends OSD_ENABLED
+include AP_OSD/AP_OSD_config.h
+singleton AP_OSD depends (OSD_ENABLED && AP_OSD_LINK_STATS_EXTENSIONS_ENABLED)
+singleton AP_OSD rename osd
+singleton AP_OSD method set_rc_tx_power void int16_t'skip_check
+singleton AP_OSD method set_rc_rssi_dbm void int8_t'skip_check
+singleton AP_OSD method set_rc_snr void int8_t'skip_check
+singleton AP_OSD method set_rc_active_antenna void int8_t'skip_check
+-- //OWEND
 

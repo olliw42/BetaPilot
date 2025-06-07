@@ -113,6 +113,10 @@ extern AP_IOMCU iomcu;
 
 #include <ctype.h>
 
+//OW
+#include "../bp_version.h"
+//OWEND
+
 extern const AP_HAL::HAL& hal;
 
 struct GCS_MAVLINK::LastRadioStatus GCS_MAVLINK::last_radio_status;
@@ -2986,6 +2990,10 @@ void GCS_MAVLINK::send_autopilot_version() const
         strncpy_noterm(os_custom_version, version.os_hash_str, ARRAY_SIZE(os_custom_version));
     }
 
+//OW
+    middleware_sw_version = atoi(BETAPILOTVERSION);
+//OWEND
+
     mavlink_msg_autopilot_version_send(
         chan,
         capabilities(),
@@ -3136,6 +3144,10 @@ void GCS_MAVLINK::send_heartbeat() const
         base_mode(),
         gcs().custom_mode(),
         system_status());
+//OW
+//    int link_bw = _port->bw_in_bytes_per_second();
+//    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "chan %u port bps %i", chan, link_bw);
+//OWEND
 }
 
 #if AP_RC_CHANNEL_ENABLED
@@ -4280,6 +4292,11 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
 
     case MAVLINK_MSG_ID_HEARTBEAT: {
         handle_heartbeat(msg);
+//OW
+#if HAL_MOUNT_ENABLED
+        handle_mount_message(msg);
+#endif
+//OWEND
         break;
     }
 
@@ -4386,6 +4403,9 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
 #endif
 
 #if HAL_MOUNT_ENABLED
+//OW
+    case MAVLINK_MSG_ID_MOUNT_STATUS:
+//OWEND
     case MAVLINK_MSG_ID_GIMBAL_REPORT:
     case MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION:
     case MAVLINK_MSG_ID_GIMBAL_DEVICE_ATTITUDE_STATUS:
@@ -4506,7 +4526,20 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
 #if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
     case MAVLINK_MSG_ID_RADIO_RC_CHANNELS:
         handle_radio_rc_channels(msg);
+//OW
+#if HAL_MOUNT_ENABLED
+        handle_mount_message(msg);
+#endif
+//OWEND
         break;
+//OW RADIOLINK
+    case MAVLINK_MSG_ID_MLRS_RADIO_LINK_STATS:
+        handle_mlrs_radio_link_stats(msg);
+        break;
+    case MAVLINK_MSG_ID_MLRS_RADIO_LINK_INFORMATION:
+        handle_mlrs_radio_link_info(msg);
+        break;
+//OWEND
 #endif
 #endif
 
@@ -4741,6 +4774,13 @@ void GCS_MAVLINK::send_banner()
         }
     }
 #endif
+
+//OW
+#if HAL_MOUNT_ENABLED
+    AP_Mount *mount = AP::mount();
+    if (mount != nullptr) mount->send_banner();
+#endif
+//OWEND
 }
 
 
@@ -7503,6 +7543,78 @@ void GCS_MAVLINK::handle_radio_rc_channels(const mavlink_message_t &msg)
 
     AP::RC().handle_radio_rc_channels(&packet);
 }
+
+//OW RADIOLINK
+// AP_RSSI::RssiType::TELEMETRY_RADIO_RSSI -> rssi is taken from RADIO_STATUS
+// AP_RSSI::RssiType::RECEIVER -> rssi is taken from RADIO_LINK_STATS
+void GCS_MAVLINK::handle_mlrs_radio_link_stats(const mavlink_message_t &msg)
+{
+    mavlink_mlrs_radio_link_stats_t packet;
+    mavlink_msg_mlrs_radio_link_stats_decode(&msg, &packet);
+
+    AP::RC().handle_mlrs_radio_link_stats(&packet);
+
+#if HAL_LOGGING_ENABLED
+    // log link stats if logging Performance monitoring data
+    if (AP::logger().should_log(log_radio_bit())) {
+
+        AP::logger().Write(
+            "RDRX", "TimeUS,rxLQrc,rxLQser,rxRssi1,rxSnr1,rxRssi2,rxSnr2,rxRAn,rxTAn",
+            "s%%------",
+            "F--------",
+            "QBBBbBbBB",
+            AP_HAL::micros64(),
+            packet.rx_LQ_rc,
+            packet.rx_LQ_ser,
+            packet.rx_rssi1,
+            packet.rx_snr1,
+            packet.rx_rssi2,
+            packet.rx_snr2,
+            (uint8_t)(packet.flags & MLRS_RADIO_LINK_STATS_FLAGS_RX_RECEIVE_ANTENNA2 ? 2 : 1),
+            (uint8_t)((packet.flags & MLRS_RADIO_LINK_STATS_FLAGS_RX_TRANSMIT_ANTENNA1 ? 1 : 0) +
+                      (packet.flags & MLRS_RADIO_LINK_STATS_FLAGS_RX_TRANSMIT_ANTENNA2 ? 2 : 0))
+            );
+
+        AP::logger().Write(
+            "RDTX", "TimeUS,txLQser,txRssi1,txSnr1,txRssi2,txSnr2,txRAn,txTAn,flags",
+            "s%-------",
+            "F--------",
+            "QBBbBbBBB",
+            AP_HAL::micros64(),
+            packet.tx_LQ_ser,
+            packet.tx_rssi1,
+            packet.tx_snr1,
+            packet.tx_rssi2,
+            packet.tx_snr2,
+            (uint8_t)(packet.flags & MLRS_RADIO_LINK_STATS_FLAGS_TX_RECEIVE_ANTENNA2 ? 2 : 1),
+            (uint8_t)((packet.flags & MLRS_RADIO_LINK_STATS_FLAGS_TX_TRANSMIT_ANTENNA1 ? 1 : 0) +
+                      (packet.flags & MLRS_RADIO_LINK_STATS_FLAGS_TX_TRANSMIT_ANTENNA2 ? 2 : 0)),
+            (uint8_t)packet.flags //TODO
+            );
+
+        AP::logger().Write(
+            "RDFR", "TimeUS,f1,f2",
+            "szz",
+            "F--",
+            "Qff",
+            AP_HAL::micros64(),
+            packet.frequency1,
+            packet.frequency2
+            );
+    }
+#endif
+}
+
+void GCS_MAVLINK::handle_mlrs_radio_link_info(const mavlink_message_t &msg)
+{
+    mavlink_mlrs_radio_link_information_t packet;
+    mavlink_msg_mlrs_radio_link_information_decode(&msg, &packet);
+
+    AP::RC().handle_mlrs_radio_link_info(&packet);
+
+    //TOD logging
+}
+//OWEND
 #endif // AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
 
 #endif  // HAL_GCS_ENABLED

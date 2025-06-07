@@ -21,5 +21,65 @@ void AP_RCProtocol_MAVLinkRadio::update_radio_rc_channels(const mavlink_radio_rc
     add_input(count, rc_chan, failsafe);
 }
 
+//OW RADIOLINK
+void AP_RCProtocol_MAVLinkRadio::update_mlrs_radio_link_stats(const mavlink_mlrs_radio_link_stats_t* packet)
+{
+    // update the backend's fields
+
+    if (packet->rx_LQ_rc != UINT8_MAX) {
+        rx_link_quality = packet->rx_LQ_rc;
+    } else
+    if (packet->rx_LQ_ser != UINT8_MAX) {
+        rx_link_quality = packet->rx_LQ_ser;
+    } else {
+        rx_link_quality = -1;
+    }
+
+    int32_t _rssi = -1;
+
+    if (packet->flags & MLRS_RADIO_LINK_STATS_FLAGS_RX_RECEIVE_ANTENNA2) {
+        // receiving on antenna 2
+        if (packet->rx_rssi2 != UINT8_MAX) {
+            _rssi = packet->rx_rssi2;
+        } else
+        if (packet->rx_rssi1 != UINT8_MAX) { // value is stored in rx_rssi1
+            _rssi = packet->rx_rssi1;
+        }
+    } else {
+        // receiving on antenna 1
+        if (packet->rx_rssi1 != UINT8_MAX) {
+            _rssi = packet->rx_rssi1;
+        }
+    }
+
+    if (_rssi == -1) { // no rssi value set
+        rssi = -1;
+        return;
+    }
+
+    if (packet->flags & MLRS_RADIO_LINK_STATS_FLAGS_RSSI_DBM) {
+        // Rssi values are in negative dBm. Values 1..254 corresponds to -1..-254 dBm. 0: no reception, UINT8_MAX: unknown.
+        // convert to AP rssi using the same logic as in CRSF driver
+        // AP rssi: -1 for unknown, 0 for no link connection, 255 for maximum link
+        if (_rssi == 0) {
+            rssi = 0; // no connection
+        } else if (_rssi < 50) {
+            rssi = 255;
+        } else if (_rssi > 120) {
+            rssi = 1; // connection, but very low rssi
+        } else {
+            rssi = int16_t(roundf((1.0f - ((float)_rssi - 50.0f) / 70.0f) * 255.0f));
+        }
+    } else {
+        // _rssi is in mavlink scale 0..254, scale it to 0..255 with rounding
+        rssi = (_rssi * 255 + 127) / 254;
+    }
+}
+
+void AP_RCProtocol_MAVLinkRadio::update_mlrs_radio_link_info(const mavlink_mlrs_radio_link_information_t* packet)
+{
+}
+//OWEND
+
 #endif // AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
 

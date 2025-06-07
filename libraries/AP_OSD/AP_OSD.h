@@ -35,6 +35,10 @@
 #include <AC_Fence/AC_Fence_config.h>
 #include <AP_RangeFinder/AP_RangeFinder_config.h>
 
+//OW OSD
+#include <AP_RCProtocol/AP_RCProtocol_CRSF.h>
+//OWEND
+
 class AP_OSD_Backend;
 class AP_MSP;
 
@@ -692,6 +696,55 @@ public:
     HAL_Semaphore &get_semaphore(void) {
         return _sem;
     }
+
+//OW OSD
+#if AP_OSD_EXTENDED_LNK_STATS
+    void set_rc_tx_power(int16_t tx_power) {
+        radio_link_stats.tx_power = tx_power; radio_link_stats.tlast_ms = AP_HAL::millis();
+    }
+    void set_rc_rssi_dbm(int8_t rssi_dbm) {
+        radio_link_stats.rssi_dbm = rssi_dbm; radio_link_stats.tlast_ms = AP_HAL::millis();
+    }
+    void set_rc_snr(int8_t snr) {
+        radio_link_stats.snr = snr; radio_link_stats.tlast_ms = AP_HAL::millis();
+    }
+    void set_rc_active_antenna(int8_t active_antenna) {
+        radio_link_stats.active_antenna = active_antenna; radio_link_stats.tlast_ms = AP_HAL::millis();
+    }
+
+    int16_t get_rc_tx_power() {
+        return (radio_link_stats.tx_power >= 0) ? radio_link_stats.tx_power : AP::crsf()->get_link_status().tx_power;
+    }
+    int8_t get_rc_rssi_dbm() {
+        return (radio_link_stats.rssi_dbm >= 0) ? radio_link_stats.rssi_dbm : AP::RC().get_link_status().rssi_dbm; // AP::crsf()->get_link_status().rssi_dbm;
+    }
+    int8_t get_rc_snr() {
+        return (radio_link_stats.snr >= INT8_MIN) ? radio_link_stats.snr : AP::RC().get_link_status().snr; // AP::crsf()->get_link_status().snr;
+    }
+    int8_t get_rc_active_antenna() {
+        return (radio_link_stats.active_antenna >= 0) ? radio_link_stats.active_antenna : AP::crsf()->get_link_status().active_antenna;
+    }
+
+    void update_radio_link_stats()
+    {
+        uint32_t tnow_ms = AP_HAL::millis();
+        if (tnow_ms - radio_link_stats.tlast_ms > 2000) {
+            radio_link_stats.tx_power = -1;
+            radio_link_stats.rssi_dbm = -1;
+            radio_link_stats.snr = INT8_MIN;
+            radio_link_stats.active_antenna = -1;
+        }
+    }
+
+    struct {
+        uint32_t tlast_ms;
+        int16_t tx_power = -1;
+        int8_t rssi_dbm = -1;
+        int8_t snr = INT8_MIN;
+        int8_t active_antenna = -1;
+    } radio_link_stats;
+#endif
+//OWEND
 
 private:
     void osd_thread();
