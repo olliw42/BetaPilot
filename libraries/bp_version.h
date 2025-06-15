@@ -1,28 +1,26 @@
 #pragma once
 
-#define BETAPILOTVERSION "v061a"
+#define BETAPILOTVERSION "v061b"
 #define DATEOFBASEBRANCH "20250615"
 
 /*
-search for //OW to find all changes  THR_MINSPD THR_SLEW SUPP_MAN waiting for rudder release
+search for //OW to find all changes
 
 
 on-top features:
 - RC_Channel, AUX_FUNC: CAMERA_SET_MODE, CAMERA_TRIG_MODE (eq CAM_MODE_TOGGLE) (OW CAMERA)
 
 2025.06.15:
- removed a number of on top features, OSD, DroneCAN, THRottle
- removed RADIO_LINK (OW RADIOLINK)
+ removed a number of on top features, OSD, DroneCAN, THR_SUPP
+ removed OW RADIOLINK
 
 2025.02.08:
  attempt at adding OSD lua script
  change to "new" radio link stats/info messages, compiles, needs testing
  upgraded to ArduPilot master 4.7.0-dev
  few changes needed, got it to compile, but needs testing if it works
-
 2025.04.30: v061
  upgraded to ArduPilot master 4.7.0-dev
-
  remove zflags, not used, could use now options
  remove GCS_serial_control: SERIAL_CONTROL 8E1
 2024.09.03: v060
