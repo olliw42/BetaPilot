@@ -440,13 +440,12 @@ void AP_Mount_STorM32_MAVLink::update_target_angles()
 
 void AP_Mount_STorM32_MAVLink::find_gimbal()
 {
-    uint32_t tnow_ms = AP_HAL::millis();
-
     // search for gimbal only until vehicle is armed
-    // NOOO if ARMING_REQUIRE = 0 it arms immediately and this may not run -> so needs time guard too
-    if (hal.util->get_soft_armed() && (tnow_ms > 100000)) {
+    if (hal.util->get_soft_armed()) {
         return;
     }
+
+    uint32_t tnow_ms = AP_HAL::millis();
 
     // search for gimbal in routing table
     if (!_compid) {
