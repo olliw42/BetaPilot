@@ -24,6 +24,9 @@
 #include <AP_Math/location.h>
 #include <SRV_Channel/SRV_Channel.h>
 #include <AP_Logger/AP_Logger.h>
+//OW
+#include "AP_Mount_STorM32_MAVLink.h"
+//OWEND
 
 const AP_Param::GroupInfo AP_Mount::var_info[] = {
 
@@ -188,6 +191,16 @@ void AP_Mount::init()
             serial_instance++;
             break;
 #endif // HAL_MOUNT_XFROBOT_ENABLED
+
+//OW
+#if HAL_MOUNT_STORM32_MAVLINK_V2_ENABLED
+        // check for STorM32_MAVLink mounts using MAVLink protocol
+        case Type::STorM32_MAVLink:
+            _backends[instance] = new AP_Mount_STorM32_MAVLink(*this, _params[instance], instance);
+            _num_instances++;
+            break;
+#endif // HAL_MOUNT_STORM32_MAVLINK_V2_ENABLED
+//OWEND
         }
 
         // init new instance
@@ -329,6 +342,8 @@ void AP_Mount::set_rate_target(uint8_t instance, float roll_degs, float pitch_de
     backend->set_rate_target(roll_degs, pitch_degs, yaw_degs, yaw_lock);
 }
 
+//OW
+/*
 MAV_RESULT AP_Mount::handle_command_do_mount_configure(const mavlink_command_int_t &packet)
 {
     auto *backend = get_primary();
@@ -340,7 +355,6 @@ MAV_RESULT AP_Mount::handle_command_do_mount_configure(const mavlink_command_int
 
     return MAV_RESULT_ACCEPTED;
 }
-
 
 MAV_RESULT AP_Mount::handle_command_do_mount_control(const mavlink_command_int_t &packet)
 {
@@ -428,7 +442,8 @@ MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_configure(const mavlink_co
     return backend->handle_command_do_gimbal_manager_configure(packet, msg);
 }
 
-void AP_Mount::handle_gimbal_manager_set_attitude(const mavlink_message_t &msg) {
+void AP_Mount::handle_gimbal_manager_set_attitude(const mavlink_message_t &msg)
+{
     mavlink_gimbal_manager_set_attitude_t packet;
     mavlink_msg_gimbal_manager_set_attitude_decode(&msg,&packet);
 
@@ -576,6 +591,119 @@ MAV_RESULT AP_Mount::handle_command(const mavlink_command_int_t &packet, const m
         return MAV_RESULT_UNSUPPORTED;
     }
 }
+*/
+//OWEND
+
+//OW
+uint8_t AP_Mount::get_gimbal_device_id(uint8_t instance) const
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return 0;
+    }
+    return backend->get_gimbal_device_id();
+}
+
+MAV_RESULT AP_Mount::handle_command_do_mount_configure(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] == nullptr) continue;
+        if (_backends[instance]->is_in_control(msg.sysid, msg.compid, 0)) {
+            _backends[instance]->set_mode((MAV_MOUNT_MODE)packet.param1);
+        }
+    }
+    return MAV_RESULT_ACCEPTED;
+}
+
+MAV_RESULT AP_Mount::handle_command_do_mount_control(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
+{
+    auto *backend = get_primary();
+    if (backend == nullptr) {
+        return MAV_RESULT_FAILED;
+    }
+    if (backend->is_in_control(msg.sysid, msg.compid, 0)) {
+        return backend->handle_command_do_mount_control(packet);
+    }
+    return MAV_RESULT_FAILED;
+}
+
+MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_configure(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] == nullptr) continue;
+        if ((uint8_t)packet.z == 0 || _backends[instance]->get_gimbal_device_id() == (uint8_t)packet.z) {
+            _backends[instance]->handle_command_do_gimbal_manager_configure(packet, msg);
+        }
+    }
+    return MAV_RESULT_ACCEPTED;
+}
+
+void AP_Mount::handle_gimbal_manager_set_pitchyaw(const mavlink_message_t &msg)
+{
+    mavlink_gimbal_manager_set_pitchyaw_t packet;
+    mavlink_msg_gimbal_manager_set_pitchyaw_decode(&msg, &packet);
+
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] == nullptr) continue;
+        if (_backends[instance]->is_in_control(msg.sysid, msg.compid, packet.gimbal_device_id)) {
+            _backends[instance]->handle_gimbal_manager_set_pitchyaw(packet);
+        }
+    }
+}
+
+void AP_Mount::handle_gimbal_manager_set_attitude(const mavlink_message_t &msg)
+{
+    mavlink_gimbal_manager_set_attitude_t packet;
+    mavlink_msg_gimbal_manager_set_attitude_decode(&msg, &packet);
+
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] == nullptr) continue;
+        if (_backends[instance]->is_in_control(msg.sysid, msg.compid, packet.gimbal_device_id)) {
+            _backends[instance]->handle_gimbal_manager_set_attitude(packet);
+        }
+    }
+}
+
+MAV_RESULT AP_Mount::handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] == nullptr) continue;
+        if (_backends[instance]->is_in_control(msg.sysid, msg.compid, packet.z)) {
+            _backends[instance]->handle_command_do_gimbal_manager_pitchyaw(packet);
+        }
+    }
+    return MAV_RESULT_ACCEPTED;
+}
+
+MAV_RESULT AP_Mount::handle_command_do_set_roi_sysid(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] == nullptr) continue;
+        if (_backends[instance]->is_in_control(msg.sysid, msg.compid, (uint8_t)packet.param2)) {
+            _backends[instance]->set_target_sysid((uint8_t)packet.param1);
+        }
+    }
+    return MAV_RESULT_ACCEPTED;
+}
+
+MAV_RESULT AP_Mount::handle_command(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
+{
+    switch (packet.command) {
+    case MAV_CMD_DO_MOUNT_CONFIGURE:
+        return handle_command_do_mount_configure(packet, msg);
+    case MAV_CMD_DO_MOUNT_CONTROL:
+        return handle_command_do_mount_control(packet, msg);
+    case MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW:
+        return handle_command_do_gimbal_manager_pitchyaw(packet, msg);
+    case MAV_CMD_DO_GIMBAL_MANAGER_CONFIGURE:
+        return handle_command_do_gimbal_manager_configure(packet, msg);
+    case MAV_CMD_DO_SET_ROI_SYSID:
+        return handle_command_do_set_roi_sysid(packet, msg);
+    default:
+        return MAV_RESULT_UNSUPPORTED;
+    }
+}
+//OWEND
 
 /// Change the configuration of the mount
 void AP_Mount::handle_global_position_int(const mavlink_message_t &msg)
@@ -970,6 +1098,10 @@ void AP_Mount::handle_gimbal_report(mavlink_channel_t chan, const mavlink_messag
 
 void AP_Mount::handle_message(mavlink_channel_t chan, const mavlink_message_t &msg)
 {
+//OW
+    handle_message_extra(chan, msg);
+//OWEND
+
     switch (msg.msgid) {
     case MAVLINK_MSG_ID_GIMBAL_REPORT:
         handle_gimbal_report(chan, msg);
@@ -1133,5 +1265,44 @@ AP_Mount *mount()
 }
 
 };
+
+//OW CAMERA
+bool AP_Mount::cam_set_mode(uint8_t instance, bool video_mode)
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return false;
+    }
+    return backend->cam_set_mode(video_mode);
+}
+
+bool AP_Mount::cam_do_photo_video_mode(uint8_t instance, PhotoVideoMode photo_video_mode)
+{
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return false;
+    }
+    return backend->cam_do_photo_video_mode(photo_video_mode);
+}
+//OWEND
+//OW
+void AP_Mount::handle_message_extra(mavlink_channel_t chan, const mavlink_message_t &msg)
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            _backends[instance]->handle_message_extra(msg);
+        }
+    }
+}
+
+void AP_Mount::send_banner()
+{
+    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
+        if (_backends[instance] != nullptr) {
+            _backends[instance]->send_banner();
+        }
+    }
+}
+//OWEND
 
 #endif /* HAL_MOUNT_ENABLED */
