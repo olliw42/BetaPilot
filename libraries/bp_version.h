@@ -1,16 +1,18 @@
 #pragma once
 
 #define BETAPILOTVERSION "v061a"
-#define DATEOFBASEBRANCH "20250607"
+#define DATEOFBASEBRANCH "20250615"
 
 /*
 search for //OW to find all changes  THR_MINSPD THR_SLEW SUPP_MAN waiting for rudder release
 
+
 on-top features:
-- OSD (OW OSD)
-- RADIO_LINK (OW RADIOLINK)
 - RC_Channel, AUX_FUNC: CAMERA_SET_MODE, CAMERA_TRIG_MODE (eq CAM_MODE_TOGGLE) (OW CAMERA)
-- Plane THR (OW THR_SUPP)
+
+2025.06.15:
+ removed a number of on top features, OSD, DroneCAN, THRottle
+ removed RADIO_LINK (OW RADIOLINK)
 
 2025.02.08:
  attempt at adding OSD lua script
@@ -18,7 +20,7 @@ on-top features:
  upgraded to ArduPilot master 4.7.0-dev
  few changes needed, got it to compile, but needs testing if it works
 
-2025.06.07: v061
+2025.04.30: v061
  upgraded to ArduPilot master 4.7.0-dev
 
  remove zflags, not used, could use now options
@@ -62,30 +64,27 @@ ArduCopter specific
 - version.h:            1x
 
 ArduPlane specific
-- ArduPlane.cpp:        1x
 - version.h:            1x
 
 Libraries:
-- AP_Camera.cpp:        1x
-- AP_Camera.h:          1x
-- AP_Mount_Backend.cpp: 3x
-- AP_Mount_Backend.h:   4x
-- AP_Mount_Params.cpp:  1x
-- AP_Mount_Params.h:    1x
-- AP_Mount.cpp:         16x
-- AP_Mount.h:           7x
-- GCS_Common.cpp:       2x        2x RADIOLINK
+- AP_Camera_Backend.cpp: 1x
+- AP_Camera_Mount.cpp:          1x OW CAMERA
+- AP_Camera_Mount.h:            1x OW CAMERA
+- AP_Camera_sharedefs.h:        1x OW CAMERA
+- AP_Camera.cpp:                1x OW CAMERA
+
+- AP_Mount_Backend.cpp: 5x
+- AP_Mount_Backend.h:   5x      1x OW CAMERA
+- AP_Mount_config.h:    1x
+- AP_Mount.cpp:         6x      1x OW CAMERA
+- AP_Mount.h:           6x      1x OW CAMERA
+
+- GCS_Common.cpp:       6x
 - GCS_MAVLink.h:        2x
-- GCS.h:                1x        1x RADIOLINK
-- RC_Channel.cpp:       4x
-- AP_Logger.h:                    1x RADIOLINK
-- LogFile.cpp:                    1x RADIOLINK
-- LogStructure.h:                 2x RADIOLINK
-- AP_RCProtocol_Backend.h:        2x RADIOLINK
-- AP_RCProtocol_MAVLinkRadio.cpp: 1x RADIOLINK
-- AP_RCProtocol_MAVLinkRadio.h:   1x RADIOLINK
-- AP_RCProtocol.cpp:              1x RADIOLINK
-- AP_RCProtocol.h:                1x RADIOLINK
+- GCS.h:                1x
+
+- RC_Channel.cpp:               2x OW CAMERA
+- RC_Channel.h:                 2x OW CAMERA
 
 Additional Files in library:
 - bp_version.h
@@ -158,6 +157,21 @@ MAV_CMD_IMAGE_START_CAPTURE, MAV_CMD_IMAGE_STOP_CAPTURE, MAV_CMD_VIDEO_START_CAP
 WIND_COV HIGH_LATENCY2 WIND, GPS_RAW_INT VFR_HUD GPS2_RAW OPEN_DRONE_ID_LOCATION
 
 MAV_TYPE_  "GUID"
+
+MAV_CMD_DO_DIGICAM_CONFIGURE
+MAV_CMD_DO_DIGICAM_CONTROL
+MAV_CMD_DO_SET_CAM_TRIGG_DIST
+MAV_CMD_REQUEST_CAMERA_INFORMATION
+MAV_CMD_SET_CAMERA_MODE
+MAV_CMD_SET_CAMERA_ZOOM
+MAV_CMD_SET_CAMERA_FOCUS
+MAV_CMD_IMAGE_START_CAPTURE
+MAV_CMD_IMAGE_STOP_CAPTURE
+MAV_CMD_VIDEO_START_CAPTURE
+MAV_CMD_VIDEO_STOP_CAPTURE
+
+MAV_CMD_DO_AUX_FUNCTION
+
 */
 
 /*
