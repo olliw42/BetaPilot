@@ -243,10 +243,6 @@ public:
     void handle_gimbal_manager_set_pitchyaw(const mavlink_gimbal_manager_set_pitchyaw_t &packet);
     void handle_gimbal_manager_set_attitude(const mavlink_gimbal_manager_set_attitude_t &packet);
     MAV_RESULT handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet);
-
-    // used for scripting
-    virtual bool take_control() { return false; }
-    virtual bool give_control() { return false; }
 //OWEND
 
     //

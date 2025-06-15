@@ -336,10 +336,6 @@ public:
 
     // send banner
     void send_banner();
-
-    // used for scripting
-    bool take_control();
-    bool give_control();
 //OWEND
 
 protected:

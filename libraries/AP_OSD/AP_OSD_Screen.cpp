@@ -2064,10 +2064,7 @@ bool AP_OSD_Screen::is_btfl_fonts()
 
 void AP_OSD_Screen::draw_rc_tx_power(uint8_t x, uint8_t y)
 {
-//OW OSD
-    //const int16_t tx_power = AP::crsf()->get_link_status().tx_power;
-    const int16_t tx_power = osd->get_rc_tx_power();
-//OWEND
+    const int16_t tx_power = AP::crsf()->get_link_status().tx_power;
     bool btfl = is_btfl_fonts();
     if (tx_power > 0) {
         if (tx_power < 1000) {
@@ -2095,10 +2092,7 @@ void AP_OSD_Screen::draw_rc_tx_power(uint8_t x, uint8_t y)
 
 void AP_OSD_Screen::draw_rc_rssi_dbm(uint8_t x, uint8_t y)
 {
-//OW OSD
-    //const int8_t rssidbm = AP::RC().get_link_status().rssi_dbm; //OW RADIOLINK AP::crsf()->get_link_status().rssi_dbm;
-    const int8_t rssidbm = osd->get_rc_rssi_dbm();
-//OWEND
+    const int8_t rssidbm = AP::crsf()->get_link_status().rssi_dbm;
     const bool blink = -rssidbm < osd->warn_rssi;
     bool btfl = is_btfl_fonts();
 
@@ -2121,10 +2115,7 @@ void AP_OSD_Screen::draw_rc_rssi_dbm(uint8_t x, uint8_t y)
 
 void AP_OSD_Screen::draw_rc_snr(uint8_t x, uint8_t y)
 {
-//OW OSD
-    //const int8_t snr = AP::RC().get_link_status().snr; //OW RADIOLINK AP::crsf()->get_link_status().snr;
-    const int8_t snr = osd->get_rc_snr();
-//OWEND
+    const int8_t snr = AP::crsf()->get_link_status().snr;
     const bool blink = snr < osd->warn_snr;
     bool btfl = is_btfl_fonts();
     if (snr == INT8_MIN) {
@@ -2144,10 +2135,7 @@ void AP_OSD_Screen::draw_rc_snr(uint8_t x, uint8_t y)
 
 void AP_OSD_Screen::draw_rc_active_antenna(uint8_t x, uint8_t y)
 {
-//OW OSD
-    //const int8_t active_antenna = AP::crsf()->get_link_status().active_antenna;
-    const int8_t active_antenna = osd->get_rc_active_antenna();
-//OWEND
+    const int8_t active_antenna = AP::crsf()->get_link_status().active_antenna;
     bool btfl = is_btfl_fonts();
     if (active_antenna < 0) {
         if (btfl) {
@@ -2166,10 +2154,7 @@ void AP_OSD_Screen::draw_rc_active_antenna(uint8_t x, uint8_t y)
 
 void AP_OSD_Screen::draw_rc_lq(uint8_t x, uint8_t y)
 {
-//OW RADIO_LINK
-    //const int16_t lqv = AP::crsf()->get_link_status().link_quality;
-    const int16_t lqv = AP::RC().get_link_status().link_quality;
-//OWEND
+    const int16_t lqv = AP::crsf()->get_link_status().link_quality;
     const bool blink = lqv < osd->warn_lq;
     bool btfl = is_btfl_fonts();
     bool prefix_rf = check_option(AP_OSD::OPTION_RF_MODE_ALONG_WITH_LQ);

@@ -134,10 +134,6 @@ public:
     bool get_location_target(Location &target_loc) override;
     void set_attitude_euler(float roll_deg, float pitch_deg, float yaw_bf_deg) override;
 
-    // added: handle control
-    bool take_control() override;
-    bool give_control() override;
-
     //
     // camera controls for gimbals that include a camera
     //

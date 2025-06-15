@@ -1393,20 +1393,6 @@ void AP_Mount_STorM32_MAVLink::set_attitude_euler(float roll_deg, float pitch_de
 }
 
 
-bool AP_Mount_STorM32_MAVLink::take_control()
-{
-    _script_angles.control = true;
-    return true; // we assume only one script trying this, so KIS
-}
-
-
-bool AP_Mount_STorM32_MAVLink::give_control()
-{
-    _script_angles.control = false;
-    return true; // we assume only one script trying this, so KIS
-}
-
-
 //------------------------------------------------------
 // Camera
 //------------------------------------------------------

@@ -106,10 +106,6 @@ void AP_DroneCAN_Serial::update(void)
             pkt.options = UAVCAN_TUNNEL_TARGETTED_OPTION_LOCK_PORT;
             if (ptr != nullptr) {
                 memcpy(pkt.buffer.data, ptr, n);
-//OW
-            } else {
-                pkt.buffer.len = 0;
-//OWEND
             }
         }
         if (targetted->broadcast(pkt)) {

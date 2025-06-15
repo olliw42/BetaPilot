@@ -2991,7 +2991,7 @@ void GCS_MAVLINK::send_autopilot_version() const
     }
 
 //OW
-    middleware_sw_version = atoi(BETAPILOTVERSION);
+    middleware_sw_version = atoi(BETAPILOTVERSION); // 0 for native ArduPilot, > 0 for BetaPilot
 //OWEND
 
     mavlink_msg_autopilot_version_send(
@@ -3144,10 +3144,6 @@ void GCS_MAVLINK::send_heartbeat() const
         base_mode(),
         gcs().custom_mode(),
         system_status());
-//OW
-//    int link_bw = _port->bw_in_bytes_per_second();
-//    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "chan %u port bps %i", chan, link_bw);
-//OWEND
 }
 
 #if AP_RC_CHANNEL_ENABLED
@@ -7612,7 +7608,7 @@ void GCS_MAVLINK::handle_mlrs_radio_link_info(const mavlink_message_t &msg)
 
     AP::RC().handle_mlrs_radio_link_info(&packet);
 
-    //TOD logging
+    //TODO logging
 }
 //OWEND
 #endif // AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
