@@ -738,33 +738,6 @@ void AP_RCProtocol::handle_radio_rc_channels(const mavlink_radio_rc_channels_t* 
 
     backend[AP_RCProtocol::MAVLINK_RADIO]->update_radio_rc_channels(packet);
 };
-
-//OW RADIOLINK
-void AP_RCProtocol::handle_mlrs_radio_link_stats(const mavlink_mlrs_radio_link_stats_t* packet)
-{
-// can be handled like CRSF (= receiver) or like RADIO_STATUS (= telemetry)
-// the user does decide it via RssiType::RECEIVER or RssiType::TELEMETRY_RADIO_RSSI setting
-// so isn't decided here, but is decide somewhere higher up in the outside
-// this here is needed only in case the user wants RssiType::RECEIVER
-
-    if (_detected_protocol != AP_RCProtocol::MAVLINK_RADIO) {
-        return;
-    }
-
-    // now update the backend
-    backend[AP_RCProtocol::MAVLINK_RADIO]->update_mlrs_radio_link_stats(packet);
-}
-
-void AP_RCProtocol::handle_mlrs_radio_link_info(const mavlink_mlrs_radio_link_information_t* packet)
-{
-    if (_detected_protocol != AP_RCProtocol::MAVLINK_RADIO) {
-        return;
-    }
-
-    // now update the backend
-    backend[AP_RCProtocol::MAVLINK_RADIO]->update_mlrs_radio_link_info(packet);
-}
-//OWEND
 #endif // AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
 
 namespace AP {

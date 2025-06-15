@@ -4528,14 +4528,6 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
 #endif
 //OWEND
         break;
-//OW RADIOLINK
-    case MAVLINK_MSG_ID_MLRS_RADIO_LINK_STATS:
-        handle_mlrs_radio_link_stats(msg);
-        break;
-    case MAVLINK_MSG_ID_MLRS_RADIO_LINK_INFORMATION:
-        handle_mlrs_radio_link_info(msg);
-        break;
-//OWEND
 #endif
 #endif
 
@@ -7539,78 +7531,6 @@ void GCS_MAVLINK::handle_radio_rc_channels(const mavlink_message_t &msg)
 
     AP::RC().handle_radio_rc_channels(&packet);
 }
-
-//OW RADIOLINK
-// AP_RSSI::RssiType::TELEMETRY_RADIO_RSSI -> rssi is taken from RADIO_STATUS
-// AP_RSSI::RssiType::RECEIVER -> rssi is taken from RADIO_LINK_STATS
-void GCS_MAVLINK::handle_mlrs_radio_link_stats(const mavlink_message_t &msg)
-{
-    mavlink_mlrs_radio_link_stats_t packet;
-    mavlink_msg_mlrs_radio_link_stats_decode(&msg, &packet);
-
-    AP::RC().handle_mlrs_radio_link_stats(&packet);
-
-#if HAL_LOGGING_ENABLED
-    // log link stats if logging Performance monitoring data
-    if (AP::logger().should_log(log_radio_bit())) {
-
-        AP::logger().Write(
-            "RDRX", "TimeUS,rxLQrc,rxLQser,rxRssi1,rxSnr1,rxRssi2,rxSnr2,rxRAn,rxTAn",
-            "s%%------",
-            "F--------",
-            "QBBBbBbBB",
-            AP_HAL::micros64(),
-            packet.rx_LQ_rc,
-            packet.rx_LQ_ser,
-            packet.rx_rssi1,
-            packet.rx_snr1,
-            packet.rx_rssi2,
-            packet.rx_snr2,
-            (uint8_t)(packet.flags & MLRS_RADIO_LINK_STATS_FLAGS_RX_RECEIVE_ANTENNA2 ? 2 : 1),
-            (uint8_t)((packet.flags & MLRS_RADIO_LINK_STATS_FLAGS_RX_TRANSMIT_ANTENNA1 ? 1 : 0) +
-                      (packet.flags & MLRS_RADIO_LINK_STATS_FLAGS_RX_TRANSMIT_ANTENNA2 ? 2 : 0))
-            );
-
-        AP::logger().Write(
-            "RDTX", "TimeUS,txLQser,txRssi1,txSnr1,txRssi2,txSnr2,txRAn,txTAn,flags",
-            "s%-------",
-            "F--------",
-            "QBBbBbBBB",
-            AP_HAL::micros64(),
-            packet.tx_LQ_ser,
-            packet.tx_rssi1,
-            packet.tx_snr1,
-            packet.tx_rssi2,
-            packet.tx_snr2,
-            (uint8_t)(packet.flags & MLRS_RADIO_LINK_STATS_FLAGS_TX_RECEIVE_ANTENNA2 ? 2 : 1),
-            (uint8_t)((packet.flags & MLRS_RADIO_LINK_STATS_FLAGS_TX_TRANSMIT_ANTENNA1 ? 1 : 0) +
-                      (packet.flags & MLRS_RADIO_LINK_STATS_FLAGS_TX_TRANSMIT_ANTENNA2 ? 2 : 0)),
-            (uint8_t)packet.flags //TODO
-            );
-
-        AP::logger().Write(
-            "RDFR", "TimeUS,f1,f2",
-            "szz",
-            "F--",
-            "Qff",
-            AP_HAL::micros64(),
-            packet.frequency1,
-            packet.frequency2
-            );
-    }
-#endif
-}
-
-void GCS_MAVLINK::handle_mlrs_radio_link_info(const mavlink_message_t &msg)
-{
-    mavlink_mlrs_radio_link_information_t packet;
-    mavlink_msg_mlrs_radio_link_information_decode(&msg, &packet);
-
-    AP::RC().handle_mlrs_radio_link_info(&packet);
-
-    //TODO logging
-}
-//OWEND
 #endif // AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
 
 #endif  // HAL_GCS_ENABLED
