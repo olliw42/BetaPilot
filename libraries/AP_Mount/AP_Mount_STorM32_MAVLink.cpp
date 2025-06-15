@@ -1445,47 +1445,6 @@ bool AP_Mount_STorM32_MAVLink::record_video(bool start_recording)
 }
 
 
-bool AP_Mount_STorM32_MAVLink::set_zoom(ZoomType zoom_type, float zoom_value)
-{
-    // allow it for both video and photo
-
-    uint8_t mav_zoom_type = 0;
-    switch (zoom_type) {
-    case ZoomType::RATE: mav_zoom_type = ZOOM_TYPE_CONTINUOUS; break;
-    case ZoomType::PCT: mav_zoom_type = ZOOM_TYPE_RANGE; break;
-    default:
-        return false;
-    }
-
-    send_cmd_set_camera_zoom(mav_zoom_type, zoom_value);
-
-    return true;
-}
-
-
-SetFocusResult AP_Mount_STorM32_MAVLink::set_focus(FocusType focus_type, float focus_value)
-{
-    uint8_t mav_focus_type = 0;
-    switch (focus_type) {
-    case FocusType::RATE:
-        mav_focus_type = FOCUS_TYPE_CONTINUOUS; // focus in, out or hold (focus in = -1, hold = 0, focus out = 1). Same as FOCUS_TYPE_CONTINUOUS
-        break;
-    case FocusType::PCT:
-        mav_focus_type = FOCUS_TYPE_RANGE; // focus to a percentage (from 0 to 100) of the full range. Same as FOCUS_TYPE_RANGE
-        break;
-    case FocusType::AUTO:
-        mav_focus_type = FOCUS_TYPE_AUTO; // focus automatically. Same as FOCUS_TYPE_AUTO
-        break;
-    default:
-        return SetFocusResult::UNSUPPORTED;
-    }
-
-    send_cmd_set_camera_focus(mav_focus_type, focus_value);
-
-    return SetFocusResult::ACCEPTED;
-}
-
-
 bool AP_Mount_STorM32_MAVLink::cam_set_mode(bool video_mode)
 {
     _camera_mode = (video_mode) ? CameraMode::VIDEO : CameraMode::PHOTO;
@@ -1573,48 +1532,6 @@ void AP_Mount_STorM32_MAVLink::send_cmd_do_digicam_control(bool shoot)
         );
 
 //    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "cam digi cntrl %u", shoot);
-}
-
-
-void AP_Mount_STorM32_MAVLink::send_cmd_set_camera_zoom(uint8_t mav_zoom_type, float zoom_value)
-{
-    if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
-        return;
-    }
-
-    float param1 = mav_zoom_type;
-    float param2 = zoom_value;
-
-    mavlink_msg_command_long_send(
-        _chan,
-        _sysid, 0, // PROBLEM: we don't know the Camera's component id ...   //_compid,
-        MAV_CMD_SET_CAMERA_ZOOM,        // command
-        0,                              // confirmation
-        param1, param2, 0, 0, 0, 0, 0   // param1 .. param7
-        );
-
-//    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "cam set zoom %lg", zoom_value);
-}
-
-
-void AP_Mount_STorM32_MAVLink::send_cmd_set_camera_focus(uint8_t mav_focus_type, float focus_value)
-{
-    if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
-        return;
-    }
-
-    float param1 = mav_focus_type;
-    float param2 = focus_value;
-
-    mavlink_msg_command_long_send(
-        _chan,
-        _sysid, 0, // PROBLEM: we don't know the Camera's component id ...   //_compid,
-        MAV_CMD_SET_CAMERA_FOCUS,       // command
-        0,                              // confirmation
-        param1, param2, 0, 0, 0, 0, 0   // param1 .. param7
-        );
-
-//    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "cam set focus %lg", focus_value);
 }
 
 

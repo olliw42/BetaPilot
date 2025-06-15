@@ -160,18 +160,14 @@ public:
     bool record_video(bool start_recording) override;
 
     // set zoom specified as a rate or percentage
-    bool set_zoom(ZoomType zoom_type, float zoom_value) override;
-
-    // set focus specified as rate, percentage or auto
-    // focus in = -1, focus hold = 0, focus out = 1
-    SetFocusResult set_focus(FocusType focus_type, float focus_value) override;
+    bool set_zoom(ZoomType zoom_type, float zoom_value) override { return false; }
 
     // send camera information message to GCS
-    // In-activate AP, if this is wanted, the camera component should be enabled in STorM32.
+    // If this is wanted, the camera component should be enabled in STorM32.
     void send_camera_information(mavlink_channel_t chan) const override {}
 
     // send camera settings message to GCS
-    // In-activate AP, if this is wanted, the camera component should be enabled in STorM32.
+    // If this is wanted, the camera component should be enabled in STorM32.
     void send_camera_settings(mavlink_channel_t chan) const override {}
 
     // added:
@@ -344,8 +340,6 @@ private:
 
     void send_cmd_do_digicam_configure(bool video_mode);
     void send_cmd_do_digicam_control(bool shoot);
-    void send_cmd_set_camera_zoom(uint8_t mav_zoom_type, float zoom_value);
-    void send_cmd_set_camera_focus(uint8_t mav_focus_type, float focus_value);
 
     // logging
 
