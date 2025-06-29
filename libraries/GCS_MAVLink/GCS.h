@@ -1346,6 +1346,10 @@ public:
     uint8_t get_available_modes_sequence() const { return available_modes_sequence; }
     void available_modes_changed() { available_modes_sequence += 1; }
 
+//OW
+    MAV_LANDED_STATE get_landed_state(void) const { return num_gcs() > 0 ? chan(0)->landed_state() : MAV_LANDED_STATE_UNDEFINED; }
+//OWEND
+
 protected:
 
     virtual GCS_MAVLINK *new_gcs_mavlink_backend(AP_HAL::UARTDriver &uart) = 0;
