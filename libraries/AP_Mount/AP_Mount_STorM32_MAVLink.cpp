@@ -440,16 +440,18 @@ void AP_Mount_STorM32_MAVLink::update_target_angles()
 
 void AP_Mount_STorM32_MAVLink::find_gimbal()
 {
-    // search for gimbal only until vehicle is armed
-    if (hal.util->get_soft_armed()) {
+    uint32_t tnow_ms = AP_HAL::millis();
+
+    // search for gimbal until vehicle is armed, but search for at least 15 secs
+    // this is to prevent that gimbal is not searched if AP is configured to be immediately armed
+    if (hal.util->get_soft_armed() && (tnow_ms > 15000)) {
         return;
     }
-
-    uint32_t tnow_ms = AP_HAL::millis();
 
     // search for gimbal in routing table
     if (!_compid) {
         // we expect that instance 0 has compid = MAV_COMP_ID_GIMBAL, instance 1 has compid = MAV_COMP_ID_GIMBAL2, etc
+        // it's the same as returned by gimbal_device_id()
         uint8_t compid = (_instance == 0) ? MAV_COMP_ID_GIMBAL : MAV_COMP_ID_GIMBAL2 + (_instance - 1);
         bool found = GCS_MAVLINK::find_by_mavtype_and_compid(MAV_TYPE_GIMBAL, compid, _sysid, _chan);
         if (!found || (_sysid != mavlink_system.sysid)) {
@@ -490,7 +492,7 @@ void AP_Mount_STorM32_MAVLink::determine_protocol(const mavlink_message_t &msg)
         case MAVLINK_MSG_ID_MOUNT_STATUS:
             _protocol = Protocol::MOUNT;
             break;
-            case MAVLINK_MSG_ID_GIMBAL_DEVICE_ATTITUDE_STATUS:
+        case MAVLINK_MSG_ID_GIMBAL_DEVICE_ATTITUDE_STATUS:
             _protocol = Protocol::GIMBAL_DEVICE;
             break;
     }
@@ -507,7 +509,7 @@ bool AP_Mount_STorM32_MAVLink::has_roll_control() const
         return (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_HAS_ROLL_AXIS);
     }
     if (_protocol == Protocol::MOUNT) {
-        return (_params.roll_angle_min < _params.roll_angle_max);
+        return roll_range_valid(); // AP's default behavior
     }
     return false;
 }
@@ -519,7 +521,7 @@ bool AP_Mount_STorM32_MAVLink::has_pitch_control() const
         return (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_HAS_PITCH_AXIS);
     }
     if (_protocol == Protocol::MOUNT) {
-        return (_params.pitch_angle_min < _params.pitch_angle_max);
+        return pitch_range_valid(); // AP's default behavior
     }
     return false;
 }
@@ -531,7 +533,7 @@ bool AP_Mount_STorM32_MAVLink::has_pan_control() const
         return (_device_info.cap_flags & GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_AXIS);
     }
     if (_protocol == Protocol::MOUNT) {
-        return yaw_range_valid();
+        return yaw_range_valid(); // AP's default behavior
     }
     return false;
 }
@@ -577,23 +579,30 @@ bool AP_Mount_STorM32_MAVLink::get_angular_velocity(Vector3f& rates)
 void AP_Mount_STorM32_MAVLink::handle_gimbal_device_information(const mavlink_message_t &msg)
 {
     // this msg is not from our gimbal
+    // somewhat dirty, we assume that msg.sysid, msg.compid are not zero
     if (msg.sysid != _sysid || msg.compid != _compid) {
         return;
     }
 
     mavlink_msg_gimbal_device_information_decode(&msg, &_device_info);
 
-    // we could check here for sanity of _device_info.gimbal_device_id, but let's just be happy
+    // let's check sanity of gimbal_device_id, must be 0 according to message spec
+    if (_device_info.gimbal_device_id != 0) {
+        return;
+    }
 
     // correct parameters from gimbal information
+    // NAN if RollMotorLimit = 0
     if (!isnan(_device_info.roll_min) && !isnan(_device_info.roll_max)) {
         if (degrees(_device_info.roll_min) > _params.roll_angle_min) _params.roll_angle_min.set(degrees(_device_info.roll_min));
         if (degrees(_device_info.roll_max) < _params.roll_angle_max) _params.roll_angle_max.set(degrees(_device_info.roll_max));
     }
+    // NAN if PitchMotorLimitMin = PitchMotorLimitMax = 0
     if (!isnan(_device_info.pitch_min) && !isnan(_device_info.pitch_max)) {
         if (degrees(_device_info.pitch_min) > _params.pitch_angle_min) _params.pitch_angle_min.set(degrees(_device_info.pitch_min));
         if (degrees(_device_info.pitch_max) < _params.pitch_angle_max) _params.pitch_angle_max.set(degrees(_device_info.pitch_max));
     }
+    // NAN if YawMotorLimit = 0
     if (!isnan(_device_info.yaw_min) && !isnan(_device_info.yaw_max)) {
         if (degrees(_device_info.yaw_min) > _params.yaw_angle_min) _params.yaw_angle_min.set(degrees(_device_info.yaw_min));
         if (degrees(_device_info.yaw_max) < _params.yaw_angle_max) _params.yaw_angle_max.set(degrees(_device_info.yaw_max));
@@ -625,7 +634,10 @@ void AP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
     mavlink_gimbal_device_attitude_status_t payload;
     mavlink_msg_gimbal_device_attitude_status_decode(&msg, &payload);
 
-    // we could check here for sanity of _device_info.gimbal_device_id, but let's just be happy
+    // let's check sanity of gimbal_device_id, must be 0 according to message spec
+    if (payload.gimbal_device_id != 0) {
+        return;
+    }
 
     // get relevant data
 
@@ -1099,6 +1111,8 @@ void AP_Mount_STorM32_MAVLink::send_gimbal_manager_information(mavlink_channel_t
     // may be different, and any third party which mistakenly thinks it can use those from
     // the gimbal device messages may get confused. Their fault.
 
+    // ISSUE: QGC does exactly this, used the flags from GIMBAL_DEVICE_ATTITUDE_STATUS
+
     cap_flags &=~ (GIMBAL_MANAGER_CAP_FLAGS_HAS_ROLL_FOLLOW |
                    GIMBAL_MANAGER_CAP_FLAGS_HAS_PITCH_FOLLOW |
                    GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_LOCK |
@@ -1109,25 +1123,26 @@ void AP_Mount_STorM32_MAVLink::send_gimbal_manager_information(mavlink_channel_t
         AP_HAL::millis(),           // autopilot system time
         cap_flags,                  // bitmap of gimbal manager capability flags
         _compid,                    // gimbal device id
-        _device_info.roll_min,      // roll_min in radians
-        _device_info.roll_max,      // roll_max in radians
-        _device_info.pitch_min,     // pitch_min in radians
-        _device_info.pitch_max,     // pitch_max in radians
-        _device_info.yaw_min,       // yaw_min in radians
-        _device_info.yaw_max        // yaw_max in radians
+        _device_info.roll_min,      // roll_min in radians, NAN if RollMotorLimit = 0
+        _device_info.roll_max,      // roll_max in radians, NAN if RollMotorLimit = 0
+        _device_info.pitch_min,     // pitch_min in radians, NAN if PitchMotorLimitMin = PitchMotorLimitMax = 0
+        _device_info.pitch_max,     // pitch_max in radians, NAN if PitchMotorLimitMin = PitchMotorLimitMax = 0
+        _device_info.yaw_min,       // yaw_min in radians, NAN if YawMotorLimit = 0
+        _device_info.yaw_max        // yaw_max in radians, NAN if YawMotorLimit = 0
         );
 }
 
 // return gimbal device id
+// "original" sends _instance + 1
+// should return 0 if instance not available
+// is also used in AP_Camera in camera_information, here the spec is
+//   0: no associated gimbal, 1-6: non-mavlink gimbals, else gimbal compi id
+// should be actually _compid, but issue is that it may be called by AP_Camera before
+// gimbal has been detected, and AP_CAmera has no means to handle that. So we derive
+// the gimbal id here from the instance.
 uint8_t AP_Mount_STorM32_MAVLink::get_gimbal_device_id() const
 {
-    if (_instance == 0) {
-        return MAV_COMP_ID_GIMBAL;
-    } else
-    if (_instance <= 5) {
-        return MAV_COMP_ID_GIMBAL2 + _instance - 1;
-    }
-    return MAV_COMP_ID_GIMBAL; // should not happen
+    return (_instance == 0) ? MAV_COMP_ID_GIMBAL : MAV_COMP_ID_GIMBAL2 + (_instance - 1);
 }
 
 // return gimbal manager flags. Used by GIMBAL_MANAGER_STATUS message.
