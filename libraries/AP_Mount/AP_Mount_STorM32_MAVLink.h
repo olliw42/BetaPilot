@@ -134,46 +134,6 @@ public:
     bool get_location_target(Location &target_loc) override;
     void set_attitude_euler(float roll_deg, float pitch_deg, float yaw_bf_deg) override;
 
-    //
-    // camera controls for gimbals that include a camera
-    //
-
-    // These are called from the Camera_Mount backend (CameraType::Mount = 4).
-    // One could instead use Camera_MAVLink backend (CameraType::MAVLINK = 5), which uses
-    // MAV_CMD_DO_DIGICAM_CONTROL and MAV_CMD_DO_DIGICAM_CONFIGURE commands.
-    // One also could use Camera_MAVLinkCamV2 backend (CameraType::MAVLINK_CAMV2 = 6), which uses
-    // MAV_CMD_IMAGE_START_CAPTURE, MAV_CMD_VIDEO_START_CAPTURE, MAV_CMD_VIDEO_STOP_CAPTURE, and so on. This
-    // backend also digests a MAVLINK_MSG_ID_CAMERA_INFORMATION message.
-    //
-    // We implement them by using MAV_CMD_DO_DIGICAM_CONFIGURE, MAV_CMD_DO_DIGICAM_CONTROL.
-    // So may not provide advantages over CameraType::MAVLINK, maybe is even less powerful.
-
-    // take a picture.  returns true on success
-    bool take_picture() override;
-
-    // start or stop video recording.  returns true on success
-    // set start_recording = true to start record, false to stop recording
-    bool record_video(bool start_recording) override;
-
-    // set zoom specified as a rate or percentage
-    bool set_zoom(ZoomType zoom_type, float zoom_value) override { return false; }
-
-    // send camera information message to GCS
-    // If this is wanted, the camera component should be enabled in STorM32.
-    void send_camera_information(mavlink_channel_t chan) const override {}
-
-    // send camera settings message to GCS
-    // If this is wanted, the camera component should be enabled in STorM32.
-    void send_camera_settings(mavlink_channel_t chan) const override {}
-
-    // added:
-
-    // momentary switch to set to photo or video mode (video_mode false: photo mode, true: video mode)
-    bool cam_set_mode(bool video_mode) override;
-
-    // momentary 3 pos switch to set to photo mode and take picture, set to video mode and start recording, or stop video recording
-    bool cam_do_photo_video_mode(PhotoVideoMode photo_video_mode) override;
-
 private:
 
     // internal variables
@@ -323,19 +283,6 @@ private:
         TASK_SLOT3
     };
     uint8_t _task_counter;
-
-    // camera
-
-    enum class CameraMode {
-        UNDEFINED = 0,              // we do not yet know
-        PHOTO,
-        VIDEO,
-    };
-    CameraMode _camera_mode;        // current camera mode
-    bool _camera_is_recording;
-
-    void send_cmd_do_digicam_configure(bool video_mode);
-    void send_cmd_do_digicam_control(bool shoot);
 
     // logging
 

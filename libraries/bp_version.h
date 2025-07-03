@@ -7,13 +7,11 @@
 search for //OW to find all changes
 
 
-on-top features:
-- RC_Channel, AUX_FUNC: CAMERA_SET_MODE, CAMERA_TRIG_MODE (eq CAM_MODE_TOGGLE) (OW CAMERA)
-
+2025.07.01:
+ removed OW CAMERA
 2025.06.15:
  removed a number of on top features, OSD, DroneCAN, THR_SUPP
  removed OW RADIOLINK
-
 2025.02.08:
  attempt at adding OSD lua script
  change to "new" radio link stats/info messages, compiles, needs testing
@@ -66,23 +64,16 @@ ArduPlane specific
 
 Libraries:
 - AP_Camera_Backend.cpp: 1x
-- AP_Camera_Mount.cpp:          1x OW CAMERA
-- AP_Camera_Mount.h:            1x OW CAMERA
-- AP_Camera_sharedefs.h:        1x OW CAMERA
-- AP_Camera.cpp:                1x OW CAMERA
 
 - AP_Mount_Backend.cpp: 5x
-- AP_Mount_Backend.h:   5x      1x OW CAMERA
+- AP_Mount_Backend.h:   5x
 - AP_Mount_config.h:    1x
-- AP_Mount.cpp:         6x      1x OW CAMERA
-- AP_Mount.h:           6x      1x OW CAMERA
+- AP_Mount.cpp:         6x
+- AP_Mount.h:           6x
 
 - GCS_Common.cpp:       6x
 - GCS_MAVLink.h:        2x
 - GCS.h:                1x
-
-- RC_Channel.cpp:               2x OW CAMERA
-- RC_Channel.h:                 2x OW CAMERA
 
 Additional Files in library:
 - bp_version.h

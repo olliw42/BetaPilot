@@ -1266,25 +1266,6 @@ AP_Mount *mount()
 
 };
 
-//OW CAMERA
-bool AP_Mount::cam_set_mode(uint8_t instance, bool video_mode)
-{
-    auto *backend = get_instance(instance);
-    if (backend == nullptr) {
-        return false;
-    }
-    return backend->cam_set_mode(video_mode);
-}
-
-bool AP_Mount::cam_do_photo_video_mode(uint8_t instance, PhotoVideoMode photo_video_mode)
-{
-    auto *backend = get_instance(instance);
-    if (backend == nullptr) {
-        return false;
-    }
-    return backend->cam_do_photo_video_mode(photo_video_mode);
-}
-//OWEND
 //OW
 void AP_Mount::handle_message_extra(mavlink_channel_t chan, const mavlink_message_t &msg)
 {
