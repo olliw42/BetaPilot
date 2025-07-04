@@ -33,7 +33,6 @@ public:
     // The mount prearm checks are tied to camera, and enabled by setting ARMING_CHECK_CAMERA.
     bool healthy() const override;
 
-
     // return true if this mount accepts roll or pitch targets
     // affects the gimbal manager capability flags send out by AP
     // only used in get_gimbal_manager_capability_flags(), which we overwrite anyhow
@@ -52,7 +51,7 @@ public:
     // for now do something simple
     bool has_pan_control() const override;
 
-    //>> Deal with some AP strangeness:
+    ///>> Deal with some AP strangeness:
 
     // get attitude as a quaternion.  Returns true on success
     // att_quat will be an earth-frame quaternion rotated such that yaw is in body-frame.
@@ -70,7 +69,6 @@ public:
     // - AP_Mount_Backend::send_gimbal_device_attitude_status()
     // => not needed, but is supplied since the data may be available
     bool get_angular_velocity(Vector3f& rates) override;
-
 
     // set yaw_lock.  If true, the gimbal's yaw target is maintained in earth-frame meaning
     // it will lock onto an earth-frame heading (e.g. North). If false (aka "follow") the gimbal's yaw
@@ -113,7 +111,7 @@ public:
     // => we need to overwrite it
     bool handle_gimbal_manager_flags(uint32_t flags) override;
 
-    //<< end of Deal with some AP strangeness
+    ///<< end of Deal with some AP strangeness
 
     // handle GIMBAL_DEVICE_INFORMATION message
     // empty => we need to overwrite it
@@ -173,10 +171,8 @@ private:
     };
 
     bool _gimbal_armed;             // true once the gimbal has reached normal state
-    uint32_t _gimbal_error_flags;   // error flags in custom_mode field of the HEARTBEAT message (restricted to 16 bits)
     bool _gimbal_prearmchecks_ok;   // true when the gimbal stops reporting prearm fail in the HEARTBEAT message
 
-    mutable uint8_t _armingchecks_running; // true when ARMING_CHECK_ALL,ARMING_CHECK_CAMERA set and running, we know from healthy()
     bool _healthy;
 
     bool _prearmchecks_passed;      // becomes true when all checks were passed once at startup
@@ -184,7 +180,6 @@ private:
     bool _checks_last;              // result of last check, to detect toggle from true -> false, false -> true
     uint32_t _checks_tlast_ms;
 
-    bool has_failures(char* s);
     bool is_healthy();
     void update_checks();
 
