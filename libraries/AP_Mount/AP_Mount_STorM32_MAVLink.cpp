@@ -14,12 +14,12 @@
 #include <AP_Vehicle/AP_Vehicle.h>
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_RTC/AP_RTC.h>
+#include <AP_Arming/AP_Arming.h>
 #include <AP_Notify/AP_Notify.h>
 #include <AP_Logger/AP_Logger.h>
 #include <RC_Channel/RC_Channel.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
 #include <GCS_MAVLink/GCS.h>
-#include <AP_Arming/AP_Arming.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -527,7 +527,6 @@ bool AP_Mount_STorM32_MAVLink::get_angular_velocity(Vector3f& rates)
 void AP_Mount_STorM32_MAVLink::handle_gimbal_device_information(const mavlink_message_t &msg)
 {
     // this msg is not from our gimbal
-    // somewhat dirty, we assume that msg.sysid, msg.compid are not zero
     if (msg.sysid != _sysid || msg.compid != _compid) {
         return;
     }
@@ -1084,7 +1083,7 @@ bool AP_Mount_STorM32_MAVLink::has_failures(char* s)
         if (failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_ENCODER_ERROR) strcat(s, "enc,");
         if (failure_flags & GIMBAL_DEVICE_ERROR_FLAGS_POWER_ERROR) strcat(s, "volt,");
         if (s[0] != '\0') {
-            s[strlen(s)-1] = '\0';
+            s[strlen(s)-1] = '\0'; // strip last ','
         } else {
             strcpy(s, "err flags");
         }

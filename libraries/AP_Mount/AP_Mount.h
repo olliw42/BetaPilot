@@ -51,7 +51,7 @@ class AP_Mount_Topotek;
 class AP_Mount_CADDX;
 class AP_Mount_XFRobot;
 //OW
-class BP_Mount_STorM32_MAVLink;
+class AP_Mount_STorM32_MAVLink;
 //OWEND
 
 /*
@@ -76,7 +76,7 @@ class AP_Mount
     friend class AP_Mount_Topotek;
     friend class AP_Mount_CADDX;
 //OW
-    friend class BP_Mount_STorM32_MAVLink;
+    friend class AP_Mount_STorM32_MAVLink;
 //OWEND
 
 public:

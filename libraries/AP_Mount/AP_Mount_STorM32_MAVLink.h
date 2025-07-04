@@ -2,6 +2,7 @@
 //OW
 // (c) olliw, www.olliw.eu, GPL3
 // STorM32 mount backend class
+// pure v2 gimbal protocol
 //*****************************************************
 #pragma once
 
@@ -113,7 +114,6 @@ public:
     bool handle_gimbal_manager_flags(uint32_t flags) override;
 
     //<< end of Deal with some AP strangeness
-
 
     // handle GIMBAL_DEVICE_INFORMATION message
     // empty => we need to overwrite it

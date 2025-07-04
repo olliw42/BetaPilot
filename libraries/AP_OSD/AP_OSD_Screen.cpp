@@ -2153,7 +2153,7 @@ void AP_OSD_Screen::draw_rc_active_antenna(uint8_t x, uint8_t y)
 }
 
 void AP_OSD_Screen::draw_rc_lq(uint8_t x, uint8_t y)
-{
+{    
     const int16_t lqv = AP::crsf()->get_link_status().link_quality;
     const bool blink = lqv < osd->warn_lq;
     bool btfl = is_btfl_fonts();

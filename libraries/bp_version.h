@@ -1,7 +1,7 @@
 #pragma once
 
 #define BETAPILOTVERSION "v061b"
-#define DATEOFBASEBRANCH "20250615"
+#define DATEOFBASEBRANCH "20250701"
 
 /*
 search for //OW to find all changes
@@ -77,8 +77,8 @@ Libraries:
 
 Additional Files in library:
 - bp_version.h
-- AP_Mount/BP_Mount_STorM32_MAVLink.cpp
-- AP_Mount/BP_Mount_STorM32_MAVLink.h
+- AP_Mount/AP_Mount_STorM32_MAVLink.cpp
+- AP_Mount/AP_Mount_STorM32_MAVLink.h
 
 
 Effect of SYSID_MYGCS parameter value:
