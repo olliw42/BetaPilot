@@ -315,11 +315,7 @@ void AP_Mount_STorM32_MAVLink::send_target_angles()
         return;
     }
 
-    if (_protocol == Protocol::GIMBAL_DEVICE) {
-        send_gimbal_device_set_attitude();
-    } else {
-        send_cmd_do_mount_control();
-    }
+    send_gimbal_device_set_attitude();
 }
 
 
@@ -408,17 +404,6 @@ void AP_Mount_STorM32_MAVLink::update_target_angles()
             break;
     }
 
-    if (_script_angles.control) {
-        // point mount to where a script wants it to point
-        // -> ANGLE
-        mnt_target.target_type = MountTargetType::ANGLE;
-        mnt_target.angle_rad.roll = _script_angles.roll;
-        mnt_target.angle_rad.pitch = _script_angles.pitch;
-        mnt_target.angle_rad.yaw = _script_angles.yaw_bf;
-        mnt_target.angle_rad.yaw_is_ef = false;
-        //?? mnt_target_loc_valid = false;
-    }
-
     // account for range limits
     // only do the yaw axis (should be done by STorM32 supervisor, but doesn't hurt)
 
@@ -473,29 +458,7 @@ void AP_Mount_STorM32_MAVLink::find_gimbal()
         return;
     }
 
-    // we don't know yet what we should do
-    if (_protocol == Protocol::UNDEFINED) {
-        return;
-    }
-
     _initialised = true;
-}
-
-
-void AP_Mount_STorM32_MAVLink::determine_protocol(const mavlink_message_t &msg)
-{
-    if (msg.sysid != _sysid || msg.compid != _compid) { // this msg is not from our gimbal
-        return;
-    }
-
-    switch (msg.msgid) {
-        case MAVLINK_MSG_ID_MOUNT_STATUS:
-            _protocol = Protocol::MOUNT;
-            break;
-        case MAVLINK_MSG_ID_GIMBAL_DEVICE_ATTITUDE_STATUS:
-            _protocol = Protocol::GIMBAL_DEVICE;
-            break;
-    }
 }
 
 
@@ -505,37 +468,22 @@ void AP_Mount_STorM32_MAVLink::determine_protocol(const mavlink_message_t &msg)
 
 bool AP_Mount_STorM32_MAVLink::has_roll_control() const
 {
-    if (_protocol == Protocol::GIMBAL_DEVICE) {
-        return (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_HAS_ROLL_AXIS);
-    }
-    if (_protocol == Protocol::MOUNT) {
-        return roll_range_valid(); // AP's default behavior
-    }
-    return false;
+    return (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_HAS_ROLL_AXIS);
+    //return roll_range_valid(); // AP's default behavior
 }
 
 
 bool AP_Mount_STorM32_MAVLink::has_pitch_control() const
 {
-    if (_protocol == Protocol::GIMBAL_DEVICE) {
-        return (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_HAS_PITCH_AXIS);
-    }
-    if (_protocol == Protocol::MOUNT) {
-        return pitch_range_valid(); // AP's default behavior
-    }
-    return false;
+    return (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_HAS_PITCH_AXIS);
+    //return pitch_range_valid(); // AP's default behavior
 }
 
 
 bool AP_Mount_STorM32_MAVLink::has_pan_control() const
 {
-    if (_protocol == Protocol::GIMBAL_DEVICE) {
-        return (_device_info.cap_flags & GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_AXIS);
-    }
-    if (_protocol == Protocol::MOUNT) {
-        return yaw_range_valid(); // AP's default behavior
-    }
-    return false;
+    return (_device_info.cap_flags & GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_AXIS);
+    //return yaw_range_valid(); // AP's default behavior
 }
 
 
@@ -622,10 +570,6 @@ void AP_Mount_STorM32_MAVLink::handle_gimbal_device_information(const mavlink_me
 
 void AP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlink_message_t &msg)
 {
-    if (_protocol != Protocol::GIMBAL_DEVICE) {
-        return;
-    }
-
     // this msg is not from our gimbal
     if (msg.sysid != _sysid || msg.compid != _compid) {
         return;
@@ -674,11 +618,6 @@ void AP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
 
 void AP_Mount_STorM32_MAVLink::handle_message_extra(const mavlink_message_t &msg)
 {
-    if (_protocol == Protocol::UNDEFINED) { // implies !_initialised && _compid
-        determine_protocol(msg);
-        return;
-    }
-
     // listen to RADIO_RC_CHANNELS messages to stop sending RC_CHANNELS
     if (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS) {
         _got_radio_rc_channels = true;
@@ -699,18 +638,6 @@ void AP_Mount_STorM32_MAVLink::handle_message_extra(const mavlink_message_t &msg
                 _gimbal_prearmchecks_ok = true;
             }
             _gimbal_error_flags = (payload.custom_mode & 0x00FFFF00) >> 8;
-            break; }
-
-        case MAVLINK_MSG_ID_MOUNT_STATUS: {
-            if (_protocol != Protocol::MOUNT) break;
-            _mount_status.received_tlast_ms = AP_HAL::millis(); // used for health check
-            mavlink_mount_status_t payload;
-            mavlink_msg_mount_status_decode(&msg, &payload);
-            _current_angles.pitch = radians((float)payload.pointing_a * 0.01f);
-            _current_angles.roll = radians((float)payload.pointing_b * 0.01f);
-            _current_angles.yaw_bf = radians((float)payload.pointing_c * 0.01f);
-            _current_angles.delta_yaw = NAN;
-            _current_omega = { NAN, NAN, NAN };
             break; }
     }
 }
@@ -733,30 +660,6 @@ void AP_Mount_STorM32_MAVLink::send_cmd_request_gimbal_device_information()
         0,                                          // confirmation
         MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION,   // param1
         0, 0, 0, 0, 0, 0                            // param2 .. param7
-        );
-}
-
-
-// called by send_target_angles()
-void AP_Mount_STorM32_MAVLink::send_cmd_do_mount_control()
-{
-    if (!HAVE_PAYLOAD_SPACE(_chan, COMMAND_LONG)) {
-        return;
-    }
-
-    // send command_long command containing a do_mount_control command
-    // Note: pitch and yaw are reversed
-    // ATTENTION: uses get_bf_yaw() to ensure body frame, which uses ahrs.yaw, not delta_yaw!
-    mavlink_msg_command_long_send(
-        _chan,
-        _sysid, _compid,
-        MAV_CMD_DO_MOUNT_CONTROL,                       // command
-        0,                                              // confirmation
-        -degrees(mnt_target.angle_rad.pitch),           // param1
-        degrees(mnt_target.angle_rad.roll),             // param2
-        -degrees(mnt_target.angle_rad.get_bf_yaw()),    // param3
-        0, 0, 0,                                        // param4 .. param6
-        get_mode()                                      // param7
         );
 }
 
@@ -1173,7 +1076,7 @@ const uint32_t FAILURE_FLAGS =
 
 bool AP_Mount_STorM32_MAVLink::has_failures(char* s)
 {
-    uint32_t failure_flags = (_protocol == Protocol::GIMBAL_DEVICE) ? _device_status.received_failure_flags : _gimbal_error_flags;
+    uint32_t failure_flags = _device_status.received_failure_flags; // _gimbal_error_flags;
 
     s[0] = '\0';
     if ((failure_flags & FAILURE_FLAGS) > 0) {
@@ -1193,29 +1096,17 @@ bool AP_Mount_STorM32_MAVLink::has_failures(char* s)
 
 bool AP_Mount_STorM32_MAVLink::is_healthy()
 {
-    if (_protocol == Protocol::GIMBAL_DEVICE) {
-        // unhealthy if attitude status is not received within the last second
-        if ((AP_HAL::millis() - _device_status.received_tlast_ms) > 1000) {
-            return false;
-        }
+    // unhealthy if attitude status is not received within the last second
+    if ((AP_HAL::millis() - _device_status.received_tlast_ms) > 1000) {
+        return false;
+    }
 
-        // check failure flags
-        // We should also check for GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER
-        // which means that gimbal did not got GIMBAL_DEVICE_SET_ATTITUDE messages.
-//        if ((_device_status.received_failure_flags & (FAILURE_FLAGS | GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER)) > 0) {
-        if ((_device_status.received_failure_flags & FAILURE_FLAGS) > 0) {
-            return false;
-        }
-    } else {
-        // unhealthy if mount status is not received within the last second
-        if ((AP_HAL::millis() - _mount_status.received_tlast_ms) > 1000) {
-            return false;
-        }
-
-        // check failure flags // are set since v2.68b
-        if ((_gimbal_error_flags & FAILURE_FLAGS) > 0) {
-            return false;
-        }
+    // check failure flags
+    // We should also check for GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER
+    // which means that gimbal did not got GIMBAL_DEVICE_SET_ATTITUDE messages.
+//    if ((_device_status.received_failure_flags & (FAILURE_FLAGS | GIMBAL_DEVICE_ERROR_FLAGS_NO_MANAGER)) > 0) {
+    if ((_device_status.received_failure_flags & FAILURE_FLAGS) > 0) {
+        return false;
     }
 
     return true;

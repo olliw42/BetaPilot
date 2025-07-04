@@ -151,7 +151,7 @@ private:
     bool _initialised;              // true once all init steps have been passed
     bool _got_radio_rc_channels;    // true when a RADIO_RC_CHANNELS message has been received
 
-    // gimbal and protocol discovery
+    // gimbal discovery
 
     // search for gimbal in GCS_MAVLink routing table
     void find_gimbal();
@@ -162,16 +162,6 @@ private:
 
     // request GIMBAL_DEVICE_INFORMATION, we can get this also if 'old' MOUNT messages are used
     void send_cmd_request_gimbal_device_information();
-
-    enum class Protocol {
-        UNDEFINED = 0,     // we do not yet know
-        MOUNT,             // gimbal uses 'old' MOUNT messages
-        GIMBAL_DEVICE,     // gimbal is a v2 gimbal device
-    };
-    Protocol _protocol;
-
-    // determine protocol based on receiving MOUNT_STATUS or GIMBAL_DEVICE_ATTITUDE_STATUS from gimbal
-    void determine_protocol(const mavlink_message_t &msg);
 
     // pre-arm and healthy checks
     // some need to be made mutable to get around that healthy() is const
@@ -218,10 +208,6 @@ private:
     // gimbal target & control
 
     struct {
-        uint32_t received_tlast_ms; // time last MOUNT_STATUS was received (used for health reporting)
-    } _mount_status;
-
-    struct {
         uint16_t received_flags;    // obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
         uint32_t received_failure_flags; // obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
         uint32_t received_tlast_ms; // time last GIMBAL_DEVICE_ATTITUDE_STATUS was received (used for health reporting)
@@ -256,9 +242,6 @@ private:
 
     // sends the target angles to gimbal, called in update loop with 12.5 Hz
     void send_target_angles();
-
-    // send do_mount_control command with latest angle targets to the gimbal
-    void send_cmd_do_mount_control();
 
     // send GIMBAL_DEVICE_SET_ATTITUDE with latest angle targets to the gimbal to control attitude
     // When the gimbal receives this message, it can assume it is coming from its gimbal manager
