@@ -198,6 +198,7 @@ void AP_Mount::init()
         case Type::STorM32_MAVLink:
             _backends[instance] = new AP_Mount_STorM32_MAVLink(*this, _params[instance], instance);
             _num_instances++;
+            serial_instance++;
             break;
 #endif // HAL_MOUNT_STORM32_MAVLINK_V2_ENABLED
 //OWEND
