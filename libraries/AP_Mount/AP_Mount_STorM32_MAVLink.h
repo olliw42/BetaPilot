@@ -129,11 +129,6 @@ public:
     // added: send banner
     void send_banner() override;
 
-    // script accessors & bindings
-    // AP provides them only for script backend, but can be useful generally.
-    bool get_location_target(Location &target_loc) override;
-    void set_attitude_euler(float roll_deg, float pitch_deg, float yaw_bf_deg) override;
-
 private:
 
     // internal variables
@@ -223,16 +218,6 @@ private:
         float delta_yaw;
     } _current_angles = {0.0f, 0.0f, 0.0f, NAN}; // current angles, obtained from MOUNT_STATUS or GIMBAL_DEVICE_ATTITUDE_STATUS, the NAN is important!
     Vector3f _current_omega;        // current angular velocities, obtained from GIMBAL_DEVICE_ATTITUDE_STATUS
-
-    struct {
-        bool control;
-        float roll;
-        float pitch;
-        float yaw_bf;
-    } _script_angles;               // control and angles set by script
-
-    bool mnt_target_loc_valid;      // true when a location is set by a mount mode
-    Location mnt_target_loc;        // target location set by a mount mode
 
     // set the flags for gimbal according to current conditions
     void update_gimbal_device_flags();

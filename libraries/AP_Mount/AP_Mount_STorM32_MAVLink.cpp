@@ -1275,31 +1275,6 @@ void AP_Mount_STorM32_MAVLink::update_manager_status()
 
 
 //------------------------------------------------------
-// Scripting accessors & bindings
-//------------------------------------------------------
-
-// return target location if available
-// returns true if a target location is available and fills in target_loc argument
-bool AP_Mount_STorM32_MAVLink::get_location_target(Location &_target_loc)
-{
-    if (mnt_target_loc_valid) {
-        _target_loc = mnt_target_loc;
-        return true;
-    }
-    return false;
-}
-
-
-// update mount's actual angles (to be called by script communicating with mount)
-void AP_Mount_STorM32_MAVLink::set_attitude_euler(float roll_deg, float pitch_deg, float yaw_bf_deg)
-{
-    _script_angles.roll = radians(roll_deg);
-    _script_angles.pitch = radians(pitch_deg);
-    _script_angles.yaw_bf = radians(yaw_bf_deg);
-}
-
-
-//------------------------------------------------------
 // MAVLink mount status forwarding
 //------------------------------------------------------
 
