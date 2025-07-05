@@ -583,7 +583,6 @@ void AP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
     }
 
     // get relevant data
-
     _device_status.received_flags = payload.flags;
     // TODO: handle case when received device_flags are not equal to those we send, set with update_gimbal_device_flags()
 
@@ -618,9 +617,11 @@ void AP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
 void AP_Mount_STorM32_MAVLink::handle_message_extra(const mavlink_message_t &msg)
 {
     // listen to RADIO_RC_CHANNELS messages to stop sending RC_CHANNELS
+#ifdef MAVLINK_MSG_ID_RADIO_RC_CHANNELS
     if (msg.msgid == MAVLINK_MSG_ID_RADIO_RC_CHANNELS) {
         _got_radio_rc_channels = true;
     }
+#endif
 
     // this msg is not from our gimbal
     if (msg.sysid != _sysid || msg.compid != _compid) {
@@ -973,7 +974,7 @@ void AP_Mount_STorM32_MAVLink::update_send_banner()
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_passed) ? "passed" : "fail");
 
     } else {
-        // we don't know nothing
+        // we don't know yet anything
         GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: no gimbal yet", _instance+1);
     }
 }
@@ -1035,7 +1036,6 @@ void AP_Mount_STorM32_MAVLink::send_gimbal_manager_information(mavlink_channel_t
 
 // return gimbal device id
 // "original" sends _instance + 1
-// should return 0 if instance not available
 // is also used in AP_Camera in camera_information, here the spec is
 //   0: no associated gimbal, 1-6: non-mavlink gimbals, else gimbal compi id
 // should be actually _compid, but issue is that it may be called by AP_Camera before
@@ -1131,7 +1131,6 @@ char txt[255];
     // prearm checks are enabled by user
 
     // report changes in health after AP's arming mechanism has stopped running, i.e., vehicle is armed
-    // don't do anything other
     if (AP::notify().flags.armed) {
         bool checks = is_healthy();
         if (_prearmchecks_passed && !AP::arming().option_enabled(AP_Arming::Option::DISABLE_PREARM_DISPLAY)) {
