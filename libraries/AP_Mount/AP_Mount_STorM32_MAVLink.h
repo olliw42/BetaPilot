@@ -143,6 +143,7 @@ private:
     bool _got_device_info;          // gimbal discovered, waiting for gimbal provide device info
     bool _initialised;              // true once all init steps have been passed
     bool _got_radio_rc_channels;    // true when a RADIO_RC_CHANNELS message has been received
+    bool _startup_rc_failsafe = true;
 
     // gimbal discovery
 
@@ -183,18 +184,6 @@ private:
     bool is_healthy();
     void update_checks();
 
-    uint32_t _request_send_banner_ms;
-    void update_send_banner();
-
-    struct {
-        uint8_t fast;               // counter to determine faster responses
-        uint32_t tlast_ms;          // time last GIMBAL_MANAGER_STATUS was send
-        uint32_t flags_last;        // to detect changes
-        uint8_t primary_sysid_last;
-        uint8_t primary_compid_last;
-    } _manager_status;
-    void update_manager_status();
-
     // gimbal target & control
 
     struct {
@@ -232,10 +221,24 @@ private:
     uint32_t _tahrs_healthy_ms;
     void send_autopilot_state_for_gimbal_device();
 
+    // further tasks
+
     void send_rc_channels();
 
     uint32_t _send_system_time_tlast_ms;
     void send_system_time();
+
+    uint32_t _request_send_banner_ms;
+    void update_send_banner();
+
+    struct {
+        uint8_t fast;               // counter to determine faster responses
+        uint32_t tlast_ms;          // time last GIMBAL_MANAGER_STATUS was send
+        uint32_t flags_last;        // to detect changes
+        uint8_t primary_sysid_last;
+        uint8_t primary_compid_last;
+    } _manager_status;
+    void update_manager_status();
 
     // task
 
@@ -250,10 +253,6 @@ private:
     // logging
 
     bool _should_log = true;
-
-    // miscellaneous
-
-    bool _startup_rc_failsafe = true;
 };
 
 

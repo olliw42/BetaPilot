@@ -260,6 +260,10 @@ void AP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
 {
     _flags_for_gimbal_device = 0;
 
+    // TODO: technically we should filter and set only according to capabilities
+    // but STorM32 will reject so no real issue
+    // flags which are send and which are received can then differ however
+
     // map mode
 
     switch (get_mode()) {
@@ -276,10 +280,12 @@ void AP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
     // account for gimbal manager flags
 
     if (_flags_from_gimbal_client != UINT32_MAX) {
-        if (_flags_from_gimbal_client & GIMBAL_MANAGER_FLAGS_RC_EXCLUSIVE) { // exclusive overrules mixed
+        if (_flags_from_gimbal_client & GIMBAL_MANAGER_FLAGS_RC_EXCLUSIVE) {
+            // rc exclusive overrules rc mixed
             _flags_for_gimbal_device |= GIMBAL_DEVICE_FLAGS_RC_EXCLUSIVE;
         } else
         if (_flags_from_gimbal_client & GIMBAL_MANAGER_FLAGS_RC_MIXED) {
+            // rc mixed
             _flags_for_gimbal_device |= GIMBAL_DEVICE_FLAGS_RC_MIXED;
         }
     } else {
@@ -287,6 +293,9 @@ void AP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
         // Should avoid user confusion when choosing the gimbal device operation mode.
         _flags_for_gimbal_device |= GIMBAL_DEVICE_FLAGS_RC_MIXED;
     }
+
+    // TODO: gimbal and/or driver currently does not support all options in the following fields
+    // what would have to be done?
 
     // driver currently does not support pitch,roll follow, only pitch,roll lock
     _flags_for_gimbal_device |= GIMBAL_DEVICE_FLAGS_ROLL_LOCK | GIMBAL_DEVICE_FLAGS_PITCH_LOCK;
@@ -296,26 +305,9 @@ void AP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
 
     // frame flags
 
-    // set either YAW_IN_VEHICLE_FRAME or YAW_IN_EARTH_FRAME, to indicate new message format, STorM32 will reject otherwise
+    // set either YAW_IN_VEHICLE_FRAME or YAW_IN_EARTH_FRAME, to indicate new message format
+    // STorM32 will reject otherwise
     _flags_for_gimbal_device |= GIMBAL_DEVICE_FLAGS_YAW_IN_VEHICLE_FRAME;
-}
-
-
-void AP_Mount_STorM32_MAVLink::send_target_angles()
-{
-    // just send stubbornly at 12.5 Hz, no check if get_target_angles() made a change
-
-    update_gimbal_device_flags();
-
-    if (mnt_target.target_type == MountTargetType::RATE) {
-        // we ignore it. One may think to just send angle_rad, but if yaw is earth frame
-        // this could result in pretty strange behavior. So better ignore.
-        // Should happen only in MAV_MOUNT_MODE_RC_TARGETING, so no need to test for this
-        // explicitly.
-        return;
-    }
-
-    send_gimbal_device_set_attitude();
 }
 
 
@@ -413,6 +405,24 @@ void AP_Mount_STorM32_MAVLink::update_target_angles()
 }
 
 
+void AP_Mount_STorM32_MAVLink::send_target_angles()
+{
+    // just send stubbornly at 12.5 Hz, no check if get_target_angles() made a change
+
+    update_gimbal_device_flags();
+
+    if (mnt_target.target_type == MountTargetType::RATE) {
+        // we ignore it. One may think to just send angle_rad, but if yaw is earth frame
+        // this could result in pretty strange behavior. So better ignore.
+        // Should happen only in MAV_MOUNT_MODE_RC_TARGETING, so no need to test for this
+        // explicitly.
+        return;
+    }
+
+    send_gimbal_device_set_attitude();
+}
+
+
 //------------------------------------------------------
 // Gimbal and protocol discovery
 //------------------------------------------------------
@@ -443,7 +453,6 @@ void AP_Mount_STorM32_MAVLink::find_gimbal()
     }
 
     // request GIMBAL_DEVICE_INFORMATION
-    // STorM32 provides this also for mount mode
     if (!_got_device_info) {
         if (tnow_ms - _request_device_info_tlast_ms > 1000) {
             _request_device_info_tlast_ms = tnow_ms;
@@ -637,7 +646,7 @@ void AP_Mount_STorM32_MAVLink::handle_message_extra(const mavlink_message_t &msg
 
 
 //------------------------------------------------------
-// MAVLink send functions
+// MAVLink gimbal device send functions
 //------------------------------------------------------
 
 void AP_Mount_STorM32_MAVLink::send_cmd_request_gimbal_device_information()
@@ -883,97 +892,6 @@ landed state:
 }
 
 
-void AP_Mount_STorM32_MAVLink::send_system_time()
-{
-    if (!HAVE_PAYLOAD_SPACE(_chan, SYSTEM_TIME)) {
-        return;
-    }
-
-    uint64_t time_unix = 0;
-    AP::rtc().get_utc_usec(time_unix); // may fail, leaving time_unix at 0
-
-    if (!time_unix) return; // no unix time available, so no reason to send
-
-    mavlink_msg_system_time_send(
-        _chan,
-        time_unix,          // uint64_t time_unix_usec
-        AP_HAL::millis()    // uint32_t time_boot_ms
-        );
-}
-
-
-void AP_Mount_STorM32_MAVLink::send_rc_channels()
-{
-    if (!HAVE_PAYLOAD_SPACE(_chan, RC_CHANNELS)) {
-        return;
-    }
-
-    // rc().channel(ch)->get_radio_in(), RC_Channels::get_radio_in(ch), and so on
-    // these are not the same as hal.rcin->read(), since radio_in can be set by override
-    // so we use hal.rcin->read()
-
-    #define RCHALIN(ch_index)  hal.rcin->read(ch_index)
-
-    mavlink_msg_rc_channels_send(
-        _chan,
-        AP_HAL::millis(),   // uint32_t time_boot_ms
-        16,                 // uint8_t chancount, STorM32 won't handle more than 16 anyhow
-        RCHALIN(0), RCHALIN(1), RCHALIN(2), RCHALIN(3), RCHALIN(4), RCHALIN(5), RCHALIN(6), RCHALIN(7), // uint16_t chan1_raw ..
-        RCHALIN(8), RCHALIN(9), RCHALIN(10), RCHALIN(11), RCHALIN(12), RCHALIN(13), RCHALIN(14), RCHALIN(15), // .. chan16_raw
-        0, 0,               // uint16_t chan17_raw .. chan18_raw
-        255                 // uint8_t rssi, 255: invalid/unknown
-        );
-}
-
-
-void AP_Mount_STorM32_MAVLink::send_banner()
-{
-    // postpone sending by few seconds, to avoid multiple sends
-    // when a GCS connects Ap is typically asked several times to send the banner,
-    // so we postpone our response by few seconds to send only one
-    _request_send_banner_ms = AP_HAL::millis();
-}
-
-
-void AP_Mount_STorM32_MAVLink::update_send_banner()
-{
-    if (!_request_send_banner_ms) return; // no request
-
-    uint32_t tnow_ms = AP_HAL::millis();
-    if ((tnow_ms - _request_send_banner_ms) < 3500) return; // not yet time to send
-    _request_send_banner_ms = 0;
-
-    if (_got_device_info) {
-        // we have lots of info
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: gimbal at %u", _instance+1, _compid);
-
-        // convert firmware version to STorM32 convention
-        char c = (_device_info.firmware_version & 0x00FF0000) >> 16;
-        if (c == '\0') c = ' '; else c += 'a' - 1;
-
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: %s v%u.%u%c",
-                _instance + 1,
-                _device_info.model_name,
-                (unsigned)(_device_info.firmware_version & 0x000000FF),
-                (unsigned)((_device_info.firmware_version & 0x0000FF00) >> 8),
-                c
-                );
-
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_passed) ? "passed" : "fail");
-
-    } else
-    if (_compid) {
-        // we have some info
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: gimbal at %u", _instance+1, _compid);
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_passed) ? "passed" : "fail");
-
-    } else {
-        // we don't know yet anything
-        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: no gimbal yet", _instance+1);
-    }
-}
-
-
 //------------------------------------------------------
 // MAVLink gimbal manager send functions
 //------------------------------------------------------
@@ -994,25 +912,29 @@ void AP_Mount_STorM32_MAVLink::send_gimbal_manager_information(mavlink_channel_t
     // So we simply can carry forward the cap_flags received from the gimbal.
     // The STorM32 gimbal has these capabilities:
     // - GIMBAL_DEVICE_CAP_FLAGS_HAS_RETRACT | GIMBAL_DEVICE_CAP_FLAGS_HAS_NEUTRAL
+    //   always enabled
     // - GIMBAL_DEVICE_CAP_FLAGS_HAS_xx_AXIS | GIMBAL_DEVICE_CAP_FLAGS_HAS_xx_FOLLOW |
-    //   GIMBAL_DEVICE_CAP_FLAGS_HAS_xx_LOCK for each enabled axis
-    // - GIMBAL_DEVICE_CAP_FLAGS_SUPPORTS_INFINITE_YAW if turn around enabled
+    //   GIMBAL_DEVICE_CAP_FLAGS_HAS_xx_LOCK
+    //   enabled for each enabled axis
+    // - GIMBAL_DEVICE_CAP_FLAGS_SUPPORTS_INFINITE_YAW
+    //   enabled if turn around enabled
     // - GIMBAL_DEVICE_CAP_FLAGS_HAS_RC_INPUTS
-    // - !GIMBAL_DEVICE_CAP_FLAGS_SUPPORTS_YAW_IN_EARTH_FRAME is not currently supported by STorM32
+    //   always enabled
+    // - !GIMBAL_DEVICE_CAP_FLAGS_SUPPORTS_YAW_IN_EARTH_FRAME
+    //   is currently not supported by STorM32, so always disabled
 
     uint32_t cap_flags = _device_info.cap_flags;
 
-    // This driver does not support all capabilities, so we erase them.
+    // Flags in addition to those based on gimbal device
+    // - GIMBAL_MANAGER_CAP_FLAGS_CAN_POINT_LOCATION_LOCAL
+    // - GIMBAL_MANAGER_CAP_FLAGS_CAN_POINT_LOCATION_GLOBAL
+
+    // This driver does not support all capabilities, so we could erase them.
     // Note: This can mean that the gimbal device and gimbal manager capability flags
     // may be different, and any third party which mistakenly thinks it can use those from
     // the gimbal device messages may get confused. Their fault.
-
-    // ISSUE: QGC does exactly this, used the flags from GIMBAL_DEVICE_ATTITUDE_STATUS
-
-    cap_flags &=~ (GIMBAL_MANAGER_CAP_FLAGS_HAS_ROLL_FOLLOW |
-                   GIMBAL_MANAGER_CAP_FLAGS_HAS_PITCH_FOLLOW |
-                   GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_LOCK |
-                   GIMBAL_MANAGER_CAP_FLAGS_SUPPORTS_YAW_IN_EARTH_FRAME);
+    // ISSUE: QGC does exactly this, uses the flags from GIMBAL_DEVICE_ATTITUDE_STATUS.
+    // So, let's just see.
 
     mavlink_msg_gimbal_manager_information_send(
         chan,
@@ -1028,17 +950,6 @@ void AP_Mount_STorM32_MAVLink::send_gimbal_manager_information(mavlink_channel_t
         );
 }
 
-// return gimbal device id
-// "original" sends _instance + 1
-// is also used in AP_Camera in camera_information, here the spec is
-//   0: no associated gimbal, 1-6: non-mavlink gimbals, else gimbal compi id
-// should be actually _compid, but issue is that it may be called by AP_Camera before
-// gimbal has been detected, and AP_CAmera has no means to handle that. So we derive
-// the gimbal id here from the instance.
-uint8_t AP_Mount_STorM32_MAVLink::get_gimbal_device_id() const
-{
-    return (_instance == 0) ? MAV_COMP_ID_GIMBAL : MAV_COMP_ID_GIMBAL2 + (_instance - 1);
-}
 
 // return gimbal manager flags. Used by GIMBAL_MANAGER_STATUS message.
 uint32_t AP_Mount_STorM32_MAVLink::get_gimbal_manager_flags() const
@@ -1049,8 +960,22 @@ uint32_t AP_Mount_STorM32_MAVLink::get_gimbal_manager_flags() const
     // Note: This driver does not support all capabilities, but this
     // should never be a problem since any third party should strictly adhere
     // to the capability flags obtained from the gimbal manager.
+    // ISSUE: QGC does not do this
 
     return _device_status.received_flags;
+}
+
+
+// return gimbal device id
+// "original" sends _instance + 1
+// is also used in AP_Camera in camera_information, here the spec is
+//   0: no associated gimbal, 1-6: non-mavlink gimbals, else gimbal compi id
+// should be actually _compid, but issue is that it may be called by AP_Camera before
+// gimbal has been detected, and AP_CAmera has no means to handle that. So we derive
+// the gimbal id here from the instance.
+uint8_t AP_Mount_STorM32_MAVLink::get_gimbal_device_id() const
+{
+    return (_instance == 0) ? MAV_COMP_ID_GIMBAL : MAV_COMP_ID_GIMBAL2 + (_instance - 1);
 }
 
 
@@ -1225,8 +1150,99 @@ bool AP_Mount_STorM32_MAVLink::healthy() const
 
 
 //------------------------------------------------------
-// Gimbal manager status function
+// Further tasks
 //------------------------------------------------------
+
+void AP_Mount_STorM32_MAVLink::send_rc_channels()
+{
+    if (!HAVE_PAYLOAD_SPACE(_chan, RC_CHANNELS)) {
+        return;
+    }
+
+    // rc().channel(ch)->get_radio_in(), RC_Channels::get_radio_in(ch), and so on
+    // these are not the same as hal.rcin->read(), since radio_in can be set by override
+    // so we use hal.rcin->read()
+
+    #define RCHALIN(ch_index)  hal.rcin->read(ch_index)
+
+    mavlink_msg_rc_channels_send(
+        _chan,
+        AP_HAL::millis(),   // uint32_t time_boot_ms
+        16,                 // uint8_t chancount, STorM32 won't handle more than 16 anyhow
+        RCHALIN(0), RCHALIN(1), RCHALIN(2), RCHALIN(3), RCHALIN(4), RCHALIN(5), RCHALIN(6), RCHALIN(7), // uint16_t chan1_raw ..
+        RCHALIN(8), RCHALIN(9), RCHALIN(10), RCHALIN(11), RCHALIN(12), RCHALIN(13), RCHALIN(14), RCHALIN(15), // .. chan16_raw
+        0, 0,               // uint16_t chan17_raw .. chan18_raw
+        255                 // uint8_t rssi, 255: invalid/unknown
+        );
+}
+
+
+void AP_Mount_STorM32_MAVLink::send_system_time()
+{
+    if (!HAVE_PAYLOAD_SPACE(_chan, SYSTEM_TIME)) {
+        return;
+    }
+
+    uint64_t time_unix = 0;
+    AP::rtc().get_utc_usec(time_unix); // may fail, leaving time_unix at 0
+
+    if (!time_unix) return; // no unix time available, so no reason to send
+
+    mavlink_msg_system_time_send(
+        _chan,
+        time_unix,          // uint64_t time_unix_usec
+        AP_HAL::millis()    // uint32_t time_boot_ms
+        );
+}
+
+
+void AP_Mount_STorM32_MAVLink::send_banner()
+{
+    // postpone sending by few seconds, to avoid multiple sends
+    // when a GCS connects Ap is typically asked several times to send the banner,
+    // so we postpone our response by few seconds to send only one
+    _request_send_banner_ms = AP_HAL::millis();
+}
+
+
+void AP_Mount_STorM32_MAVLink::update_send_banner()
+{
+    if (!_request_send_banner_ms) return; // no request
+
+    uint32_t tnow_ms = AP_HAL::millis();
+    if ((tnow_ms - _request_send_banner_ms) < 3500) return; // not yet time to send
+    _request_send_banner_ms = 0;
+
+    if (_got_device_info) {
+        // we have lots of info
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: gimbal at %u", _instance+1, _compid);
+
+        // convert firmware version to STorM32 convention
+        char c = (_device_info.firmware_version & 0x00FF0000) >> 16;
+        if (c == '\0') c = ' '; else c += 'a' - 1;
+
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: %s v%u.%u%c",
+                _instance + 1,
+                _device_info.model_name,
+                (unsigned)(_device_info.firmware_version & 0x000000FF),
+                (unsigned)((_device_info.firmware_version & 0x0000FF00) >> 8),
+                c
+                );
+
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_passed) ? "passed" : "fail");
+
+    } else
+    if (_compid) {
+        // we have some info
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: gimbal at %u", _instance+1, _compid);
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: prearm checks %s", _instance+1, (_prearmchecks_passed) ? "passed" : "fail");
+
+    } else {
+        // we don't know yet anything
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "MNT%u: no gimbal yet", _instance+1);
+    }
+}
+
 
 void AP_Mount_STorM32_MAVLink::update_manager_status()
 {
