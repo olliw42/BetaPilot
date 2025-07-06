@@ -1,13 +1,13 @@
 #pragma once
 
 #define BETAPILOTVERSION "v061b"
-#define DATEOFBASEBRANCH "20250701"
+#define DATEOFBASEBRANCH "20250705"
 
 /*
 search for //OW to find all changes
 
 
-2025.07.01:
+2025.07.05:
  removed OW CAMERA
 2025.06.15:
  removed a number of on top features, OSD, DroneCAN, THR_SUPP

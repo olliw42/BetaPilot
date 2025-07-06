@@ -323,26 +323,24 @@ void AP_Mount_STorM32_MAVLink::send_target_angles()
 // TODO: one should allow angles outside of +-PI, to go shortest path in case of turn around
 void AP_Mount_STorM32_MAVLink::update_target_angles()
 {
+    if (!rc().in_rc_failsafe()) _startup_rc_failsafe = false;
+
     // update based on mount mode
-    switch ((uint8_t)get_mode()) {
+    switch (get_mode()) {
 
         // move mount to a "retracted" position
         // -> ANGLE
         case MAV_MOUNT_MODE_RETRACT: {
-            const Vector3f &target = _params.retract_angles.get();
             mnt_target.target_type = MountTargetType::ANGLE;
-            mnt_target.angle_rad.set(target*DEG_TO_RAD, false);
-            //?? mnt_target_loc_valid = false;
+            mnt_target.angle_rad.set(_params.retract_angles.get() * DEG_TO_RAD, false);
             break;
         }
 
         // move mount to a neutral position, typically pointing forward
         // -> ANGLE
         case MAV_MOUNT_MODE_NEUTRAL: {
-            const Vector3f &target = _params.neutral_angles.get();
             mnt_target.target_type = MountTargetType::ANGLE;
-            mnt_target.angle_rad.set(target*DEG_TO_RAD, false);
-            //?? mnt_target_loc_valid = false;
+            mnt_target.angle_rad.set(_params.neutral_angles.get() * DEG_TO_RAD, false);
             break;
         }
 
@@ -353,7 +351,6 @@ void AP_Mount_STorM32_MAVLink::update_target_angles()
             // SToRM32 doesn't support rate, so update target angle from rate if necessary.
             if (mnt_target.target_type == MountTargetType::RATE) {
                 update_angle_target_from_rate(mnt_target.rate_rads, mnt_target.angle_rad);
-                //?? mnt_target_loc_valid = false;
             }
             break;
 
@@ -362,7 +359,10 @@ void AP_Mount_STorM32_MAVLink::update_target_angles()
         // -> can be RATE, will be ignored
         case MAV_MOUNT_MODE_RC_TARGETING: {
             update_mnt_target_from_rc_target();
-            //?? mnt_target_loc_valid = false;
+            if (_startup_rc_failsafe) { // AP's handling is not desirable, so overwrite until cleared
+                mnt_target.target_type = MountTargetType::ANGLE;
+                mnt_target.angle_rad.set(_params.neutral_angles.get() * DEG_TO_RAD, false);
+            }
             break;
         }
 
@@ -372,8 +372,6 @@ void AP_Mount_STorM32_MAVLink::update_target_angles()
         case MAV_MOUNT_MODE_GPS_POINT:
             if (get_angle_target_to_roi(mnt_target.angle_rad)) {
                 mnt_target.target_type = MountTargetType::ANGLE;
-                //?? mnt_target_loc_valid = true;
-                //?? mnt_target_loc = _roi_target;
             }
             break;
 
@@ -383,8 +381,6 @@ void AP_Mount_STorM32_MAVLink::update_target_angles()
         case MAV_MOUNT_MODE_SYSID_TARGET:
             if (get_angle_target_to_sysid(mnt_target.angle_rad)) {
                 mnt_target.target_type = MountTargetType::ANGLE;
-                //?? mnt_target_loc_valid = true;
-                //?? mnt_target_loc = _target_sysid_location;
             }
             break;
 
@@ -394,8 +390,6 @@ void AP_Mount_STorM32_MAVLink::update_target_angles()
         case MAV_MOUNT_MODE_HOME_LOCATION:
             if (get_angle_target_to_home(mnt_target.angle_rad)) {
                 mnt_target.target_type = MountTargetType::ANGLE;
-                //?? mnt_target_loc_valid = true;
-                //?? mnt_target_loc = AP::ahrs().get_home();
             }
             break;
 

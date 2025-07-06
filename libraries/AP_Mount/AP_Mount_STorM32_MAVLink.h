@@ -250,6 +250,10 @@ private:
     // logging
 
     bool _should_log = true;
+
+    // miscellaneous
+
+    bool _startup_rc_failsafe = true;
 };
 
 
