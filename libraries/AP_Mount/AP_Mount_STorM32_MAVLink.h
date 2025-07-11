@@ -35,7 +35,8 @@ public:
 
     // return true if this mount accepts roll or pitch targets
     // affects the gimbal manager capability flags send out by AP
-    // only used in get_gimbal_manager_capability_flags(), which we overwrite anyhow
+    // only used in get_gimbal_manager_capability_flags(), which is only called in
+    // send_gimbal_manager_information(), which we overwrite anyhow
     // => irrelevant for now, but we set it to something useful nevertheless
     bool has_roll_control() const override;
     bool has_pitch_control() const override;
@@ -226,7 +227,7 @@ private:
     void send_rc_channels();
 
     uint32_t _send_system_time_tlast_ms;
-    void send_system_time();
+    void update_send_system_time();
 
     uint32_t _request_send_banner_ms;
     void update_send_banner();
@@ -235,10 +236,9 @@ private:
         uint8_t fast;               // counter to determine faster responses
         uint32_t tlast_ms;          // time last GIMBAL_MANAGER_STATUS was send
         uint32_t flags_last;        // to detect changes
-        uint8_t primary_sysid_last;
-        uint8_t primary_compid_last;
+        mavlink_control_id_t primary_last;
     } _manager_status;
-    void update_manager_status();
+    void update_send_gimbal_manager_status();
 
     // task
 

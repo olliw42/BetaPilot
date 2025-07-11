@@ -179,26 +179,18 @@ void AP_Mount_STorM32_MAVLink::update()
     _task_counter++;
     if (_task_counter > TASK_SLOT3) _task_counter = TASK_SLOT0;
 
-    update_send_banner();
+    update_send_banner(); // send banner when asked for
 
     if (!_initialised) {
         find_gimbal();
         return;
     }
 
-    update_manager_status();
+    update_send_gimbal_manager_status(); // send GIMBAL_MANAGER_STATUS every 2 secs, or faster when needed
 
-    uint32_t tnow_ms = AP_HAL::millis();
+    update_checks(); // do checks every 1 sec
 
-    if ((tnow_ms - _checks_tlast_ms) >= 1000) { // do every 1 sec
-        _checks_tlast_ms = tnow_ms;
-        update_checks();
-    }
-
-    if ((tnow_ms - _send_system_time_tlast_ms) >= 5000) { // every 5 sec is really plenty
-        _send_system_time_tlast_ms = tnow_ms;
-        send_system_time();
-    }
+    update_send_system_time(); // send SYSTEM_TIME every 5 secs
 }
 
 
@@ -262,7 +254,7 @@ void AP_Mount_STorM32_MAVLink::update_gimbal_device_flags()
 
     // TODO: technically we should filter and set only according to capabilities
     // but STorM32 will reject so no real issue
-    // flags which are send and which are received can then differ however
+    // flags which are send and which are received can then differ however, but that's no issue
 
     // map mode
 
@@ -390,15 +382,17 @@ void AP_Mount_STorM32_MAVLink::update_target_angles()
             break;
     }
 
-    // account for range limits
-    // only do the yaw axis (should be done by STorM32 supervisor, but doesn't hurt)
+    // account for range limits, if available and set
+    // only do the yaw axis (should be done by STorM32 supervisor, but does not hurt)
 
-    if (_got_device_info) return;
-    if (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_SUPPORTS_INFINITE_YAW) return;
-    if (isnan(_device_info.yaw_min) || isnan(_device_info.yaw_max)) return;
+    if (!_got_device_info ||
+        (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_SUPPORTS_INFINITE_YAW) ||
+        isnan(_device_info.yaw_min) || isnan(_device_info.yaw_max)) {
+        return;
+    }
 
     // I believe currently angles are inside +-PI, no wrapPI needed
-    // TODO: if copter, copter might yaw by what the gimbal can't do
+    // TODO: if copter, copter might yaw by what the gimbal cannot do
 
     if (mnt_target.angle_rad.yaw < _device_info.yaw_min) mnt_target.angle_rad.yaw = _device_info.yaw_min;
     if (mnt_target.angle_rad.yaw > _device_info.yaw_max) mnt_target.angle_rad.yaw = _device_info.yaw_max;
@@ -469,6 +463,13 @@ void AP_Mount_STorM32_MAVLink::find_gimbal()
 // Gimbal control flags
 //------------------------------------------------------
 
+// where is a problem here, the has_xx_control() may be asked for before
+// the gimbal has been found
+// roll and pitch are used only by get_gimbal_manager_capability_flags()
+// we overwrite send_gimbal_manager_information(), so issue resolved
+// pan is used in Copter/Sub to adjust yaw behavior
+// hopefully we don't fly before gimbal has been found
+
 bool AP_Mount_STorM32_MAVLink::has_roll_control() const
 {
     return (_device_info.cap_flags & GIMBAL_DEVICE_CAP_FLAGS_HAS_ROLL_AXIS);
@@ -485,6 +486,10 @@ bool AP_Mount_STorM32_MAVLink::has_pitch_control() const
 
 bool AP_Mount_STorM32_MAVLink::has_pan_control() const
 {
+    if (!_initialised) {
+        return false; // gimbal not yet ready, so that's probably the best we can do
+    }
+
     return (_device_info.cap_flags & GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_AXIS);
     //return yaw_range_valid(); // AP's default behavior
 }
@@ -507,7 +512,7 @@ bool AP_Mount_STorM32_MAVLink::get_attitude_quaternion(Quaternion &att_quat)
 }
 
 
-bool AP_Mount_STorM32_MAVLink::get_angular_velocity(Vector3f& rates)
+bool AP_Mount_STorM32_MAVLink::get_angular_velocity(Vector3f &rates)
 {
     if (!_initialised) {
         return false;
@@ -515,9 +520,7 @@ bool AP_Mount_STorM32_MAVLink::get_angular_velocity(Vector3f& rates)
 
     if (isnan(_current_omega.x) || isnan(_current_omega.y) || isnan(_current_omega.z)) return false;
 
-    rates.x = _current_omega.x;
-    rates.y = _current_omega.y;
-    rates.z = _current_omega.z;
+    rates = _current_omega;
 
     return true;
 }
@@ -536,7 +539,7 @@ void AP_Mount_STorM32_MAVLink::handle_gimbal_device_information(const mavlink_me
 
     mavlink_msg_gimbal_device_information_decode(&msg, &_device_info);
 
-    // let's check sanity of gimbal_device_id, must be 0 according to message spec
+    // let's check sanity of gimbal_device_id, must be 0 according to message specification
     if (_device_info.gimbal_device_id != 0) {
         return;
     }
@@ -580,14 +583,15 @@ void AP_Mount_STorM32_MAVLink::handle_gimbal_device_attitude_status(const mavlin
     mavlink_gimbal_device_attitude_status_t payload;
     mavlink_msg_gimbal_device_attitude_status_decode(&msg, &payload);
 
-    // let's check sanity of gimbal_device_id, must be 0 according to message spec
+    // let's check sanity of gimbal_device_id, must be 0 according to message specification
     if (payload.gimbal_device_id != 0) {
         return;
     }
 
     // get relevant data
+
+    // note: the received flags can be different from those which are set and send with update_gimbal_device_flags()
     _device_status.received_flags = payload.flags;
-    // TODO: handle case when received device_flags are not equal to those we send, set with update_gimbal_device_flags()
 
     _device_status.received_failure_flags = payload.failure_flags;
 
@@ -633,6 +637,7 @@ void AP_Mount_STorM32_MAVLink::handle_message_extra(const mavlink_message_t &msg
 
     switch (msg.msgid) {
         case MAVLINK_MSG_ID_HEARTBEAT: {
+            // listen to gimbal HEARTBEAT messages to get some status info
             mavlink_heartbeat_t payload;
             mavlink_msg_heartbeat_decode(&msg, &payload);
             uint8_t storm32_state = (payload.custom_mode & 0xFF);
@@ -1034,6 +1039,10 @@ void AP_Mount_STorM32_MAVLink::update_checks()
 {
 char txt[255];
 
+    uint32_t tnow_ms = AP_HAL::millis();
+    if ((tnow_ms - _checks_tlast_ms) < 1000) return; // do every 1 sec, not yet time
+    _checks_tlast_ms = tnow_ms;
+
     // prearm checks are disabled by user
     // report to GCS only if the prearm checks go to passed
     if (!(AP::arming().get_enabled_checks() & (uint32_t)AP_Arming::Check::ALL ||
@@ -1177,8 +1186,12 @@ void AP_Mount_STorM32_MAVLink::send_rc_channels()
 }
 
 
-void AP_Mount_STorM32_MAVLink::send_system_time()
+void AP_Mount_STorM32_MAVLink::update_send_system_time()
 {
+    uint32_t tnow_ms = AP_HAL::millis();
+    if ((tnow_ms - _send_system_time_tlast_ms) < 5000) return; // every 5 sec is really plenty, not yet time
+    _send_system_time_tlast_ms = tnow_ms;
+
     if (!HAVE_PAYLOAD_SPACE(_chan, SYSTEM_TIME)) {
         return;
     }
@@ -1199,7 +1212,7 @@ void AP_Mount_STorM32_MAVLink::send_system_time()
 void AP_Mount_STorM32_MAVLink::send_banner()
 {
     // postpone sending by few seconds, to avoid multiple sends
-    // when a GCS connects Ap is typically asked several times to send the banner,
+    // when a GCS connects, AP is typically asked several times to send the banner,
     // so we postpone our response by few seconds to send only one
     _request_send_banner_ms = AP_HAL::millis();
 }
@@ -1244,16 +1257,17 @@ void AP_Mount_STorM32_MAVLink::update_send_banner()
 }
 
 
-void AP_Mount_STorM32_MAVLink::update_manager_status()
+// backend's handle_command_do_gimbal_manager_configure() sends a
+// MSG_GIMBAL_MANAGER_STATUS when mavlink_control_id (i.e. primary control) has changed
+// we add this mechanism here on top of it
+void AP_Mount_STorM32_MAVLink::update_send_gimbal_manager_status()
 {
     // check if status has changed
     if (_manager_status.flags_last != get_gimbal_manager_flags() ||
-        _manager_status.primary_sysid_last != mavlink_control_id.sysid ||
-        _manager_status.primary_compid_last != mavlink_control_id.compid) {
+        _manager_status.primary_last != mavlink_control_id) {
 
         _manager_status.flags_last = get_gimbal_manager_flags();
-        _manager_status.primary_sysid_last = mavlink_control_id.sysid;
-        _manager_status.primary_compid_last = mavlink_control_id.compid;
+        _manager_status.primary_last = mavlink_control_id;
 
         _manager_status.fast = 3;
     }
@@ -1273,7 +1287,7 @@ void AP_Mount_STorM32_MAVLink::update_manager_status()
     if (_manager_status.fast >= 3) { // status has just changed, so react immediately
         _manager_status.fast = 2;
         _manager_status.tlast_ms = tnow_ms;
-        gcs().send_message(MSG_GIMBAL_MANAGER_STATUS);
+        // don't send MSG_GIMBAL_MANAGER_STATUS as it was just send by backend // gcs().send_message(MSG_GIMBAL_MANAGER_STATUS);
     } else
     if ((tnow_ms - _manager_status.tlast_ms) >= 250) { // do every 250 ms
         _manager_status.fast--;

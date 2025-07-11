@@ -1,6 +1,6 @@
 #pragma once
 
-#define BETAPILOTVERSION "v061b"
+#define BETAPILOTVERSION "v061c"
 #define DATEOFBASEBRANCH "20250705"
 
 /*
@@ -64,16 +64,17 @@ ArduPlane specific
 
 Libraries:
 - AP_Camera_Backend.cpp: 1x
-
 - AP_Mount_Backend.cpp: 5x
 - AP_Mount_Backend.h:   5x
 - AP_Mount_config.h:    1x
 - AP_Mount.cpp:         6x
 - AP_Mount.h:           6x
-
 - GCS_Common.cpp:       6x
 - GCS_MAVLink.h:        2x
 - GCS.h:                1x
+
+Miscellaneous:
+- wscript               1x
 
 Additional Files in library:
 - bp_version.h

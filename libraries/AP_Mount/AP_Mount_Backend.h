@@ -119,8 +119,8 @@ public:
     // return gimbal capabilities sent to GCS in the GIMBAL_MANAGER_INFORMATION
     virtual uint32_t get_gimbal_manager_capability_flags() const;
 
-//OW
     // send a GIMBAL_MANAGER_INFORMATION message to GCS
+//OW
 //    void send_gimbal_manager_information(mavlink_channel_t chan);
     virtual void send_gimbal_manager_information(mavlink_channel_t chan);
 //OWEND
