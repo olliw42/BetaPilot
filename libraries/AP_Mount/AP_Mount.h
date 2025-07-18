@@ -50,6 +50,9 @@ class AP_Mount_Viewpro;
 class AP_Mount_Topotek;
 class AP_Mount_CADDX;
 class AP_Mount_XFRobot;
+//OW
+class AP_Mount_STorM32_MAVLink;
+//OWEND
 
 /*
   This is a workaround to allow the MAVLink backend access to the
@@ -72,6 +75,9 @@ class AP_Mount
     friend class AP_Mount_Viewpro;
     friend class AP_Mount_Topotek;
     friend class AP_Mount_CADDX;
+//OW
+    friend class AP_Mount_STorM32_MAVLink;
+//OWEND
 
 public:
     AP_Mount();
@@ -129,6 +135,11 @@ public:
 #if HAL_MOUNT_XFROBOT_ENABLED
         XFRobot = 14,        /// XFRobot gimbal using a custom serial protocol
 #endif
+//OW
+#if HAL_MOUNT_STORM32_MAVLINK_V2_ENABLED
+        STorM32_MAVLink = 83
+#endif
+//OWEND
     };
 
     // init - detect and initialise all mounts
@@ -194,7 +205,9 @@ public:
     void set_target_sysid(uint8_t instance, uint8_t sysid);
 
     // handling of set_roi_sysid message
-    MAV_RESULT handle_command_do_set_roi_sysid(const mavlink_command_int_t &packet);
+//OW
+//    MAV_RESULT handle_command_do_set_roi_sysid(const mavlink_command_int_t &packet);
+//OWEND
 
     // mavlink message handling:
     MAV_RESULT handle_command(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
@@ -307,6 +320,17 @@ public:
     // parameter var table
     static const struct AP_Param::GroupInfo        var_info[];
 
+//OW
+    // this links into handle_message() to catch all messages
+    void handle_message_extra(mavlink_channel_t chan, const mavlink_message_t &msg);
+
+    // returns the gimbal device id for this instance, or 0 if the instance is not available
+    uint8_t get_gimbal_device_id(uint8_t instance) const;
+
+    // send banner
+    void send_banner();
+//OWEND
+
 protected:
 
     static AP_Mount *_singleton;
@@ -326,9 +350,15 @@ private:
 
     void handle_gimbal_report(mavlink_channel_t chan, const mavlink_message_t &msg);
 
-    MAV_RESULT handle_command_do_mount_configure(const mavlink_command_int_t &packet);
-    MAV_RESULT handle_command_do_mount_control(const mavlink_command_int_t &packet);
-    MAV_RESULT handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet);
+//OW
+//    MAV_RESULT handle_command_do_mount_configure(const mavlink_command_int_t &packet);
+//    MAV_RESULT handle_command_do_mount_control(const mavlink_command_int_t &packet);
+//    MAV_RESULT handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet);
+    MAV_RESULT handle_command_do_mount_configure(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
+    MAV_RESULT handle_command_do_mount_control(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
+    MAV_RESULT handle_command_do_gimbal_manager_pitchyaw(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
+    MAV_RESULT handle_command_do_set_roi_sysid(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
+//OWEND
     MAV_RESULT handle_command_do_gimbal_manager_configure(const mavlink_command_int_t &packet, const mavlink_message_t &msg);
     void handle_gimbal_manager_set_attitude(const mavlink_message_t &msg);
     void handle_gimbal_manager_set_pitchyaw(const mavlink_message_t &msg);
