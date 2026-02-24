@@ -1,12 +1,12 @@
 #pragma once
 
 #define BETAPILOTVERSION "v062a"
-#define DATEOFBASEBRANCH "20260131"
+#define DATEOFBASEBRANCH "20260224"
 
 /*
 search for //OW to find all changes
 
-2026.01.31:
+2026.02.24:
  upgraded to ArduPilot master 4.7.0-dev
 2025.07.05:
  removed OW CAMERA
