@@ -117,6 +117,10 @@ extern AP_IOMCU iomcu;
 
 #include <ctype.h>
 
+//OW
+#include "../bp_version.h"
+//OWEND
+
 extern const AP_HAL::HAL& hal;
 
 struct GCS_MAVLINK::LastRadioStatus GCS_MAVLINK::last_radio_status;
@@ -3017,6 +3021,10 @@ void GCS_MAVLINK::send_autopilot_version() const
         strncpy_noterm(os_custom_version, version.os_hash_str, ARRAY_SIZE(os_custom_version));
     }
 
+//OW
+    middleware_sw_version = atoi(BETAPILOTVERSION); // 0 for native ArduPilot, > 0 for BetaPilot
+//OWEND
+
     mavlink_msg_autopilot_version_send(
         chan,
         capabilities(),
@@ -4344,6 +4352,11 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
 
     case MAVLINK_MSG_ID_HEARTBEAT: {
         handle_heartbeat(msg);
+//OW
+#if HAL_MOUNT_ENABLED
+        handle_mount_message(msg);
+#endif
+//OWEND
         break;
     }
 
@@ -4461,6 +4474,9 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
 #endif
 
 #if HAL_MOUNT_ENABLED
+//OW
+    case MAVLINK_MSG_ID_MOUNT_STATUS:
+//OWEND
     case MAVLINK_MSG_ID_GIMBAL_REPORT:
     case MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION:
     case MAVLINK_MSG_ID_GIMBAL_DEVICE_ATTITUDE_STATUS:
@@ -4581,6 +4597,11 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
 #if AP_RCPROTOCOL_MAVLINK_RADIO_ENABLED
     case MAVLINK_MSG_ID_RADIO_RC_CHANNELS:
         handle_radio_rc_channels(msg);
+//OW
+#if HAL_MOUNT_ENABLED
+        handle_mount_message(msg);
+#endif
+//OWEND
         break;
 #endif
 #endif
@@ -4816,6 +4837,13 @@ void GCS_MAVLINK::send_banner()
         }
     }
 #endif
+
+//OW
+#if HAL_MOUNT_ENABLED
+    AP_Mount *mount = AP::mount();
+    if (mount != nullptr) mount->send_banner();
+#endif
+//OWEND
 }
 
 

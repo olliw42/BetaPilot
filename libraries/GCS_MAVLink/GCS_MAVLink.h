@@ -43,7 +43,10 @@ typedef uint32_t mavlink_channel_mask_t;
 #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 #endif
 
-#include "include/mavlink/v2.0/all/version.h"
+//OW
+//#include "include/mavlink/v2.0/all/version.h"
+#include "include/mavlink/v2.0/betapilot/version.h"
+//OWEND
 
 #define MAVLINK_MAX_PAYLOAD_LEN 255
 
@@ -82,7 +85,10 @@ uint16_t comm_get_txspace(mavlink_channel_t chan);
 #if !defined(__clang__)  // avoid -Wunknown-warning-option
 #pragma GCC diagnostic ignored "-Wstringop-truncation"
 #endif  // clang
-#include "include/mavlink/v2.0/all/mavlink.h"
+//OW
+//#include "include/mavlink/v2.0/all/mavlink.h"
+#include "include/mavlink/v2.0/betapilot/mavlink.h"
+//OWEND
 #pragma GCC diagnostic pop
 
 // lock and unlock a channel, for multi-threaded mavlink send
