@@ -557,6 +557,11 @@ void AP_DroneCAN_DNA_Server::handle_allocation(const CanardRxTransfer& transfer,
     }
 
     allocation_pub.broadcast(rsp, false); // never publish allocation message with CAN FD
+
+    dronecan_protocol_CanConfig can_config_msg {};
+    can_config_msg.bit_rate = DRONECAN_PROTOCOL_CANCONFIG_CAN_BITRATE_1MBPS; //1000000;
+    can_config_msg.variant = DRONECAN_PROTOCOL_CANCONFIG_CAN_CLASSIC;
+    can_config_pub.broadcast(can_config_msg, false);
 }
 
 //report the server state, along with failure message if any

@@ -140,6 +140,8 @@ class AP_DroneCAN_DNA_Server
     Canard::ObjCallback<AP_DroneCAN_DNA_Server, uavcan_protocol_GetNodeInfoResponse> node_info_cb{this, &AP_DroneCAN_DNA_Server::handleNodeInfo};
     Canard::Client<uavcan_protocol_GetNodeInfoResponse> node_info_client;
 
+    Canard::Publisher<dronecan_protocol_CanConfig> can_config_pub{_canard_iface};
+
 #if HAL_LOGGING_ENABLED
     // Linked list of node status timestamps used for logging
     struct node_status_log_data {
