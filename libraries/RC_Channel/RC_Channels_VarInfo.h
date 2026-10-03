@@ -112,6 +112,13 @@ const AP_Param::GroupInfo RC_Channels::var_info[] = {
     // @Units: s
     AP_GROUPINFO("_FS_TIMEOUT", 35, RC_CHANNELS_SUBCLASS, _fs_timeout, 1.0),
 
+//OW
+#if NUM_RC_CHANNELS == 18
+    AP_GROUPINFO("17_OPTION", 36, RC_CHANNELS_SUBCLASS, obj_channels[17].option, 0),
+    AP_GROUPINFO("18_OPTION", 37, RC_CHANNELS_SUBCLASS, obj_channels[18].option, 0),
+#endif
+//OWEND
+
     AP_GROUPEND
 };
 

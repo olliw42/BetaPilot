@@ -27,7 +27,10 @@
 #include <AP_Arming/AP_Arming_config.h>
 #include <AP_BattMonitor/AP_BattMonitor_config.h>
 
-#define NUM_RC_CHANNELS 16
+//OW
+//#define NUM_RC_CHANNELS 16
+#define NUM_RC_CHANNELS 18
+//OWEND
 
 /// @class	RC_Channel
 /// @brief	Object managing one RC channel
