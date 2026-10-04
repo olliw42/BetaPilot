@@ -24,7 +24,14 @@
 #include <GCS_MAVLink/GCS_MAVLink.h>
 #endif
 
-#define MAX_RCIN_CHANNELS 18
+//OW
+//#define MAX_RCIN_CHANNELS 18
+#if AP_RCPROTOCOL_24CHANNELS_ENABLED
+  #define MAX_RCIN_CHANNELS 24
+#else
+  #define MAX_RCIN_CHANNELS 18
+#endif
+//OWEND
 #define MIN_RCIN_CHANNELS  5
 
 class AP_RCProtocol_Backend;

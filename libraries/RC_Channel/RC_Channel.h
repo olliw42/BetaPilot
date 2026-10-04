@@ -29,7 +29,11 @@
 
 //OW
 //#define NUM_RC_CHANNELS 16
-#define NUM_RC_CHANNELS 18
+#if AP_RC_CHANNEL_24CHANNELS_ENABLED
+  #define NUM_RC_CHANNELS 24
+#else
+  #define NUM_RC_CHANNELS 16
+#endif
 //OWEND
 
 /// @class	RC_Channel
