@@ -30,7 +30,14 @@
 #endif
 
 #ifndef RC_INPUT_MAX_CHANNELS
-#define RC_INPUT_MAX_CHANNELS 18
+//OW
+//#define RC_INPUT_MAX_CHANNELS 18
+#if AP_RCPROTOCOL_24CHANNELS_ENABLED
+  #define RC_INPUT_MAX_CHANNELS 24
+#else
+  #define RC_INPUT_MAX_CHANNELS 18
+#endif
+//OWEND
 #endif
 
 class ChibiOS::RCInput : public AP_HAL::RCInput {
