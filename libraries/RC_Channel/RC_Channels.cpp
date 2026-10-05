@@ -116,6 +116,14 @@ bool RC_Channels::read_input(void)
         }
     }
 
+//OW
+static uint32_t last_rc_debug_ms = 0;
+if (AP_HAL::millis() - last_rc_debug_ms >= 1000) {
+    last_rc_debug_ms = AP_HAL::millis();
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "RC17-20: %u %u %u %u", hal.rcin->read(16), hal.rcin->read(17), hal.rcin->read(18), hal.rcin->read(19));
+}
+//OWEND
+
     return success;
 }
 
