@@ -26,6 +26,9 @@
 #include <AP_VideoTX/AP_VideoTX_config.h>
 #include <AP_Arming/AP_Arming_config.h>
 #include <AP_BattMonitor/AP_BattMonitor_config.h>
+//OW
+#include <AP_RCProtocol/AP_RCProtocol_config.h>
+//OWEND
 
 //OW
 //#define NUM_RC_CHANNELS 16

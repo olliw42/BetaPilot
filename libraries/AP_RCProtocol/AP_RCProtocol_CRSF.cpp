@@ -413,12 +413,16 @@ bool AP_RCProtocol_CRSF::decode_crsf_packet()
 //OWEND
             _crsf_v3_active = false;
             rc_active = !_uart; // only accept RC data if we are not in standalone mode
-            break; }
+            break;
+        }
         case AP_CRSF_Protocol::CRSF_FRAMETYPE_LINK_STATISTICS:
             process_link_stats_frame((uint8_t*)&_frame.payload);
             break;
         case AP_CRSF_Protocol::CRSF_FRAMETYPE_SUBSET_RC_CHANNELS_PACKED:
+//OW
+            if (_frame.length < 3) break; // invalid frame
             decode_variable_bit_channels((const uint8_t*)(&_frame.payload), _frame.length);
+//OWEND
             _crsf_v3_active = true;
             rc_active = !_uart; // only accept RC data if we are not in standalone mode
             break;

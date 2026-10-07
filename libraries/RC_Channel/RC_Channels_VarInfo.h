@@ -81,6 +81,89 @@ const AP_Param::GroupInfo RC_Channels::var_info[] = {
     // @Path: RC_Channel.cpp
     AP_SUBGROUPINFO(obj_channels[15], "16_", 16, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
 
+//OW
+#if NUM_RC_CHANNELS > 16
+    // @Group: 17_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[16], "17_", 17, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 17
+    // @Group: 18_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[17], "18_", 18, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 18
+    // @Group: 19_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[18], "19_", 19, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 19
+    // @Group: 20_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[19], "20_", 20, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 20
+    // @Group: 21_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[20], "21_", 21, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 21
+    // @Group: 22_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[21], "22_", 22, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 22
+    // @Group: 23_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[22], "23_", 23, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 23
+    // @Group: 24_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[23], "24_", 24, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 24
+    // @Group: 25_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[24], "25_", 25, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 25
+    // @Group: 26_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[25], "26_", 26, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 26
+    // @Group: 27_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[26], "27_", 27, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 27
+    // @Group: 28_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[27], "28_", 28, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 28
+    // @Group: 29_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[28], "29_", 29, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 29
+    // @Group: 30_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[29], "30_", 30, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 30
+    // @Group: 31_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[30], "31_", 31, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS),
+#endif
+#if NUM_RC_CHANNELS > 31
+    // @Group: 32_
+    // @Path: RC_Channel.cpp
+    AP_SUBGROUPINFO(obj_channels[31], "32_", 36, RC_CHANNELS_SUBCLASS, RC_CHANNEL_SUBCLASS), // ATTENTION: is 36, not 32, as 32 was already occupied
+#endif
+//OWEND
+
     // @Param: _OVERRIDE_TIME
     // @DisplayName: RC override timeout
     // @Description: Timeout after which RC overrides will no longer be used, and RC input will resume, 0 will disable RC overrides, -1 will never timeout, and continue using overrides until they are disabled
@@ -111,153 +194,6 @@ const AP_Param::GroupInfo RC_Channels::var_info[] = {
     // @Range: 0.1 10.0
     // @Units: s
     AP_GROUPINFO("_FS_TIMEOUT", 35, RC_CHANNELS_SUBCLASS, _fs_timeout, 1.0),
-
-//OW
-#if NUM_RC_CHANNELS > 16
-    // @Param: HI_RC17_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC17 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC17_OPTION", 36, RC_CHANNELS_SUBCLASS, obj_channels[16].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 17
-    // @Param: HI_RC18_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC18 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC18_OPTION", 37, RC_CHANNELS_SUBCLASS, obj_channels[17].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 18
-    // @Param: HI_RC19_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC19 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC19_OPTION", 38, RC_CHANNELS_SUBCLASS, obj_channels[18].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 19
-    // @Param: HI_RC20_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC20 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC20_OPTION", 39, RC_CHANNELS_SUBCLASS, obj_channels[19].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 20
-    // @Param: HI_RC21_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC21 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC21_OPTION", 40, RC_CHANNELS_SUBCLASS, obj_channels[20].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 21
-    // @Param: HI_RC22_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC22 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC22_OPTION", 41, RC_CHANNELS_SUBCLASS, obj_channels[21].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 22
-    // @Param: HI_RC23_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC23 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC23_OPTION", 42, RC_CHANNELS_SUBCLASS, obj_channels[22].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 23
-    // @Param: HI_RC24_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC24 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC24_OPTION", 43, RC_CHANNELS_SUBCLASS, obj_channels[23].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 24
-    // @Param: HI_RC25_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC25 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC25_OPTION", 44, RC_CHANNELS_SUBCLASS, obj_channels[24].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 25
-    // @Param: HI_RC26_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC26 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC26_OPTION", 45, RC_CHANNELS_SUBCLASS, obj_channels[25].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 26
-    // @Param: HI_RC27_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC27 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC27_OPTION", 46, RC_CHANNELS_SUBCLASS, obj_channels[26].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 27
-    // @Param: HI_RC28_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC28 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC28_OPTION", 47, RC_CHANNELS_SUBCLASS, obj_channels[27].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 28
-    // @Param: HI_RC29_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC29 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC29_OPTION", 48, RC_CHANNELS_SUBCLASS, obj_channels[28].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 29
-    // @Param: HI_RC30_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC30 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC30_OPTION", 49, RC_CHANNELS_SUBCLASS, obj_channels[29].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 30
-    // @Param: HI_RC31_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC31 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC31_OPTION", 50, RC_CHANNELS_SUBCLASS, obj_channels[30].option, 0),
-#endif
-#if NUM_RC_CHANNELS > 31
-    // @Param: HI_RC32_OPTION
-    // @CopyFieldsFrom: RC1_OPTION
-    // @DisplayName: RC32 input option
-    // @Description: Function assigned to this RC channel
-    // @SortValues: AlphabeticalZeroAtTop
-    // @User: Standard
-    AP_GROUPINFO("HI_RC32_OPTION", 51, RC_CHANNELS_SUBCLASS, obj_channels[31].option, 0),
-#endif
-//OWEND
 
     AP_GROUPEND
 };

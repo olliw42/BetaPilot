@@ -104,8 +104,9 @@
 #if !defined MAX_RCIN_CHANNELS && AP_RCPROTOCOL_ENABLED && HAL_PROGRAM_SIZE_LIMIT_KB > 1024
 #define MAX_RCIN_CHANNELS 24
 #if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-#define RC_INPUT_MAX_CHANNELS 24
+#define RC_INPUT_MAX_CHANNELS 24 // announce to RCInput class
 #endif
+#define NUM_RC_CHANNELS 24 // announce to RC_Channels class
 #endif
 //OWEND
 

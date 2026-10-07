@@ -268,9 +268,11 @@ RC_Channel *RC_Channels::flight_mode_channel()
     if (num <= 0) {
         return nullptr;
     }
-    if (num >= NUM_RC_CHANNELS) {
-        return nullptr;
-    }
+//OW
+//    if (num >= NUM_RC_CHANNELS) {
+//        return nullptr;
+//    }
+// OWEND
     return channel(num-1);
 }
 const RC_Channel *RC_Channels::flight_mode_channel() const
